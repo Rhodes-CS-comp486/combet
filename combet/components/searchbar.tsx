@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput } from "react-native";
-//import { IconSymbol } from "./ui/icon-symbol";
+import { IconSymbol } from "./ui/icon-symbol";
 
 
 type Props = {
@@ -21,6 +21,13 @@ export default function SearchBar({ value, onChangeText, placeholder }: Props) {
         backgroundColor: "#fff",
       }}
     >
+
+      <IconSymbol
+        name="search"
+        size={18}
+        color="#999"
+        style={{ marginRight: 8 }}
+      />
 
       <TextInput
         value={value}
