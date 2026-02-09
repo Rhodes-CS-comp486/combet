@@ -6,35 +6,35 @@ import { View } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import CombetHeader from '@/components/CombetHeader';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {JSX} from "react";
+
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+
+export default function RootLayout(): JSX.Element {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={{ flex: 1 }}>
-        {/* Global App Header */}
-        <CombetHeader />
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
 
-        {/* App Navigation */}
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-
-          {/* Example modal route (keep, don’t overuse yet) */}
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: 'modal' }}
-          />
-
-        </Stack>
-      </View>
-
-      <StatusBar style="auto" />
-    </ThemeProvider>
+       <View style={{ flex: 1 }}>
+  <CombetHeader />
+  <View style={{ flex: 1, marginTop: 0 }}>
+    <Stack screenOptions={{ headerShown: false
+    }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+    </Stack>
+  </View>
+</View>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
