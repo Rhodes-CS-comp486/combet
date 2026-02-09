@@ -1,28 +1,35 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Ionicons } from '@expo/vector-icons';
+
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+    const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarInactiveTintColor: '#9e9e9e',
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: {
+            height: 70,
+            paddingBottom: 8,
+            paddingTop: 8,
+        },
+
       }}>
       <Tabs.Screen // home page starts here
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({color }) =>
-              <IconSymbol size={28} name="home" color={color} />,
+              <Ionicons size={28} name="home-outline" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -30,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Community',
           tabBarIcon: ({color }) =>
-              <IconSymbol size={24} name="people-alt" color={color} />,
+              <Ionicons size={24} name="globe-outline" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -38,7 +45,7 @@ export default function TabLayout() {
         options={{
             title: 'Bet',
             tabBarIcon: ({ color }) =>
-                <IconSymbol size={28}  name="add-circle" color={color} />,
+                <Ionicons size={28}  name="add-circle" color={color} />,
       }}
     />
       <Tabs.Screen
@@ -46,7 +53,7 @@ export default function TabLayout() {
           options={{
             title: 'Circles',
             tabBarIcon: ({ color }) =>
-                <IconSymbol size={28} name="360" color={color} />,
+                <Ionicons size={28} name="people-circle" color={color} />,
          }}
       />
       <Tabs.Screen // profile page starts here
@@ -54,7 +61,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) =>
-              <IconSymbol size={28} name="person" color={color} />,
+              <Ionicons size={28} name="person" color={color} />,
         }}
       />
       <Tabs.Screen

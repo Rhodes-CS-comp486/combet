@@ -3,7 +3,6 @@ import { View, Text, FlatList } from 'react-native';
 import React, { useMemo, useState } from "react";
 import SearchBar from "../../components/searchbar";
 
-
 //export default function CommunityScreen() {
 //  return <View />;
 //}

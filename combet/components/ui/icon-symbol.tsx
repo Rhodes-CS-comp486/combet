@@ -2,7 +2,7 @@
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
+import { SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
@@ -20,9 +20,10 @@ type IconSymbolName =
   | 'home'
   | 'person'
   | 'add-circle'
-  | '360'
+  | 'people'
   | 'people-alt'
-  | 'chevron-right';
+  | 'chevron-right'
+  | 'search'
 
 /*const MAPPING = {
   'house.fill': 'home',
@@ -30,7 +31,7 @@ type IconSymbolName =
    'add-circle': 'add-bet'
    '360': 'circle',
    'people-alt' : 'community',
-} as IconMapping; // changed from IconMapping
+} as IconMapping;
  */
 
 
