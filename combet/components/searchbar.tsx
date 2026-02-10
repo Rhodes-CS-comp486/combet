@@ -1,7 +1,6 @@
 import React from "react";
 import { View, TextInput } from "react-native";
-import { IconSymbol } from "./ui/icon-symbol";
-
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   value: string;
@@ -13,30 +12,52 @@ export default function SearchBar({ value, onChangeText, placeholder }: Props) {
   return (
     <View
       style={{
-        borderWidth: 1,
-        borderColor: "#ddd",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        backgroundColor: "#fff",
+        position: "relative",
+        height: 48,          // overall height of the control
+        justifyContent: "center",
       }}
     >
+      {/* White input pill */}
+      <View
+        style={{
+          height: 40,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 20,
+          paddingLeft: 56,   // space for the overlapping circle
+          paddingRight: 14,
+          justifyContent: "center",
+            marginLeft: 8,
+        }}
+      >
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder ?? "Search..."}
+          placeholderTextColor="#9aa3ad"
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={{
+            fontSize: 16,
+            color: "#0F223A",
+          }}
+        />
+      </View>
 
-      <IconSymbol
-        name="search"
-        size={18}
-        color="#999"
-        style={{ marginRight: 8 }}
-      />
-
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder ?? "Search..."}
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={{ fontSize: 16 }}
-      />
+      {/* Blue overlapping circle */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: "#203a5b",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons name="search-outline" size={20} color="#FFFFFF" />
+      </View>
     </View>
   );
 }

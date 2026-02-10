@@ -37,7 +37,7 @@ export default function HomeScreen() {
   }, [q]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, gap: 12 }}>
+    <View style={{ flex: 1, backgroundColor: "#051120", padding: 16, gap: 12 }}>
       <SearchBar
         value={q}
         onChangeText={setQ}
@@ -45,9 +45,9 @@ export default function HomeScreen() {
       />
 
       {!q.trim() ? (
-        <Text style={{ color: "#666" }}>Start typing to search (mock data for now).</Text>
+        <Text style={{ color: "rgba(255,255,255,0.75)" }}>Start typing to search (mock data for now).</Text>
       ) : results.length === 0 ? (
-        <Text style={{ color: "#666" }}>No matches.</Text>
+        <Text style={{ color: "rgba(255,255,255,0.75)" }}>No matches.</Text>
       ) : (
         <FlatList
           data={results}
@@ -58,15 +58,14 @@ export default function HomeScreen() {
                 // later: navigate to friend/circle/community detail screens
               }}
               style={{
-                padding: 12,
-                borderWidth: 1,
-                borderColor: "#eee",
-                borderRadius: 12,
-                marginBottom: 10,
-              }}
+                  padding: 12,
+                  borderRadius: 12,
+                  marginBottom: 10,
+                  backgroundColor: "#0F2A44",
+}}
             >
-              <Text style={{ fontWeight: "600" }}>{item.label}</Text>
-              <Text style={{ color: "#666" }}>{item.type}</Text>
+              <Text style={{ fontWeight: "600", color: "#FFFFFF" }}>{item.label}</Text>
+              <Text style={{ color: "rgba(255,255,255,0.7)" }}>{item.type}</Text>
             </Pressable>
           )}
         />

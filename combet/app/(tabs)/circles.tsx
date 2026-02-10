@@ -25,7 +25,7 @@ export default function CirclesScreen() {
   }, [q]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, gap: 12 }}>
+    <View style={{ flex: 1, backgroundColor: "#051120", padding: 16, gap: 12 }}>
       <SearchBar
         value={q}
         onChangeText={setQ}
@@ -39,11 +39,14 @@ export default function CirclesScreen() {
           <View
             style={{
               paddingVertical: 12,
-              borderBottomWidth: 1,
-              borderBottomColor: "#eee",
+
+                backgroundColor: "#0F223A",
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              marginBottom: 8,
             }}
           >
-            <Text style={{ fontWeight: "600" }}>{item.name}</Text>
+            <Text style={{ fontWeight: "600", color: "#FFFFFF" }}>{item.name}</Text>
           </View>
         )}
       />
