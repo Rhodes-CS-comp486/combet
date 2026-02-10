@@ -3,10 +3,6 @@ import { View, Text, FlatList } from 'react-native';
 import React, { useMemo, useState } from "react";
 import SearchBar from "../../components/searchbar";
 
-//export default function CommunityScreen() {
-//  return <View />;
-//}
-
 // placeholder data
 const COMMUNITIES = [
   { id: "m1", name: "Memphis Runners" },
@@ -23,15 +19,40 @@ export default function CommunityScreen() {
   }, [q]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", padding: 16, gap: 12 }}>
-      <SearchBar value={q} onChangeText={setQ} placeholder="Search communities..." />
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#051120",
+        padding: 16,
+        gap: 12,
+      }}
+    >
+      <SearchBar
+        value={q}
+        onChangeText={setQ}
+        placeholder="Search communities..."
+      />
 
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#eee" }}>
-            <Text style={{ fontWeight: "600" }}>{item.name}</Text>
+          <View
+            style={{
+              padding: 14,
+              borderRadius: 12,
+              backgroundColor: "#0f223a",
+              marginBottom: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontWeight: "600",
+                color: "#FFFFFF",
+              }}
+            >
+              {item.name}
+            </Text>
           </View>
         )}
       />

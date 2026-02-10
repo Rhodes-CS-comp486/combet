@@ -21,7 +21,7 @@ export default function CombetHeader(): JSX.Element {
           style={styles.left}
           onPress={() => router.push('/inbox')}
         >
-          <Ionicons name="menu" size={26} color="#000" />
+          <Ionicons name="menu" size={26} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* Center */}
@@ -29,7 +29,7 @@ export default function CombetHeader(): JSX.Element {
 
         {/* Right */}
         <View style={styles.right}>
-          <Ionicons name="ellipse-outline" size={20} color="#000" />
+          <Ionicons name="ellipse-outline" size={20} color="#FFFFFF" />
           <Text style={styles.balance}>{coinBalance}</Text>
         </View>
       </View>
@@ -39,7 +39,7 @@ export default function CombetHeader(): JSX.Element {
 const styles = StyleSheet.create({
   // Paints behind the notch / status bar
   safeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0f223a',
   },
 
   // Actual header height (do NOT include safe area here)
@@ -49,9 +49,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#0f223a',
     borderBottomWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: '#0f223a',
   },
 
   left: {
@@ -65,18 +65,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 4,
+    gap: 6,
   },
 
   title: {
+
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 1,
+      color: '#FFFFFF',
   },
 
   balance: {
     fontSize: 14,
     fontWeight: '600',
+      color: '#FFFFFF',
   },
 });
 

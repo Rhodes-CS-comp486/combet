@@ -22,11 +22,19 @@ export default function RootLayout(): JSX.Element {
     <SafeAreaProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
 
-       <View style={{ flex: 1 }}>
+       <View style={{ flex: 1, backgroundColor: '#091C32' }}>
+
   <CombetHeader />
   <View style={{ flex: 1, marginTop: 0 }}>
-    <Stack screenOptions={{ headerShown: false
-    }}>
+    <Stack
+        screenOptions={{
+            headerShown: false,
+            contentStyle: {
+                backgroundColor: '#091C32',
+            },
+        }}
+    >
+
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
     </Stack>
