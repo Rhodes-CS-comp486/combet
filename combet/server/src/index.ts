@@ -1,23 +1,65 @@
-import "dotenv/config";
 import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 import { pool } from "./db";
 
+dotenv.config();
+
 const app = express();
+
+app.use(cors());
 app.use(express.json());
 
-app.get("/", (_req, res) => {
-  res.send("ComBet API is running ✅");
-});
+/**
+ * CREATE CIRCLE
+ */
+app.post("/circles", async (req, res) => {
+  const { name, description, icon } = req.body;
 
-app.get("/health", async (_req, res) => {
+  if (!name || name.length < 5 || name.length > 15) {
+    return res.status(400).json({ error: "Name must be 5–15 characters" });
+  }
+
+  if (description && description.length > 100) {
+    return res.status(400).json({ error: "Description max 100 characters" });
+  }
+
   try {
-    const r = await pool.query("SELECT NOW() as now");
-    res.json({ ok: true, dbTime: r.rows[0].now });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: e.message });
+    const result = await pool.query(
+      `
+      INSERT INTO circles (name, description, icon)
+      VALUES ($1, $2, $3)
+      RETURNING circle_id, name, description, icon, created_at
+      `,
+      [name, description, icon]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// Start server
-const port = Number(process.env.PORT ?? 3001);
-app.listen(port, () => console.log(`API running on http://localhost:${port}`));
+/**
+ * GET ALL CIRCLES
+ */
+app.get("/circles", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT circle_id, name, description, icon FROM circles ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+const PORT = 3001;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

@@ -1,86 +1,92 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, Stack } from "expo-router";
+import React from "react";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-import { Ionicons } from '@expo/vector-icons';
+import { HapticTab } from "@/components/haptic-tab";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-          tabBarInactiveTintColor: '#9e9e9e',
-          headerShown: false,
-          tabBarButton: HapticTab,
-          tabBarStyle: {
-            height: 70,
-            paddingBottom: 8,
-            paddingTop: 8,
-              backgroundColor: '#0f223a',
-              borderTopWidth: 0,
-              shadowColor: 'transparent',
-              elevation: 0,
-              //borderTopColor: 'rgba(255,255,255,0.15)',
-
-
-
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarInactiveTintColor: "#9e9e9e",
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarStyle: {
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 8,
+          backgroundColor: "#0f223a",
+          borderTopWidth: 0,
+          shadowColor: "transparent",
+          elevation: 0,
         },
-
-      }}>
-      <Tabs.Screen // home page starts here
+      }}
+    >
+      <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({color }) =>
-              <Ionicons size={28} name="home-outline" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home-outline" size={28} color={color} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="community" // community page
+        name="community"
         options={{
-          title: 'Community',
-          tabBarIcon: ({color }) =>
-              <Ionicons size={24} name="globe-outline" color={color} />,
+          title: "Community",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="globe-outline" size={24} color={color} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="add-bet" // add-bet page starts here
+        name="add-bet"
         options={{
-            title: 'Bet',
-            tabBarIcon: ({ color }) =>
-                <Ionicons size={28}  name="add-circle" color={color} />,
-      }}
-    />
-      <Tabs.Screen
-          name="circles" // circles page starts here
-          options={{
-            title: 'Circles',
-            tabBarIcon: ({ color }) =>
-                <Ionicons size={28} name="people-circle" color={color} />,
-         }}
+          title: "Bet",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="add-circle" size={28} color={color} />
+          ),
+        }}
       />
-      <Tabs.Screen // profile page starts here
+
+      <Tabs.Screen
+        name="circles"
+        options={{
+          title: "Circles",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people-circle" size={28} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) =>
-              <Ionicons size={28} name="person" color={color} />,
+          title: "Profile",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person" size={28} color={color} />
+          ),
         }}
       />
-      <Tabs.Screen
-        name="inbox"
-        options={{
-            title: 'Inbox',
-            href: null,
-            //tabBarButton: () => null, // hides it from tab bar, but removed because href conflict
+
+        <Tabs.Screen
+            name="inbox"
+            options={{
+            href: null,              // ⬅️ THIS removes it from the tab bar
             headerShown: false,
         }}
-      />
+        />
     </Tabs>
   );
 }
+
+
+
