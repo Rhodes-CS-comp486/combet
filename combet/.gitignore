@@ -47,3 +47,5 @@ app-example
 devices.json
 .idea/
 
+.env
+

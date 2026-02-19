@@ -11,6 +11,7 @@ import { View, Text, FlatList, Pressable } from 'react-native';
 import React, { useMemo, useState } from "react";
 import SearchBar from "../../components/searchbar";
 
+
 type Result =
   | { type: "friend"; id: string; label: string }
   | { type: "circle"; id: string; label: string }
@@ -38,6 +39,8 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#051120", padding: 16, gap: 12 }}>
+
+
       <SearchBar
         value={q}
         onChangeText={setQ}

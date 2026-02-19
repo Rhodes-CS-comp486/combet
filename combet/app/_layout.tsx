@@ -36,7 +36,9 @@ export default function RootLayout(): JSX.Element {
     >
 
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+
+
+
     </Stack>
   </View>
 </View>
