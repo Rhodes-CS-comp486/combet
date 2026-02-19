@@ -20,28 +20,38 @@ export default function RootLayout(): JSX.Element {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider
+        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+      >
+        <View style={{ flex: 1, backgroundColor: "#091C32" }}>
+          <CombetHeader />
 
-       <View style={{ flex: 1, backgroundColor: '#091C32' }}>
+          <View style={{ flex: 1 }}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "#091C32" },
+              }}
+            >
+              {/* Tabs */}
+              <Stack.Screen name="(tabs)" />
 
-  <CombetHeader />
-  <View style={{ flex: 1, marginTop: 0 }}>
-    <Stack
-        screenOptions={{
-            headerShown: false,
-            contentStyle: {
-                backgroundColor: '#091C32',
-            },
-        }}
-    >
+              {/* Create Circle Modal */}
+              <Stack.Screen
+                name="create-circle"
+                options={{
+                  presentation: "transparentModal",
+                  animation: "fade",
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: "transparent",
+                  },
+                }}
+              />
+            </Stack>
+          </View>
+        </View>
 
-      <Stack.Screen name="(tabs)" />
-
-
-
-    </Stack>
-  </View>
-</View>
         <StatusBar style="auto" />
       </ThemeProvider>
     </SafeAreaProvider>

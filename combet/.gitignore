@@ -47,5 +47,6 @@ app-example
 devices.json
 .idea/
 
+# .env files
 .env
 

@@ -5,6 +5,16 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
+import { Tabs, Stack , Redirect} from "expo-router";
+import React , { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import { getSessionId } from "@/components/sessionStore";
+
+
+import { HapticTab } from "@/components/haptic-tab";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -26,6 +36,23 @@ export default function TabLayout() {
     marginBottom: 10,
     fontSize: 14,
   };
+
+  const [loading, setLoading] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const sessionId = await getSessionId();
+
+      setHasSession(!!sessionId);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return null;
+
+  // If not logged in, force user to login
+  if (!hasSession) return <Redirect href="/login" />;
 
   return (
     <View style={{ flex: 1 }}>
