@@ -1,5 +1,8 @@
-import { Tabs, Stack } from "expo-router";
-import React from "react";
+import { Tabs, Stack , Redirect} from "expo-router";
+import React , { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import { getSessionId } from "@/components/sessionStore";
+
 
 import { HapticTab } from "@/components/haptic-tab";
 import { Colors } from "@/constants/theme";
@@ -8,6 +11,23 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+
+  const [loading, setLoading] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const sessionId = await getSessionId();
+
+      setHasSession(!!sessionId);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return null;
+
+  // If not logged in, force user to login
+  if (!hasSession) return <Redirect href="/login" />;
 
   return (
     <Tabs

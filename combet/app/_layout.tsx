@@ -8,6 +8,8 @@ import CombetHeader from '@/components/CombetHeader';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {JSX} from "react";
 
+
+
 export const unstable_settings = {
   anchor: '(tabs)',
 };
