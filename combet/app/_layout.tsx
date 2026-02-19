@@ -3,16 +3,17 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { View } from 'react-native';
+
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import CombetHeader from '@/components/CombetHeader';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {JSX} from "react";
 
 
-
 export const unstable_settings = {
   anchor: '(tabs)',
 };
+
 
 export default function RootLayout(): JSX.Element {
   const colorScheme = useColorScheme();
@@ -56,7 +57,6 @@ export default function RootLayout(): JSX.Element {
     </SafeAreaProvider>
   );
 }
-
 
 
 /*
