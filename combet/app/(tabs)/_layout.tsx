@@ -1,20 +1,13 @@
-import { Tabs } from 'expo-router';
-import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
 import { Tabs, Stack , Redirect} from "expo-router";
 import React , { useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { getSessionId } from "@/components/sessionStore";
-
-
 import { HapticTab } from "@/components/haptic-tab";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { Ionicons } from "@expo/vector-icons";
+
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
