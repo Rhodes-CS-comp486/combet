@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import { setSessionId } from "@/components/sessionStore";
 
 const API_URL = "http://localhost:3001"; // change to LAN IP if using Expo Go on phone
 
@@ -45,7 +45,7 @@ export default function Register() {
       }
 
       const data = JSON.parse(text);
-      await SecureStore.setItemAsync("session_id", data.session_id);
+      await setSessionId(data.session_id);
 
       router.replace("/(tabs)");
     } catch {
@@ -158,8 +158,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
   },
-  title: { color: "white", fontSize: 22, fontWeight: "800" },
-  subtitle: { color: "rgba(255,255,255,0.75)", marginTop: 4, marginBottom: 16 },
+  title: {
+  color: "white",
+  fontSize: 22,
+  fontWeight: "800",
+  textAlign: "center",
+},
+
+subtitle: {
+  color: "rgba(255,255,255,0.75)",
+  marginTop: 4,
+  marginBottom: 16,
+  textAlign: "center",
+},
+
   label: { color: "rgba(255,255,255,0.85)", marginBottom: 6, fontWeight: "600" },
   input: {
     backgroundColor: "white",

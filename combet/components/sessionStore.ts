@@ -4,24 +4,43 @@ import * as SecureStore from "expo-secure-store";
 const KEY = "session_id";
 
 export async function getSessionId(): Promise<string | null> {
-  if (Platform.OS === "web") {
-    return window.localStorage.getItem(KEY);
+  try {
+    if (Platform.OS === "web") {
+      return typeof window !== "undefined"
+        ? window.localStorage.getItem(KEY)
+        : null;
+    }
+    return await SecureStore.getItemAsync(KEY);
+  } catch (e) {
+    console.error("getSessionId error:", e);
+    return null;
   }
-  return SecureStore.getItemAsync(KEY);
 }
 
 export async function setSessionId(value: string): Promise<void> {
-  if (Platform.OS === "web") {
-    window.localStorage.setItem(KEY, value);
-    return;
+  try {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(KEY, value);
+      }
+      return;
+    }
+    await SecureStore.setItemAsync(KEY, value);
+  } catch (e) {
+    console.error("setSessionId error:", e);
   }
-  await SecureStore.setItemAsync(KEY, value);
 }
 
 export async function deleteSessionId(): Promise<void> {
-  if (Platform.OS === "web") {
-    window.localStorage.removeItem(KEY);
-    return;
+  try {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(KEY);
+      }
+      return;
+    }
+    await SecureStore.deleteItemAsync(KEY);
+  } catch (e) {
+    console.error("deleteSessionId error:", e);
   }
-  await SecureStore.deleteItemAsync(KEY);
 }
