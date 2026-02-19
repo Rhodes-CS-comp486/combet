@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { View } from 'react-native';
@@ -16,6 +16,7 @@ export const unstable_settings = {
 
 export default function RootLayout(): JSX.Element {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
 
   return (
     <SafeAreaProvider>
@@ -23,7 +24,8 @@ export default function RootLayout(): JSX.Element {
         value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
       >
         <View style={{ flex: 1, backgroundColor: "#091C32" }}>
-          <CombetHeader />
+          {!pathname.startsWith("/login") && !pathname.startsWith("/register") && (<CombetHeader />
+              )}
 
           <View style={{ flex: 1 }}>
             <Stack
