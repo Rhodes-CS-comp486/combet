@@ -26,7 +26,7 @@ export default function CirclesScreen() {
 
   // Fetch circles
   useEffect(() => {
-    fetch("http://localhost:3001/circles")
+    fetch("http://10.20.60.13:3001/circles") // changed to localhost
       .then((res) => res.json())
       .then((data) => setCircles(data))
       .catch((err) => console.error("Failed to load circles", err));
