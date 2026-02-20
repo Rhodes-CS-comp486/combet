@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-const BASE_URL = "http://10.20.60.13:3001"; // changed from local host
+const BASE_URL = "http://localhost:3001"; // changed from local host
 
 type Props = {
   visible: boolean;
