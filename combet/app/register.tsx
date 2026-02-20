@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Pla
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
 
-const API_URL = "http://10.20.60.13:3001"; // change to LAN IP if using Expo Go on phone
+const API_URL = "http://localhost:3001"; // change to LAN IP if using Expo Go on phone
 
 export default function Register() {
   const [first_name, setFirst] = useState("");

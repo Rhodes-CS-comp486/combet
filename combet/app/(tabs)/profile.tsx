@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Alert, Platform } from "react-native
 import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
 
-const API_URL = "http://10.20.60.13:3001"; // changed from localhost
+const API_URL = "http://localhost:3001"; // changed from localhost
 
 export default function ProfileScreen() {
   const doLogout = async () => {
