@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getSessionId } from "@/components/sessionStore";
 
 export default function AddBet() {
   const [postTo, setPostTo] = useState<"circles" | "friends">("circles");
@@ -36,24 +38,75 @@ export default function AddBet() {
     setOptions(updated);
   };
 
+  const handleCreateBet = async () => {
+    try {
+      const sessionId = await getSessionId();
+
+      if (!sessionId) {
+        Alert.alert("Error", "User not logged in");
+        return;
+      }
+
+      const cleanedOptions = options.filter((opt) => opt.trim() !== "");
+
+      if (!title || !description || !stake || cleanedOptions.length < 2) {
+        Alert.alert("Missing Fields", "Please complete all required fields.");
+        return;
+      }
+
+      const response = await fetch("http://localhost:3001/bets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-id": sessionId,
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          stake: Number(stake),
+          closesAt: closeAt || null,
+          options: cleanedOptions,
+          targetType: postTo === "circles" ? "circle" : "user",
+          targetId: "TEMP_TARGET_ID",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert("Error", data.error || "Failed to create bet");
+        return;
+      }
+
+      setTitle("");
+      setDescription("");
+      setOptions(["", ""]);
+      setStake("");
+      setCloseAt("");
+      setPostTo("circles");
+
+      router.back();
+    } catch (error) {
+      console.error("Create bet error:", error);
+      Alert.alert("Network Error", "Could not connect to server");
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
-
-
-
       {/* BET DETAILS */}
-      <View style={styles.section}>
+      <View style={styles.card}>
         <Text style={styles.sectionTitle}>Bet on It!</Text>
 
         <TextInput
           value={title}
           onChangeText={setTitle}
           placeholder="Enter bet title"
-          placeholderTextColor="#7a8ca3"
+          placeholderTextColor="#94a3b8"
           style={inputStyle(title)}
         />
 
@@ -61,14 +114,14 @@ export default function AddBet() {
           value={description}
           onChangeText={setDescription}
           placeholder="What is this bet about?"
-          placeholderTextColor="#7a8ca3"
+          placeholderTextColor="#94a3b8"
           style={[inputStyle(description), styles.multiline]}
           multiline
         />
       </View>
 
-      {/* YOUR BET */}
-      <View style={styles.section}>
+      {/* PICKS */}
+      <View style={styles.card}>
         <Text style={styles.sectionTitle}>Picks</Text>
 
         {options.map((opt, index) => (
@@ -83,7 +136,7 @@ export default function AddBet() {
               value={opt}
               onChangeText={(text) => updateOption(index, text)}
               placeholder={`Option ${String.fromCharCode(65 + index)}`}
-              placeholderTextColor="#7a8ca3"
+              placeholderTextColor="#94a3b8"
               style={[
                 styles.optionInput,
                 opt.length > 0 && styles.inputFilled,
@@ -101,8 +154,8 @@ export default function AddBet() {
 
       {/* WHO + STAKE ROW */}
       <View style={styles.row}>
-        {/* Who’s In */}
-        <View style={[styles.section, styles.halfSection]}>
+        {/* WHO CARD */}
+        <View style={[styles.card, styles.halfCardLeft]}>
           <Text style={styles.sectionTitle}>Who’s In?</Text>
 
           <TouchableOpacity
@@ -112,14 +165,7 @@ export default function AddBet() {
             ]}
             onPress={() => setPostTo("circles")}
           >
-            <Text
-              style={[
-                styles.toggleText,
-                postTo === "circles" && styles.toggleTextActive,
-              ]}
-            >
-              Circles
-            </Text>
+            <Text style={styles.toggleText}>Circles</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -129,57 +175,43 @@ export default function AddBet() {
             ]}
             onPress={() => setPostTo("friends")}
           >
-            <Text
-              style={[
-                styles.toggleText,
-                postTo === "friends" && styles.toggleTextActive,
-              ]}
-            >
-              Friends
-            </Text>
+            <Text style={styles.toggleText}>Friends</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Stake & Close */}
-        <View style={[styles.section, styles.halfSection]}>
+        {/* STAKE CARD */}
+        <View style={[styles.card, styles.halfCardRight]}>
           <Text style={styles.sectionTitle}>Stake & Close</Text>
 
           <View style={styles.iconInputRow}>
-            <Ionicons name="cash-outline" size={18} color="#1DA1F2" />
+            <Ionicons name="cash-outline" size={18} color="#38bdf8" />
             <TextInput
               value={stake}
               onChangeText={setStake}
               placeholder="Stake"
-              placeholderTextColor="#7a8ca3"
-              style={[
-                styles.iconInput,
-                stake.length > 0 && styles.inputFilledTransparent,
-              ]}
+              placeholderTextColor="#94a3b8"
+              keyboardType="numeric"
+              style={styles.iconInput}
             />
           </View>
 
           <View style={styles.iconInputRow}>
-            <Ionicons name="calendar-outline" size={18} color="#1DA1F2" />
+            <Ionicons name="calendar-outline" size={18} color="#38bdf8" />
             <TextInput
               value={closeAt}
               onChangeText={setCloseAt}
               placeholder="Closes"
-              placeholderTextColor="#7a8ca3"
-              style={[
-                styles.iconInput,
-                closeAt.length > 0 && styles.inputFilledTransparent,
-              ]}
+              placeholderTextColor="#94a3b8"
+              style={styles.iconInput}
             />
           </View>
         </View>
       </View>
 
-      {/* CREATE BUTTON */}
-      <TouchableOpacity style={styles.createButton}>
+      <TouchableOpacity style={styles.createButton} onPress={handleCreateBet}>
         <Text style={styles.createButtonText}>Create Bet</Text>
       </TouchableOpacity>
 
-      {/* CANCEL */}
       <TouchableOpacity
         onPress={() => router.back()}
         style={styles.cancelButton}
@@ -192,20 +224,17 @@ export default function AddBet() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingBottom: 20,
-    backgroundColor: "#041120",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 40,
+    backgroundColor: "#0f172a",
   },
 
-  title: {
-    fontSize: 28,
-    fontWeight: "600",
-    color: "white",
-  },
-
-  subtitle: {
-    color: "#7a8ca3",
-    marginBottom: 25,
+  card: {
+    backgroundColor: "#172033",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 22,
   },
 
   row: {
@@ -213,67 +242,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  section: {
-    backgroundColor: "#142b47",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+  halfCardLeft: {
+    flex: 1,
+    marginRight: 10,
   },
 
-  halfSection: {
-    width: "48%",
+  halfCardRight: {
+    flex: 1,
+    marginLeft: 10,
   },
 
   sectionTitle: {
-    color: "#1DA1F2",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
+    color: "#ffffff",
     marginBottom: 12,
   },
 
   input: {
-    backgroundColor: "#1b3555",
+    backgroundColor: "#1e293b",
+    padding: 14,
     borderRadius: 12,
-    padding: 12,
-    color: "white",
+    color: "#ffffff",
     marginBottom: 12,
   },
 
   inputFilled: {
-    backgroundColor: "#1e4068",
     borderWidth: 1,
-    borderColor: "#1DA1F2",
-  },
-
-  inputFilledTransparent: {
-    borderBottomWidth: 1,
-    borderColor: "#1DA1F2",
+    borderColor: "#38bdf8",
   },
 
   multiline: {
-    height: 80,
+    minHeight: 90,
     textAlignVertical: "top",
-  },
-
-  toggleButton: {
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: "#1b3555",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  toggleActive: {
-    backgroundColor: "#1DA1F2",
-  },
-
-  toggleText: {
-    color: "#7a8ca3",
-  },
-
-  toggleTextActive: {
-    color: "white",
-    fontWeight: "600",
   },
 
   optionRow: {
@@ -286,69 +287,82 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#1DA1F2",
+    backgroundColor: "#38bdf8",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 12,
   },
 
   badgeText: {
-    color: "white",
+    color: "#fff",
     fontWeight: "600",
   },
 
   optionInput: {
     flex: 1,
-    backgroundColor: "#1b3555",
-    borderRadius: 12,
+    backgroundColor: "#1e293b",
     padding: 12,
-    color: "white",
+    borderRadius: 10,
+    color: "#ffffff",
   },
 
   addOption: {
-    color: "#1DA1F2",
-    marginTop: 5,
-    fontWeight: "600",
+    color: "#38bdf8",
+    marginTop: 6,
+    fontWeight: "500",
+  },
+
+  toggleButton: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#1e293b",
+    marginBottom: 10,
+  },
+
+  toggleActive: {
+    backgroundColor: "#38bdf8",
+  },
+
+  toggleText: {
+    color: "#ffffff",
+    textAlign: "center",
+    fontWeight: "500",
   },
 
   iconInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1b3555",
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    backgroundColor: "#1e293b",
+    padding: 12,
+    borderRadius: 10,
     marginBottom: 12,
   },
 
   iconInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingLeft: 8,
-    color: "white",
+    marginLeft: 10,
+    color: "#ffffff",
   },
 
   createButton: {
-    backgroundColor: "#1DA1F2",
-    paddingVertical: 16,
-    borderRadius: 25,
+    backgroundColor: "#38bdf8",
+    padding: 16,
+    borderRadius: 14,
     alignItems: "center",
     marginTop: 10,
   },
 
   createButtonText: {
-    color: "white",
-    fontSize: 16,
+    color: "#ffffff",
     fontWeight: "600",
   },
 
   cancelButton: {
-    marginTop: 15,
     alignItems: "center",
-      marginBottom: 10,
+    marginTop: 18,
   },
 
   cancelText: {
-    color: "#7a8ca3",
-    fontSize: 14,
+    color: "#94a3b8",
   },
 });
