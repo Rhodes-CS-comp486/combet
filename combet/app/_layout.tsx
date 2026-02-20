@@ -49,6 +49,20 @@ export default function RootLayout(): JSX.Element {
                   },
                 }}
               />
+                <Stack.Screen
+                  name="add-bet"
+                  options={{
+                    headerShown: true,
+                      title: "Create Bet",
+                      headerStyle: {
+                          backgroundColor: "#0f223a",
+                      },
+                      headerTintColor: "white",
+                      headerTitleStyle: {
+                          fontWeight: "600",
+                      },
+                  }}
+                />
             </Stack>
           </View>
         </View>
