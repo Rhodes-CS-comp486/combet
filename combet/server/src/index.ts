@@ -13,6 +13,21 @@ app.use(cors());
 app.use(express.json());
 app.use("/auth", authRouter);
 
+// gets user_id from sessions
+async function getUserIdFromSession(sessionId: string): Promise<string | null> {
+  const result = await pool.query(
+    `
+    SELECT u.id
+    FROM sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.session_id = $1
+    `,
+    [sessionId]
+  );
+
+  return result.rows.length ? result.rows[0].id : null;
+}
+
 /**
  * CREATE CIRCLE
  */
@@ -163,7 +178,97 @@ app.post("/bets", async (req, res) => {
   }
 });
 
+/**
+ * gets all users and circles
+ */
+app.get("/search", async (req, res) => {
+  try {
+    const sessionId = req.header("x-session-id");
+    if (!sessionId) return res.status(401).json({ error: "Missing session" });
 
+    const currentUserId = await getUserIdFromSession(sessionId);
+    if (!currentUserId) return res.status(401).json({ error: "Invalid session" });
+
+    const q = String(req.query.q ?? "").trim();
+    if (!q) return res.json([]);
+
+    const result = await pool.query(
+      `
+      -- USERS
+      SELECT
+        'user' AS type,
+        u.id::text AS id,
+        COALESCE(
+  NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
+        u.username AS subtitle,
+        CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend"
+      FROM users u
+      LEFT JOIN follows f
+        ON f.following_id = u.id
+       AND f.follower_id = $1
+      WHERE u.id <> $1
+        AND (
+          u.username ILIKE '%' || $2 || '%'
+          OR COALESCE(u.first_name,'') ILIKE '%' || $2 || '%'
+          OR COALESCE(u.last_name,'') ILIKE '%' || $2 || '%'
+        )
+
+      UNION ALL
+
+      -- CIRCLES
+      SELECT
+        'circle' AS type,
+        c.circle_id::text AS id,
+        c.name AS label,
+        COALESCE(c.description,'') AS subtitle,
+        NULL::boolean AS "isFriend"
+      FROM circles c
+      WHERE c.name ILIKE '%' || $2 || '%'
+
+      ORDER BY label
+      LIMIT 50
+      `,
+      [currentUserId, q]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /search error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/**
+ * create follows from users
+ */
+app.post("/follows", async (req, res) => {
+  try {
+    const sessionId = req.header("x-session-id");
+    if (!sessionId) return res.status(401).json({ error: "Missing session" });
+
+    const currentUserId = await getUserIdFromSession(sessionId);
+    if (!currentUserId) return res.status(401).json({ error: "Invalid session" });
+
+    const { followingId } = req.body;
+    if (!followingId) return res.status(400).json({ error: "followingId required" });
+    if (followingId === currentUserId)
+      return res.status(400).json({ error: "Cannot follow yourself" });
+
+    await pool.query(
+      `
+      INSERT INTO follows (follower_id, following_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+      `,
+      [currentUserId, followingId]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /follows error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 const PORT = 3001;
 
