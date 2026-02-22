@@ -118,6 +118,21 @@ export default function TabLayout() {
         }}
         />
 
+        <Tabs.Screen
+            name="circle-profile/[id]/index"
+            options={{
+            href: null,              // ⬅️ THIS removes it from the tab bar
+            headerShown: false,
+        }}
+        />
+        <Tabs.Screen
+            name="circle-profile/[id]/edit"
+            options={{
+            href: null,              // ⬅️ THIS removes it from the tab bar
+            headerShown: false,
+        }}
+        />
+
     </Tabs>
 
     {/* Floating Bet Button */}
