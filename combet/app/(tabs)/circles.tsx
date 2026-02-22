@@ -1,6 +1,6 @@
 // Circles Screen
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import SearchBar from "../../components/searchbar";
+import { useFocusEffect } from "@react-navigation/native";
+
 
 type Circle = {
   circle_id: string;
@@ -25,12 +27,14 @@ export default function CirclesScreen() {
   const [q, setQ] = useState("");
 
   // Fetch circles
-  useEffect(() => {
-    fetch("http://localhost:3001/circles") // changed to localhost
-      .then((res) => res.json())
-      .then((data) => setCircles(data))
-      .catch((err) => console.error("Failed to load circles", err));
-  }, []);
+    useFocusEffect(
+        useCallback(() => {
+        fetch("http://localhost:3001/circles")
+        .then((res) => res.json())
+        .then((data) => setCircles(data))
+        .catch((err) => console.error(err));
+    }, [])
+    );
 
   // Search filtering
   const filtered = useMemo(() => {
@@ -43,7 +47,13 @@ export default function CirclesScreen() {
   }, [q, circles]);
 
   const renderItem = ({ item }: { item: Circle }) => (
-    <TouchableOpacity style={styles.circleContainer}>
+    <TouchableOpacity
+      style={styles.circleContainer}
+      onPress={() => {
+        console.log("Navigating to:", item.circle_id);
+        router.push(`/circle-profile/${item.circle_id}`);
+      }}
+    >
       <View style={styles.iconWrapper}>
         <Ionicons
           name={(item.icon as any) || "people"}
@@ -92,7 +102,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-
   addButton: {
     position: "absolute",
     top: 12,
@@ -105,22 +114,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 10,
   },
-
   listContent: {
     paddingTop: 60,
     paddingHorizontal: 8,
   },
-
   row: {
     justifyContent: "space-between",
   },
-
   circleContainer: {
     width: "33.33%",
     alignItems: "center",
     marginBottom: 28,
   },
-
   iconWrapper: {
     width: 80,
     height: 80,
@@ -130,7 +135,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   circleName: {
     color: "white",
     fontSize: 14,

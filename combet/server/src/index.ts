@@ -270,6 +270,68 @@ app.post("/follows", async (req, res) => {
   }
 });
 
+/**
+ * GET SINGLE CIRCLE
+ */
+app.get("/circles/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM circles WHERE circle_id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).send("Circle not found");
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
+
+/**
+ * UPDATE CIRCLE
+ */
+app.put("/circles/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description, icon } = req.body;
+
+  if (!name || name.length < 5 || name.length > 15) {
+    return res.status(400).json({ error: "Name must be 5–15 characters" });
+  }
+
+  if (description && description.length > 100) {
+    return res.status(400).json({ error: "Description max 100 characters" });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE circles
+      SET name = $1,
+          description = $2,
+          icon = $3
+      WHERE circle_id = $4
+      RETURNING circle_id, name, description, icon
+      `,
+      [name, description, icon, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Circle not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("PUT circle error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 const PORT = 3001;
 
 app.listen(PORT, () => {
