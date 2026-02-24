@@ -1,3 +1,5 @@
+console.log("INDEX FILE LOADED");
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -10,6 +12,12 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
+
+app.use((req, res, next) => {
+  console.log("ROUTE HIT:", req.method, req.url);
+  next();
+});
+
 app.use(express.json());
 app.use("/auth", authRouter);
 
@@ -131,6 +139,11 @@ app.post("/bets", async (req, res) => {
       targetId
     } = req.body;
 
+    if (!targetType || !targetId) {
+      return res.status(400).json({ error: "Target required" });
+    }
+
+
     if (
       !title ||
       !description ||
@@ -168,14 +181,22 @@ app.post("/bets", async (req, res) => {
 
 
       `
-      INSERT INTO bets (title, description, stake_amount, closes_at, creator_user_id, status)
-      VALUES ($1, $2, $3, $4, $5, 'PENDING')
+      INSERT INTO bets (title, description, stake_amount, closes_at, creator_user_id, status, post_to, target_id)
+      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)
       RETURNING id
       `,
-      [title, description, stake, closesAt, creatorUserId]
+      [title, description, stake, closesAt, creatorUserId, targetType, targetId, ]
     );
 
     const betId = betResult.rows[0].id;
+
+    await client.query(
+  `
+      INSERT INTO bet_targets (bet_id, target_type, target_id)
+      VALUES ($1, $2, $3)
+      `,
+      [betId, targetType, targetId]
+    );
 
     // 2️⃣ Insert bet options
     for (let i = 0; i < options.length; i++) {
@@ -188,14 +209,7 @@ app.post("/bets", async (req, res) => {
       );
     }
 
-    // 3️⃣ Insert bet target
-    //await client.query(
-      //`
-      //INSERT INTO bet_targets (bet_id, target_type, target_id)
-      //VALUES ($1, $2, $3)
-      //`,
-      //[betId, targetType, targetId]
-    //);
+
 
     await client.query("COMMIT");
 
@@ -214,7 +228,8 @@ app.post("/bets", async (req, res) => {
  * gets all users and circles
  */
 app.get("/search", async (req, res) => {
-  try {
+    console.log("SEARCH ROUTE HIT");
+    try {
     const sessionId = req.header("x-session-id");
     if (!sessionId) return res.status(401).json({ error: "Missing session" });
 
@@ -306,7 +321,8 @@ app.post("/follows", async (req, res) => {
  * displays circles for that user
  */
 app.get("/circles/my", async (req, res) => {
-  const sessionId = req.headers["user-id"];
+  const sessionId =
+  req.header("x-session-id") || req.header("user-id");
 
   if (!sessionId) {
     return res.status(400).json({ error: "Missing session id" });
@@ -344,6 +360,25 @@ app.get("/circles/my", async (req, res) => {
   }
 });
 
+app.get("/friends/my", async (req, res) => {
+  const sessionId = req.header("x-session-id");
+  if (!sessionId) return res.status(401).json({ error: "Missing session" });
+
+  const userId = await getUserIdFromSession(sessionId);
+  if (!userId) return res.status(401).json({ error: "Invalid session" });
+
+  const result = await pool.query(
+    `
+    SELECT u.id, u.username AS name
+    FROM follows f
+    JOIN users u ON u.id = f.following_id
+    WHERE f.follower_id = $1
+    `,
+    [userId]
+  );
+
+  res.json(result.rows);
+});
 /**
  * GET SINGLE CIRCLE
  */
@@ -850,7 +885,163 @@ app.delete("/circles/:circleId/leave", async (req, res) => {
   }
 });
 
+app.get("/homefeed", async (req, res) => {
+  try {
+    const sessionId = req.header("x-session-id");
+    if (!sessionId)
+      return res.status(401).json({ error: "Missing session" });
+
+    const userId = await getUserIdFromSession(sessionId);
+    if (!userId)
+      return res.status(401).json({ error: "Invalid session" });
+
+    const result = await pool.query(
+      `
+      SELECT 
+        b.id,
+        b.title,
+        b.description,
+        b.created_at,
+        b.stake_amount,
+        b.status,
+        c.icon AS icon,
+
+        creator.username AS creator_username,
+
+        bt.target_type,
+
+        CASE 
+          WHEN bt.target_type = 'circle' THEN c.name
+          WHEN bt.target_type = 'user' THEN target_user.username
+        END AS target_name,
+
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'id', bo.id,
+            'label', bo.label,
+            'text', bo.option_text
+          )
+        ) FILTER (WHERE bo.id IS NOT NULL) AS options
+
+      FROM bets b
+
+      JOIN bet_targets bt
+        ON bt.bet_id = b.id
+
+      LEFT JOIN users creator
+        ON creator.id = b.creator_user_id
+
+      LEFT JOIN users target_user
+        ON bt.target_type = 'user'
+        AND target_user.id = bt.target_id
+
+      LEFT JOIN circles c
+        ON bt.target_type = 'circle'
+        AND c.circle_id = bt.target_id
+
+      LEFT JOIN bet_options bo
+        ON bo.bet_id = b.id
+
+      LEFT JOIN circle_members cm
+        ON bt.target_type = 'circle'
+        AND cm.circle_id = bt.target_id
+        AND cm.user_id = $1
+        AND cm.status = 'accepted'
+
+      WHERE
+        (
+          bt.target_type = 'user'
+          AND bt.target_id = $1
+        )
+        OR
+        (
+          bt.target_type = 'circle'
+          AND cm.user_id IS NOT NULL
+        )
+
+      GROUP BY 
+        b.id,
+        creator.username,
+        bt.target_type,
+        c.name,
+        c.icon,
+        target_user.username
+
+      ORDER BY b.created_at DESC
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("HOMEFEED ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.post("/bets/:betId/accept", async (req, res) => {
+  const { betId } = req.params;
+  const { selectedOptionId } = req.body;
+
+  const sessionId = req.header("x-session-id");
+  if (!sessionId) return res.status(401).json({ error: "Missing session" });
+
+  const userId = await getUserIdFromSession(sessionId);
+  if (!userId) return res.status(401).json({ error: "Invalid session" });
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
+      VALUES ($1, $2, 'accepted', $3)
+      ON CONFLICT (bet_id, user_id)
+      DO UPDATE SET
+        status = 'accepted',
+        selected_option_id = EXCLUDED.selected_option_id,
+        responded_at = now()
+      `,
+      [betId, userId, selectedOptionId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("ACCEPT ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/bets/:betId/decline", async (req, res) => {
+  const { betId } = req.params;
+
+  const sessionId = req.header("x-session-id");
+  if (!sessionId) return res.status(401).json({ error: "Missing session" });
+
+  const userId = await getUserIdFromSession(sessionId);
+  if (!userId) return res.status(401).json({ error: "Invalid session" });
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO bet_responses (bet_id, user_id, status)
+      VALUES ($1, $2, 'declined')
+      ON CONFLICT (bet_id, user_id)
+      DO UPDATE SET
+        status = 'declined',
+        responded_at = now()
+      `,
+      [betId, userId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DECLINE ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
