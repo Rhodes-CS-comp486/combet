@@ -886,6 +886,7 @@ app.delete("/circles/:circleId/leave", async (req, res) => {
 });
 
 app.get("/homefeed", async (req, res) => {
+    console.log("HOMEFEED ROUTE HIT");
   try {
     const sessionId = req.header("x-session-id");
     if (!sessionId)
@@ -904,7 +905,11 @@ app.get("/homefeed", async (req, res) => {
         b.created_at,
         b.stake_amount,
         b.status,
-        c.icon AS icon,
+       CASE
+  WHEN bt.target_type = 'circle' THEN COALESCE(c.icon, 'ellipse-outline')
+  WHEN bt.target_type = 'user' THEN 'people-outline'
+  ELSE 'ellipse-outline'
+END AS icon,
 
         creator.username AS creator_username,
 
@@ -972,6 +977,8 @@ app.get("/homefeed", async (req, res) => {
       [userId]
     );
 
+    console.log("HOMEFEED ROWS:", result.rows);
+
     res.json(result.rows);
 
   } catch (err) {
@@ -981,10 +988,7 @@ app.get("/homefeed", async (req, res) => {
 });
 
 
-const PORT = 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
 
 app.post("/bets/:betId/accept", async (req, res) => {
   const { betId } = req.params;
@@ -1044,4 +1048,9 @@ app.post("/bets/:betId/decline", async (req, res) => {
     console.error("DECLINE ERROR:", err);
     res.status(500).json({ error: "Server error" });
   }
+});
+
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
