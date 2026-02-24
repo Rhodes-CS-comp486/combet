@@ -132,6 +132,20 @@ export default function TabLayout() {
             headerShown: false,
         }}
         />
+         <Tabs.Screen
+            name="circle-profile/[id]/members"
+            options={{
+            href: null,              // ⬅️ THIS removes it from the tab bar
+            headerShown: false,
+        }}
+        />
+        <Tabs.Screen
+            name="circle-profile/[id]/add-friend"
+            options={{
+            href: null,              // ⬅️ THIS removes it from the tab bar
+            headerShown: false,
+        }}
+        />
 
     </Tabs>
 

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {getSessionId} from "@/components/sessionStore";
 
 const BASE_URL = "http://localhost:3001"; // changed from local host
 
@@ -57,15 +58,25 @@ export default function CreateCircle({
     try {
       setLoading(true);
 
-      const res = await fetch(`${BASE_URL}/circles`, {
+      const sessionId = await getSessionId();
+
+        if (!sessionId) {
+            Alert.alert("Not authenticated");
+            return;
+}
+
+    const res = await fetch(`${BASE_URL}/circles`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "session-id": sessionId || "",
+        },
         body: JSON.stringify({
-          name,
-          description,
-          icon,
+            name,
+            description,
+            icon,
         }),
-      });
+        });
 
       const data = await res.json();
 

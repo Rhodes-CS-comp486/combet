@@ -32,10 +32,25 @@ async function getUserIdFromSession(sessionId: string): Promise<string | null> {
  * CREATE CIRCLE
  */
 app.post("/circles", async (req, res) => {
+  console.log("BODY:", req.body); // testing
   const { name, description, icon } = req.body;
+  const sessionId = req.headers["session-id"];
+  console.log("SESSION HEADER:", sessionId); // testing
+
+  // Get user from session
+  const sessionResult = await pool.query(
+    `SELECT user_id FROM sessions WHERE session_id = $1`,
+    [sessionId]
+  );
+
+  const userId = sessionResult.rows[0]?.user_id;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Missing user id" });
+  }
 
   if (!name || name.length < 5 || name.length > 15) {
-    return res.status(400).json({ error: "Name must be 5–15 characters" });
+    return res.status(400).json({ error: "Name must be 5-15 characters" });
   }
 
   if (description && description.length > 100) {
@@ -43,29 +58,46 @@ app.post("/circles", async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
+    // 1️⃣ Insert circle
+    const circleResult = await pool.query(
       `
       INSERT INTO circles (name, description, icon)
       VALUES ($1, $2, $3)
-      RETURNING circle_id, name, description, icon, created_at
+      RETURNING circle_id
       `,
       [name, description, icon]
     );
 
-    res.status(201).json(result.rows[0]);
+    const circleId = circleResult.rows[0].circle_id;
+
+    // 2️⃣ Insert creator as ACCEPTED (not pending)
+    await pool.query(
+      `
+      INSERT INTO circle_members (circle_id, user_id, status)
+      VALUES ($1, $2, 'accepted')
+      `,
+      [circleId, userId]
+    );
+
+    res.status(201).json({ circle_id: circleId });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
-
 /**
  * GET ALL CIRCLES
  */
 app.get("/circles", async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT circle_id, name, description, icon FROM circles ORDER BY created_at DESC`
+
+        `SELECT c.*
+            FROM circles c
+            JOIN circle_members cm
+            ON cm.circle_id = c.circle_id
+            WHERE cm.user_id = $1;`
     );
     res.json(result.rows);
   } catch (err) {
@@ -271,15 +303,57 @@ app.post("/follows", async (req, res) => {
 });
 
 /**
+ * displays circles for that user
+ */
+app.get("/circles/my", async (req, res) => {
+  const sessionId = req.headers["user-id"];
+
+  if (!sessionId) {
+    return res.status(400).json({ error: "Missing session id" });
+  }
+
+  try {
+    // Get user_id from sessions table
+    const sessionResult = await pool.query(
+      `SELECT user_id FROM sessions WHERE session_id = $1`,
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid session" });
+    }
+
+    const userId = sessionResult.rows[0].user_id;
+
+    // Now use actual user_id
+    const circlesResult = await pool.query(
+      `
+      SELECT c.circle_id, c.name, c.icon
+      FROM circles c
+      JOIN circle_members m ON m.circle_id = c.circle_id
+      WHERE m.user_id = $1
+      `,
+      [userId]
+    );
+
+    res.json(circlesResult.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(200).json({ success: true });
+  }
+});
+
+/**
  * GET SINGLE CIRCLE
  */
-app.get("/circles/:id", async (req, res) => {
-  const { id } = req.params;
+app.get("/circles/:circleId", async (req, res) => {
+  const { circleId } = req.params;
 
   try {
     const result = await pool.query(
       "SELECT * FROM circles WHERE circle_id = $1",
-      [id]
+      [circleId]
     );
 
     if (result.rows.length === 0) {
@@ -289,15 +363,15 @@ app.get("/circles/:id", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Server error");
+    res.status(200).json({ success: true });
   }
 });
 
 /**
  * UPDATE CIRCLE
  */
-app.put("/circles/:id", async (req, res) => {
-  const { id } = req.params;
+app.put("/circles/:circleId", async (req, res) => {
+  const { circleId } = req.params;
   const { name, description, icon } = req.body;
 
   if (!name || name.length < 5 || name.length > 15) {
@@ -307,7 +381,7 @@ app.put("/circles/:id", async (req, res) => {
   if (description && description.length > 100) {
     return res.status(400).json({ error: "Description max 100 characters" });
   }
-
+ // update the circle from edit circle profile
   try {
     const result = await pool.query(
       `
@@ -318,7 +392,7 @@ app.put("/circles/:id", async (req, res) => {
       WHERE circle_id = $4
       RETURNING circle_id, name, description, icon
       `,
-      [name, description, icon, id]
+      [name, description, icon, circleId]
     );
 
     if (result.rows.length === 0) {
@@ -332,8 +406,451 @@ app.put("/circles/:id", async (req, res) => {
   }
 });
 
-const PORT = 3001;
+/**
+ * see members of a circle
+ */
+app.get("/circles/:id/members", async (req, res) => {
+  const circleId = req.params.id;
+ // see members of the circle were they have also accepted the invite
+  try {
+    const result = await pool.query(
+      `
+      SELECT u.id, u.username
+      FROM circle_members cm
+      JOIN users u ON cm.user_id = u.id
+      WHERE cm.circle_id = $1
+      AND cm.status = 'accepted'
+      `,
+      [circleId]
+    );
 
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching members:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/**
+ * search friends to add to a circle
+ * someone who is requested by a user in a circle will show as requested by another user
+ */
+app.get("/circles/:circleId/search-friends", async (req, res) => {
+  const { circleId } = req.params;
+  const sessionId = req.headers["session-id"];
+  const query = req.query.q;
+
+  const userResult = await pool.query(
+    `SELECT user_id FROM sessions WHERE session_id = $1`,
+    [sessionId]
+  );
+
+  const currentUserId = userResult.rows[0]?.user_id;
+  const result = await pool.query(
+    ` SELECT 
+  u.id,
+  u.username,
+  cm.status AS member_status,
+  ci.status AS invite_status, 
+  ci.inviter_id
+FROM follows f
+JOIN users u ON u.id = f.following_id
+
+LEFT JOIN circle_members cm
+  ON cm.user_id = u.id
+  AND cm.circle_id = $2
+
+LEFT JOIN circle_invites ci
+  ON ci.invitee_id = u.id
+  AND ci.circle_id = $2
+  AND ci.status = 'pending'
+
+WHERE f.follower_id = $1
+AND u.username ILIKE $3`,
+    [currentUserId, circleId, `%${query}%`]
+  );
+
+  const normalized = result.rows.map(row => {
+  let status: "accepted" | "pending" | null = null;
+  let invitedByMe = false;
+
+  if (row.member_status === "accepted") {
+    status = "accepted";
+  } else if (row.invite_status === "pending") {
+    status = "pending";
+    invitedByMe = row.inviter_id === currentUserId;
+  }
+
+  return {
+    id: row.id,
+    username: row.username,
+    status,
+    invitedByMe
+  };
+});
+
+res.json(normalized);
+});
+
+/**
+ * invite friends to a circle
+ */
+app.post("/circles/:circleId/invite", async (req, res) => {
+  const { circleId } = req.params;
+  const { inviteeId } = req.body;
+  const sessionId = req.headers["session-id"];
+
+  if (!sessionId) return res.status(401).json({ error: "Not authenticated" });
+
+  const session = await pool.query(
+    "SELECT user_id FROM sessions WHERE session_id = $1",
+    [sessionId]
+  );
+
+  if (!session.rows.length)
+    return res.status(401).json({ error: "Invalid session" });
+
+  const inviterId = session.rows[0].user_id;
+
+  // prevent duplicate pending invite
+  const existing = await pool.query(
+    `
+    SELECT 1 FROM circle_invites
+    WHERE circle_id = $1
+    AND invitee_id = $2
+    AND status = 'pending'
+    `,
+    [circleId, inviteeId]
+  );
+
+  if (existing.rows.length)
+    return res.status(400).json({ error: "Already invited" });
+
+  // create invite
+  const invite = await pool.query(
+    `
+    INSERT INTO circle_invites
+    (circle_id, inviter_id, invitee_id, status)
+    VALUES ($1, $2, $3, 'pending')
+    RETURNING invite_id
+    `,
+    [circleId, inviterId, inviteeId]
+  );
+
+  const inviteId = invite.rows[0].invite_id;
+
+  // create notification referencing invite_id
+  await pool.query(
+    `
+    INSERT INTO notifications
+    (recipient_id, actor_id, type, entity_type, entity_id)
+    VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)
+    `,
+    [inviteeId, inviterId, inviteId]
+  );
+
+  res.json({ success: true, inviteId });
+});
+
+/**
+ * this retracts an invite if the original inviter retracts the invite
+ */
+app.delete("/circles/:circleId/retract/:inviteeId", async (req, res) => {
+  const { circleId, inviteeId } = req.params;
+  const sessionId = req.headers["session-id"];
+
+  if (!sessionId)
+    return res.status(401).json({ error: "Not authenticated" });
+
+  const session = await pool.query(
+    "SELECT user_id FROM sessions WHERE session_id = $1",
+    [sessionId]
+  );
+
+  if (!session.rows.length)
+    return res.status(401).json({ error: "Invalid session" });
+
+  const currentUserId = session.rows[0].user_id;
+
+  // Get invite_id first
+  const invite = await pool.query(
+    `
+    SELECT invite_id
+    FROM circle_invites
+    WHERE circle_id = $1
+    AND invitee_id = $2
+    AND inviter_id = $3
+    AND status = 'pending'
+    `,
+    [circleId, inviteeId, currentUserId]
+  );
+
+  if (!invite.rows.length) {
+    return res.status(403).json({ error: "Cannot retract this invite" });
+  }
+
+  const inviteId = invite.rows[0].invite_id;
+
+  // Delete invite
+  await pool.query(
+    `
+    DELETE FROM circle_invites
+    WHERE invite_id = $1
+    `,
+    [inviteId]
+  );
+
+  // Delete matching notification
+  await pool.query(
+    `
+    DELETE FROM notifications
+    WHERE recipient_id = $1
+    AND entity_id = $2
+    AND entity_type = 'circle_invite'
+    `,
+    [inviteeId, inviteId]
+  );
+
+  res.json({ success: true });
+});
+
+
+/**
+ * add invite to inbox
+ */
+app.get("/inbox", async (req, res) => {
+  const sessionId = req.headers["session-id"];
+  if (!sessionId) return res.status(401).json({ error: "Not authenticated" });
+
+  const session = await pool.query(
+    "SELECT user_id FROM sessions WHERE session_id = $1",
+    [sessionId]
+  );
+
+  if (!session.rows.length)
+    return res.status(401).json({ error: "Invalid session" });
+
+  const userId = session.rows[0].user_id;
+
+  const result = await pool.query(
+    `
+  SELECT 
+    n.notification_id,
+    n.type,
+    n.entity_id,
+    n.is_read,
+    n.created_at,
+    u.username AS actor_username,
+    c.name AS circle_name,
+    ci.invite_id,
+    ci.status
+  FROM notifications n
+  JOIN circle_invites ci
+    ON ci.invite_id = n.entity_id
+  LEFT JOIN users u ON n.actor_id = u.id
+  LEFT JOIN circles c ON ci.circle_id = c.circle_id
+  WHERE n.recipient_id = $1
+  AND n.entity_type = 'circle_invite'
+  ORDER BY n.created_at DESC
+  `,
+  [userId]
+);
+
+  res.json(result.rows);
+});
+
+/**
+ * accept invite to a circle
+ */
+app.post("/invites/:inviteId/accept", async (req, res) => {
+  const { inviteId } = req.params;
+  const sessionId = req.headers["session-id"];
+
+  if (!sessionId) return res.status(401).json({ error: "Not authenticated" });
+
+  const session = await pool.query(
+    "SELECT user_id FROM sessions WHERE session_id = $1",
+    [sessionId]
+  );
+
+  if (!session.rows.length)
+    return res.status(401).json({ error: "Invalid session" });
+
+  const userId = session.rows[0].user_id;
+
+  const invite = await pool.query(
+    `
+    SELECT * FROM circle_invites
+    WHERE invite_id = $1
+    AND invitee_id = $2
+    AND status = 'pending'
+    `,
+    [inviteId, userId]
+  );
+
+  if (!invite.rows.length)
+    return res.status(400).json({ error: "Invite not found" });
+
+  const circleId = invite.rows[0].circle_id;
+
+  // if accepted invite -> mark invite accepted
+  await pool.query(
+    `
+    UPDATE circle_invites
+    SET status = 'accepted'
+    WHERE invite_id = $1
+    `,
+    [inviteId]
+  );
+
+  // if accepted invite -> add to members
+  await pool.query(
+    `
+    INSERT INTO circle_members (circle_id, user_id, status, joined_at)
+    VALUES ($1, $2, 'accepted', NOW())`,
+    [circleId, userId]
+  );
+
+  // if accepted invite -> notification has been read
+  await pool.query(
+    `
+    UPDATE notifications
+    SET is_read = true
+    WHERE recipient_id = $1
+    AND entity_id = $2
+    AND entity_type = 'circle_invite'
+    `,
+    [userId, inviteId]
+  );
+
+  res.json({ success: true });
+});
+
+/**
+ * decline invite to a circle
+ */
+app.post("/invites/:inviteId/decline", async (req, res) => {
+  const { inviteId } = req.params;
+  const sessionId = req.headers["session-id"];
+
+  if (!sessionId)
+    return res.status(401).json({ error: "Not authenticated" });
+
+  const session = await pool.query(
+    "SELECT user_id FROM sessions WHERE session_id = $1",
+    [sessionId]
+  );
+
+  if (!session.rows.length)
+    return res.status(401).json({ error: "Invalid session" });
+
+  const currentUserId = session.rows[0].user_id;
+
+  // 1️⃣ Delete the invite
+  await pool.query(
+    `
+    DELETE FROM circle_invites
+    WHERE invite_id = $1
+    AND invitee_id = $2
+    `,
+    [inviteId, currentUserId]
+  );
+
+  // 2️⃣ Delete the notification that references this invite
+  await pool.query(
+    `
+    DELETE FROM notifications
+    WHERE recipient_id = $1
+    AND entity_id = $2
+    AND entity_type = 'circle_invite'
+    `,
+    [currentUserId, inviteId]
+  );
+
+  res.json({ success: true });
+});
+
+/**
+ * LEAVE CIRCLE
+ */
+app.delete("/circles/:circleId/leave", async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const sessionId = req.headers["session-id"] as string;
+    if (!sessionId) {
+      return res.status(401).json({ error: "Missing session" });
+    }
+
+    const { circleId } = req.params;
+
+    await client.query("BEGIN");
+
+    // 1️⃣ Get user from session
+    const userResult = await client.query(
+      `
+      SELECT u.id
+      FROM sessions s
+      JOIN users u ON u.id = s.user_id
+      WHERE s.session_id = $1
+      `,
+      [sessionId]
+    );
+
+    if (userResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(401).json({ error: "Invalid session" });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // 2️⃣ Remove membership
+    await client.query(
+      `
+      DELETE FROM circle_members
+      WHERE circle_id = $1
+      AND user_id = $2
+      `,
+      [circleId, userId]
+    );
+
+    // 3️⃣ Check if any members remain
+    const remaining = await client.query(
+      `
+      SELECT COUNT(*) 
+      FROM circle_members
+      WHERE circle_id = $1
+      `,
+      [circleId]
+    );
+
+    const memberCount = parseInt(remaining.rows[0].count, 10);
+
+    // 4️⃣ If no members → delete circle
+    if (memberCount === 0) {
+      await client.query(
+        `
+        DELETE FROM circles
+        WHERE circle_id = $1
+        `,
+        [circleId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    res.json({ success: true });
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Leave circle error:", err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
+const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
