@@ -210,10 +210,10 @@ export default function HomeScreen() {
                       }}
                     >
                       <Ionicons
-                        name={item.icon}
-                        size={24}
-                        color="#3B82F6"
-                      />
+                      name={item.icon || "ellipse"}
+                      size={24}
+                      color="#3B82F6"
+                    />
                     </View>
 
                     {/* Text Content */}
