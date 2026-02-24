@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
+import { useEffect } from "react";
 
 export default function AddBet() {
   const [postTo, setPostTo] = useState<"circles" | "friends">("circles");
@@ -20,6 +21,46 @@ export default function AddBet() {
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [stake, setStake] = useState("");
   const [closeAt, setCloseAt] = useState("");
+
+  const [targets, setTargets] = useState<any[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+useEffect(() => {
+  const fetchTargets = async () => {
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+
+      const endpoint =
+        postTo === "circles"
+          ? "http://localhost:3001/circles/my"
+          : "http://localhost:3001/friends/my";
+
+      const res = await fetch(endpoint, {
+        headers: { "x-session-id": sessionId },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setTargets(data);
+        setSelectedTargetId(null);
+      }
+    } catch (err) {
+      console.error("Fetch targets error:", err);
+    }
+  };
+
+  fetchTargets();
+}, [postTo]);
+
+const filteredTargets = targets.filter((item) => {
+  const name = item.name ?? item.username;
+  return name
+    ?.toLowerCase()
+    .includes(searchQuery.toLowerCase());
+});
 
   const inputStyle = (value: string) => [
     styles.input,
@@ -49,7 +90,7 @@ export default function AddBet() {
 
       const cleanedOptions = options.filter((opt) => opt.trim() !== "");
 
-      if (!title || !description || !stake || cleanedOptions.length < 2) {
+      if (!title || !description || !stake || cleanedOptions.length < 2 || !selectedTargetId) {
         Alert.alert("Missing Fields", "Please complete all required fields.");
         return;
       }
@@ -67,7 +108,7 @@ export default function AddBet() {
           closesAt: closeAt || null,
           options: cleanedOptions,
           targetType: postTo === "circles" ? "circle" : "user",
-          targetId: "TEMP_TARGET_ID",
+          targetId: selectedTargetId,
         }),
       });
 
@@ -153,32 +194,97 @@ export default function AddBet() {
       </View>
 
       {/* WHO + STAKE ROW */}
-      <View style={styles.row}>
-        {/* WHO CARD */}
-        <View style={[styles.card, styles.halfCardLeft]}>
-          <Text style={styles.sectionTitle}>Who’s In?</Text>
+        <View style={styles.row}>
 
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              postTo === "circles" && styles.toggleActive,
-            ]}
-            onPress={() => setPostTo("circles")}
-          >
-            <Text style={styles.toggleText}>Circles</Text>
-          </TouchableOpacity>
+          {/* WHO CARD */}
+          <View style={[styles.card, styles.halfCardLeft]}>
+            <Text style={styles.sectionTitle}>Who’s In?</Text>
 
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              postTo === "friends" && styles.toggleActive,
-            ]}
-            onPress={() => setPostTo("friends")}
-          >
-            <Text style={styles.toggleText}>Friends</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Toggle */}
+            <View style={{ marginBottom: 12 }}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  postTo === "circles" && styles.toggleActive,
+                ]}
+                onPress={() => {
+                  setPostTo("circles");
+                  setSearchQuery("");
+                  setSelectedTargetId(null);
+                }}
+              >
+                <Text style={styles.toggleText}>Circles</Text>
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  postTo === "friends" && styles.toggleActive,
+                ]}
+                onPress={() => {
+                  setPostTo("friends");
+                  setSearchQuery("");
+                  setSelectedTargetId(null);
+                }}
+              >
+                <Text style={styles.toggleText}>Friends</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={`Search ${postTo}`}
+              placeholderTextColor="#94a3b8"
+              style={styles.input}
+            />
+
+            {/* Selected Target Display (collapsed state) */}
+            {selectedTargetId && searchQuery.length === 0 && (
+              <View style={[styles.toggleButton, styles.toggleActive]}>
+                <Text style={styles.toggleText}>
+                  {
+                    targets.find(
+                      (t) =>
+                        (t.id ?? t.circle_id) === selectedTargetId
+                    )?.name ??
+                    targets.find(
+                      (t) =>
+                        (t.id ?? t.circle_id) === selectedTargetId
+                    )?.username
+                  }
+                </Text>
+              </View>
+            )}
+
+            {/* Search Results (only when typing) */}
+            {searchQuery.length > 0 &&
+              targets
+                .filter((item) => {
+                  const name = item.name ?? item.username;
+                  return name
+                    ?.toLowerCase()
+                    .includes(searchQuery.toLowerCase());
+                })
+                .map((item) => {
+                  const id = item.id ?? item.circle_id;
+                  const name = item.name ?? item.username;
+
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={styles.toggleButton}
+                      onPress={() => {
+                        setSelectedTargetId(id);
+                        setSearchQuery(""); // collapse results
+                      }}
+                    >
+                      <Text style={styles.toggleText}>{name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+          </View>
         {/* STAKE CARD */}
         <View style={[styles.card, styles.halfCardRight]}>
           <Text style={styles.sectionTitle}>Stake & Close</Text>
