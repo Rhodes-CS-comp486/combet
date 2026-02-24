@@ -12,6 +12,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import SearchBar from "../../components/searchbar";
 import { useFocusEffect } from "@react-navigation/native";
+import {getSessionId} from "@/components/sessionStore";
+
 
 
 type Circle = {
@@ -26,15 +28,49 @@ export default function CirclesScreen() {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [q, setQ] = useState("");
 
+
   // Fetch circles
-    useFocusEffect(
-        useCallback(() => {
-        fetch("http://localhost:3001/circles")
-        .then((res) => res.json())
-        .then((data) => setCircles(data))
-        .catch((err) => console.error(err));
-    }, [])
-    );
+   useFocusEffect(
+  useCallback(() => {
+    let isActive = true;
+
+    const loadCircles = async () => {
+      try {
+        const sessionId = await getSessionId();
+
+        if (!sessionId) {
+          console.log("No session found");
+          return;
+        }
+
+        const res = await fetch("http://localhost:3001/circles/my", {
+          headers: {
+            "user-id": sessionId,
+          },
+        });
+
+        if (!res.ok) {
+          console.log("Failed to fetch circles");
+          return;
+        }
+
+        const data = await res.json();
+
+        if (isActive) {
+          setCircles(data);
+        }
+      } catch (err) {
+        console.error("Error fetching circles:", err);
+      }
+    };
+
+    loadCircles();
+
+    return () => {
+      isActive = false;
+    };
+  }, [])
+);
 
   // Search filtering
   const filtered = useMemo(() => {

@@ -1,3 +1,4 @@
+// Circle Profile
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -5,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import {getSessionId} from "@/components/sessionStore";
 
 
 type Circle = {
@@ -37,7 +40,32 @@ export default function CircleProfile() {
   }, [circleId])
   );
 
+const handleLeaveCircle = async () => {
+  try {
+    const sessionId = await getSessionId();
+    if (!sessionId) return;
+
+    await fetch(
+      `http://localhost:3001/circles/${circleId}/leave`,
+      {
+        method: "DELETE",
+        headers: {
+          "session-id": sessionId,
+        },
+      }
+    );
+
+    // After leaving → go back to circles list
+    router.replace("/(tabs)/circles");
+
+  } catch (err) {
+    console.error("Leave circle error:", err);
+  }
+};
+
+
   if (!circle) return null;
+
 
   return (
     <View style={styles.container}>
@@ -77,7 +105,10 @@ export default function CircleProfile() {
 
           {/* Buttons */}
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.sideButton}>
+            <TouchableOpacity
+                style={styles.sideButton}
+                onPress={() => router.push(`/circle-profile/${circleId}/members`)}
+            >
               <Text style={styles.sideButtonText}>See Members</Text>
             </TouchableOpacity>
 
@@ -90,9 +121,20 @@ export default function CircleProfile() {
               <Text style={styles.editButtonText}>Edit Circle</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.sideButton}>
+            <TouchableOpacity
+                style={styles.sideButton}
+                onPress={() => router.push(`/circle-profile/${circleId}/add-friend`)}>
               <Text style={styles.sideButtonText}>Add Friend</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+                style={styles.sideButton}
+                onPress={handleLeaveCircle}
+            >
+              <Text style={styles.sideButtonText}>Leave Circle</Text>
+            </TouchableOpacity>
+
+
           </View>
         </View>
 
@@ -278,4 +320,5 @@ const styles = StyleSheet.create({
       marginBottom: 0,
       alignSelf: "center",
     },
+
 });
