@@ -141,12 +141,11 @@ export default function HomeScreen() {
               No matches.
             </Text>
           ) : (
-            <FlatList
+              <FlatList
               style={{ marginTop: 12 }}
               data={results}
               keyExtractor={(item) => `${item.type}:${item.id}`}
               renderItem={({ item }) => {
-
                 const isUser = item.type === "user";
 
                 return (
@@ -157,21 +156,70 @@ export default function HomeScreen() {
                       marginBottom: 10,
                       backgroundColor: "#0F2A44",
                       flexDirection: "row",
+                      alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 12,
                     }}
                   >
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={{ color: "#fff", fontWeight: "600" }}>
                         {item.label}
                       </Text>
-                      <Text style={{ color: "rgba(255,255,255,0.7)" }}>
-                        {isUser ? `@${item.subtitle}` : "circle"}
-                      </Text>
+
+                      {isUser ? (
+                        item.isFriend ? (
+                          <Text
+                            style={{
+                              color: "rgba(255,255,255,0.7)",
+                              marginTop: 4,
+                            }}
+                          >
+                            Friend
+                          </Text>
+                        ) : (
+                          <Text
+                            style={{
+                              color: "rgba(255,255,255,0.7)",
+                              marginTop: 4,
+                            }}
+                          >
+                            @{item.subtitle}
+                          </Text>
+                        )
+                      ) : (
+                        <Text
+                          style={{
+                            color: "rgba(255,255,255,0.7)",
+                            marginTop: 4,
+                          }}
+                        >
+                          circle
+                        </Text>
+                      )}
                     </View>
+
+                    {isUser && !item.isFriend && (
+                      <TouchableOpacity
+                        onPress={() => followUser(item.id)}
+                        style={{
+                          backgroundColor: "#2E6CF6",
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 999,
+                        }}
+                      >
+                        <Text style={{ color: "#fff", fontWeight: "700" }}>
+                          Follow
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </Pressable>
                 );
               }}
             />
+
+
+
           )
         ) : (
           // 🏠 SHOW FEED
