@@ -1,0 +1,571 @@
+<html>
+<head>
+<title>add-bet.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #2aacb8;}
+.s5 { color: #7a7e85;}
+.s6 { color: #d5b778;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+add-bet.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">React</span><span class="s2">, { </span><span class="s1">useState</span><span class="s2">, </span><span class="s1">useEffect </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">View</span><span class="s2">, </span><span class="s1">ScrollView</span><span class="s2">, </span><span class="s1">Alert</span><span class="s2">, </span><span class="s1">Pressable</span><span class="s2">, </span><span class="s1">TouchableOpacity </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{</span>
+  <span class="s1">Text</span><span class="s2">,</span>
+  <span class="s1">TextInput</span><span class="s2">,</span>
+  <span class="s1">Button</span><span class="s2">,</span>
+  <span class="s1">Surface</span><span class="s2">,</span>
+  <span class="s1">HelperText</span><span class="s2">,</span>
+  <span class="s1">SegmentedButtons</span><span class="s2">,</span>
+<span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native-paper&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Ionicons </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@expo/vector-icons&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">router </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;expo-router&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">getSessionId </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/components/sessionStore&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useAppTheme </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/context/ThemeContext&quot;</span><span class="s2">;</span>
+
+<span class="s0">export default function </span><span class="s1">AddBet</span><span class="s2">() {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">theme</span><span class="s2">, </span><span class="s1">isDark </span><span class="s2">} = </span><span class="s1">useAppTheme</span><span class="s2">();</span>
+
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">postTo</span><span class="s2">, </span><span class="s1">setPostTo</span><span class="s2">]                   = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s3">&quot;circles&quot; </span><span class="s2">| </span><span class="s3">&quot;friends&quot;</span><span class="s2">&gt;(</span><span class="s3">&quot;circles&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">title</span><span class="s2">, </span><span class="s1">setTitle</span><span class="s2">]                     = </span><span class="s1">useState</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">description</span><span class="s2">, </span><span class="s1">setDescription</span><span class="s2">]         = </span><span class="s1">useState</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">options</span><span class="s2">, </span><span class="s1">setOptions</span><span class="s2">]                 = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">string</span><span class="s2">[]&gt;([</span><span class="s3">&quot;&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">]);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">stake</span><span class="s2">, </span><span class="s1">setStake</span><span class="s2">]                     = </span><span class="s1">useState</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">closeAt</span><span class="s2">, </span><span class="s1">setCloseAt</span><span class="s2">]                 = </span><span class="s1">useState</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">targets</span><span class="s2">, </span><span class="s1">setTargets</span><span class="s2">]                 = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">any</span><span class="s2">[]&gt;([]);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">selectedTargetId</span><span class="s2">, </span><span class="s1">setSelectedTargetId</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">&gt;(</span><span class="s0">null</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">selectedTargetName</span><span class="s2">, </span><span class="s1">setSelectedTargetName</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">&gt;(</span><span class="s0">null</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">searchQuery</span><span class="s2">, </span><span class="s1">setSearchQuery</span><span class="s2">]         = </span><span class="s1">useState</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">loading</span><span class="s2">, </span><span class="s1">setLoading</span><span class="s2">]                 = </span><span class="s1">useState</span><span class="s2">(</span><span class="s0">false</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">step</span><span class="s2">, </span><span class="s1">setStep</span><span class="s2">]                       = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s4">1 </span><span class="s2">| </span><span class="s4">2 </span><span class="s2">| </span><span class="s4">3</span><span class="s2">&gt;(</span><span class="s4">1</span><span class="s2">);</span>
+
+  <span class="s5">// ── Fetch circles or friends ─────────────────────────────────────────────</span>
+  <span class="s1">useEffect</span><span class="s2">(() =&gt; {</span>
+    <span class="s0">const </span><span class="s1">fetchTargets </span><span class="s2">= </span><span class="s1">async </span><span class="s2">() =&gt; {</span>
+      <span class="s0">try </span><span class="s2">{</span>
+        <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+        <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+        <span class="s0">const </span><span class="s1">endpoint </span><span class="s2">= </span><span class="s1">postTo </span><span class="s2">=== </span><span class="s3">&quot;circles&quot;</span>
+          <span class="s2">? </span><span class="s3">&quot;http://localhost:3001/circles/my&quot;</span>
+          <span class="s2">: </span><span class="s3">&quot;http://localhost:3001/users/friends&quot;</span><span class="s2">;</span>
+        <span class="s0">const </span><span class="s1">res </span><span class="s2">= </span><span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s1">endpoint</span><span class="s2">, { </span><span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">} });</span>
+        <span class="s0">const </span><span class="s1">data </span><span class="s2">= </span><span class="s0">await </span><span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">();</span>
+        <span class="s0">if </span><span class="s2">(</span><span class="s1">res</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">) { </span><span class="s1">setTargets</span><span class="s2">(</span><span class="s1">data</span><span class="s2">); </span><span class="s1">setSelectedTargetId</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); </span><span class="s1">setSelectedTargetName</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); }</span>
+      <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+        <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Fetch targets error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+      <span class="s2">}</span>
+    <span class="s2">};</span>
+    <span class="s1">fetchTargets</span><span class="s2">();</span>
+  <span class="s2">}, [</span><span class="s1">postTo</span><span class="s2">]);</span>
+
+  <span class="s0">const </span><span class="s1">filteredTargets </span><span class="s2">= </span><span class="s1">targets</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">item</span><span class="s2">) =&gt; {</span>
+    <span class="s0">const </span><span class="s1">name </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">name </span><span class="s2">?? </span><span class="s1">item</span><span class="s2">.</span><span class="s1">username</span><span class="s2">;</span>
+    <span class="s0">return </span><span class="s1">name</span><span class="s2">?.</span><span class="s1">toLowerCase</span><span class="s2">().</span><span class="s1">includes</span><span class="s2">(</span><span class="s1">searchQuery</span><span class="s2">.</span><span class="s1">toLowerCase</span><span class="s2">());</span>
+  <span class="s2">});</span>
+
+  <span class="s0">const </span><span class="s1">updateOption </span><span class="s2">= (</span><span class="s1">index</span><span class="s2">: </span><span class="s1">number</span><span class="s2">, </span><span class="s1">text</span><span class="s2">: </span><span class="s1">string</span><span class="s2">) =&gt; {</span>
+    <span class="s0">const </span><span class="s1">updated </span><span class="s2">= [</span><span class="s1">...options</span><span class="s2">];</span>
+    <span class="s1">updated</span><span class="s2">[</span><span class="s1">index</span><span class="s2">] = </span><span class="s1">text</span><span class="s2">;</span>
+    <span class="s1">setOptions</span><span class="s2">(</span><span class="s1">updated</span><span class="s2">);</span>
+  <span class="s2">};</span>
+
+  <span class="s0">const </span><span class="s1">removeOption </span><span class="s2">= (</span><span class="s1">index</span><span class="s2">: </span><span class="s1">number</span><span class="s2">) =&gt; {</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">options</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&lt;= </span><span class="s4">2</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+    <span class="s1">setOptions</span><span class="s2">(</span><span class="s1">options</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">_</span><span class="s2">, </span><span class="s1">i</span><span class="s2">) =&gt; </span><span class="s1">i </span><span class="s2">!== </span><span class="s1">index</span><span class="s2">));</span>
+  <span class="s2">};</span>
+
+  <span class="s5">// ── Validation per step ──────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">canProceedStep1 </span><span class="s2">= </span><span class="s1">title</span><span class="s2">.</span><span class="s1">trim</span><span class="s2">().</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s4">0 </span><span class="s2">&amp;&amp; </span><span class="s1">description</span><span class="s2">.</span><span class="s1">trim</span><span class="s2">().</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s4">0</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">canProceedStep2 </span><span class="s2">= </span><span class="s1">options</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">o</span><span class="s2">) =&gt; </span><span class="s1">o</span><span class="s2">.</span><span class="s1">trim</span><span class="s2">()).</span><span class="s1">length </span><span class="s2">&gt;= </span><span class="s4">2</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">canSubmit       </span><span class="s2">= </span><span class="s1">canProceedStep1 </span><span class="s2">&amp;&amp; </span><span class="s1">canProceedStep2 </span><span class="s2">&amp;&amp; !!</span><span class="s1">selectedTargetId </span><span class="s2">&amp;&amp; !!</span><span class="s1">stake</span><span class="s2">;</span>
+
+  <span class="s0">const </span><span class="s1">handleCreateBet </span><span class="s2">= </span><span class="s1">async </span><span class="s2">() =&gt; {</span>
+    <span class="s0">try </span><span class="s2">{</span>
+      <span class="s1">setLoading</span><span class="s2">(</span><span class="s0">true</span><span class="s2">);</span>
+      <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) { </span><span class="s1">Alert</span><span class="s2">.</span><span class="s1">alert</span><span class="s2">(</span><span class="s3">&quot;Error&quot;</span><span class="s2">, </span><span class="s3">&quot;Not logged in&quot;</span><span class="s2">); </span><span class="s0">return</span><span class="s2">; }</span>
+
+      <span class="s0">const </span><span class="s1">cleanedOptions </span><span class="s2">= </span><span class="s1">options</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">o</span><span class="s2">) =&gt; </span><span class="s1">o</span><span class="s2">.</span><span class="s1">trim</span><span class="s2">() !== </span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+
+      <span class="s0">const </span><span class="s1">response </span><span class="s2">= </span><span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s3">&quot;http://localhost:3001/bets&quot;</span><span class="s2">, {</span>
+        <span class="s1">method</span><span class="s2">: </span><span class="s3">&quot;POST&quot;</span><span class="s2">,</span>
+        <span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;Content-Type&quot;</span><span class="s2">: </span><span class="s3">&quot;application/json&quot;</span><span class="s2">, </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">},</span>
+        <span class="s1">body</span><span class="s2">: </span><span class="s1">JSON</span><span class="s2">.</span><span class="s1">stringify</span><span class="s2">({</span>
+          <span class="s1">title</span><span class="s2">,</span>
+          <span class="s1">description</span><span class="s2">,</span>
+          <span class="s1">stake</span><span class="s2">:      </span><span class="s1">Number</span><span class="s2">(</span><span class="s1">stake</span><span class="s2">),</span>
+          <span class="s1">closesAt</span><span class="s2">:   </span><span class="s1">closeAt </span><span class="s2">|| </span><span class="s0">null</span><span class="s2">,</span>
+          <span class="s1">options</span><span class="s2">:    </span><span class="s1">cleanedOptions</span><span class="s2">,</span>
+          <span class="s1">targetType</span><span class="s2">: </span><span class="s1">postTo </span><span class="s2">=== </span><span class="s3">&quot;circles&quot; </span><span class="s2">? </span><span class="s3">&quot;circle&quot; </span><span class="s2">: </span><span class="s3">&quot;user&quot;</span><span class="s2">,</span>
+          <span class="s1">targetId</span><span class="s2">:   </span><span class="s1">selectedTargetId</span><span class="s2">,</span>
+        <span class="s2">}),</span>
+      <span class="s2">});</span>
+
+      <span class="s0">const </span><span class="s1">data </span><span class="s2">= </span><span class="s0">await </span><span class="s1">response</span><span class="s2">.</span><span class="s1">json</span><span class="s2">();</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">response</span><span class="s2">.</span><span class="s1">ok</span><span class="s2">) { </span><span class="s1">Alert</span><span class="s2">.</span><span class="s1">alert</span><span class="s2">(</span><span class="s3">&quot;Error&quot;</span><span class="s2">, </span><span class="s1">data</span><span class="s2">.</span><span class="s1">error </span><span class="s2">|| </span><span class="s3">&quot;Failed to create bet&quot;</span><span class="s2">); </span><span class="s0">return</span><span class="s2">; }</span>
+
+      <span class="s5">// Reset</span>
+      <span class="s1">setTitle</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">); </span><span class="s1">setDescription</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">); </span><span class="s1">setOptions</span><span class="s2">([</span><span class="s3">&quot;&quot;</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">]); </span><span class="s1">setStake</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">);</span>
+      <span class="s1">setCloseAt</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">); </span><span class="s1">setPostTo</span><span class="s2">(</span><span class="s3">&quot;circles&quot;</span><span class="s2">); </span><span class="s1">setSelectedTargetId</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">1</span><span class="s2">);</span>
+      <span class="s1">router</span><span class="s2">.</span><span class="s1">back</span><span class="s2">();</span>
+    <span class="s2">} </span><span class="s0">catch </span><span class="s2">{</span>
+      <span class="s1">Alert</span><span class="s2">.</span><span class="s1">alert</span><span class="s2">(</span><span class="s3">&quot;Network Error&quot;</span><span class="s2">, </span><span class="s3">&quot;Could not connect to server&quot;</span><span class="s2">);</span>
+    <span class="s2">} </span><span class="s0">finally </span><span class="s2">{</span>
+      <span class="s1">setLoading</span><span class="s2">(</span><span class="s0">false</span><span class="s2">);</span>
+    <span class="s2">}</span>
+  <span class="s2">};</span>
+
+  <span class="s0">const </span><span class="s1">cardBg   </span><span class="s2">= </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#0D1F35&quot; </span><span class="s2">: </span><span class="s3">&quot;#ffffff&quot;</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">subtleBg </span><span class="s2">= </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#091828&quot; </span><span class="s2">: </span><span class="s3">&quot;#f2f6ff&quot;</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">optionColors </span><span class="s2">= [</span><span class="s3">&quot;#1D4ED8&quot;</span><span class="s2">, </span><span class="s3">&quot;#2E6CF6&quot;</span><span class="s2">, </span><span class="s3">&quot;#60A5FA&quot;</span><span class="s2">, </span><span class="s3">&quot;#93C5FD&quot;</span><span class="s2">];</span>
+
+  <span class="s5">// ── Step indicator ───────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">StepIndicator </span><span class="s2">= () =&gt; (</span>
+    <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">24 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+      <span class="s2">{[</span><span class="s4">1</span><span class="s2">, </span><span class="s4">2</span><span class="s2">, </span><span class="s4">3</span><span class="s2">].</span><span class="s1">map</span><span class="s2">((</span><span class="s1">s</span><span class="s2">) =&gt; (</span>
+        <span class="s6">&lt;React.Fragment </span><span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">s</span><span class="s2">}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;Pressable </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; {</span>
+            <span class="s0">if </span><span class="s2">(</span><span class="s1">s </span><span class="s2">&lt; </span><span class="s1">step</span><span class="s2">) </span><span class="s1">setStep</span><span class="s2">(</span><span class="s1">s </span><span class="s2">as </span><span class="s4">1 </span><span class="s2">| </span><span class="s4">2 </span><span class="s2">| </span><span class="s4">3</span><span class="s2">);</span>
+            <span class="s0">else if </span><span class="s2">(</span><span class="s1">s </span><span class="s2">=== </span><span class="s4">2 </span><span class="s2">&amp;&amp; </span><span class="s1">canProceedStep1</span><span class="s2">) </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">2</span><span class="s2">);</span>
+            <span class="s0">else if </span><span class="s2">(</span><span class="s1">s </span><span class="s2">=== </span><span class="s4">3 </span><span class="s2">&amp;&amp; </span><span class="s1">canProceedStep1 </span><span class="s2">&amp;&amp; </span><span class="s1">canProceedStep2</span><span class="s2">) </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">3</span><span class="s2">);</span>
+          <span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">width</span><span class="s2">:           </span><span class="s4">32</span><span class="s2">,</span>
+              <span class="s1">height</span><span class="s2">:          </span><span class="s4">32</span><span class="s2">,</span>
+              <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">16</span><span class="s2">,</span>
+              <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">step </span><span class="s2">&gt;= </span><span class="s1">s </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: (</span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#1a2f4a&quot; </span><span class="s2">: </span><span class="s3">&quot;#e0e7ff&quot;</span><span class="s2">),</span>
+              <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+              <span class="s1">justifyContent</span><span class="s2">:  </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+              <span class="s1">shadowColor</span><span class="s2">:     </span><span class="s1">step </span><span class="s2">=== </span><span class="s1">s </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: </span><span class="s3">&quot;transparent&quot;</span><span class="s2">,</span>
+              <span class="s1">shadowOpacity</span><span class="s2">:   </span><span class="s4">0.5</span><span class="s2">,</span>
+              <span class="s1">shadowRadius</span><span class="s2">:    </span><span class="s4">8</span><span class="s2">,</span>
+              <span class="s1">elevation</span><span class="s2">:       </span><span class="s1">step </span><span class="s2">=== </span><span class="s1">s </span><span class="s2">? </span><span class="s4">4 </span><span class="s2">: </span><span class="s4">0</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s2">{</span><span class="s1">step </span><span class="s2">&gt; </span><span class="s1">s </span><span class="s2">? (</span>
+                <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;checkmark&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">16</span><span class="s2">} color</span><span class="s3">=&quot;white&quot; </span><span class="s6">/&gt;</span>
+              <span class="s2">) : (</span>
+                <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">color</span><span class="s2">:      </span><span class="s1">step </span><span class="s2">&gt;= </span><span class="s1">s </span><span class="s2">? </span><span class="s3">&quot;white&quot; </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">,</span>
+                  <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+                  <span class="s1">fontSize</span><span class="s2">:   </span><span class="s4">13</span><span class="s2">,</span>
+                <span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">s</span><span class="s2">}</span>
+                <span class="s6">&lt;/Text&gt;</span>
+              <span class="s2">)}</span>
+            <span class="s6">&lt;/View&gt;</span>
+          <span class="s6">&lt;/Pressable&gt;</span>
+          <span class="s2">{</span><span class="s1">s </span><span class="s2">&lt; </span><span class="s4">3 </span><span class="s2">&amp;&amp; (</span>
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">width</span><span class="s2">:           </span><span class="s4">40</span><span class="s2">,</span>
+              <span class="s1">height</span><span class="s2">:          </span><span class="s4">2</span><span class="s2">,</span>
+              <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">step </span><span class="s2">&gt; </span><span class="s1">s </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: (</span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#1a2f4a&quot; </span><span class="s2">: </span><span class="s3">&quot;#e0e7ff&quot;</span><span class="s2">),</span>
+              <span class="s1">marginHorizontal</span><span class="s2">: </span><span class="s4">4</span><span class="s2">,</span>
+            <span class="s2">}} </span><span class="s6">/&gt;</span>
+          <span class="s2">)}</span>
+        <span class="s6">&lt;/React.Fragment&gt;</span>
+      <span class="s2">))}</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s2">);</span>
+
+  <span class="s5">// ── Step labels ──────────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">stepLabels </span><span class="s2">= [</span><span class="s3">&quot;The Bet&quot;</span><span class="s2">, </span><span class="s3">&quot;The Picks&quot;</span><span class="s2">, </span><span class="s3">&quot;Who &amp; Stakes&quot;</span><span class="s2">];</span>
+
+  <span class="s0">return </span><span class="s2">(</span>
+    <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">background </span><span class="s2">}}</span><span class="s6">&gt;</span>
+      <span class="s6">&lt;ScrollView</span>
+        <span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s4">120 </span><span class="s2">}}</span>
+        <span class="s2">showsVerticalScrollIndicator</span><span class="s3">=</span><span class="s2">{</span><span class="s0">false</span><span class="s2">}</span>
+        <span class="s2">keyboardShouldPersistTaps</span><span class="s3">=&quot;handled&quot;</span>
+      <span class="s6">&gt;</span>
+        <span class="s2">{</span><span class="s5">/* ── Header ── */</span><span class="s2">}</span>
+        <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;headlineMedium&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+          <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;900&quot;</span><span class="s2">,</span>
+          <span class="s1">textAlign</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">6</span><span class="s2">, </span><span class="s1">letterSpacing</span><span class="s2">: </span><span class="s4">0.5</span><span class="s2">,</span>
+        <span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s1">Create a Bet</span>
+        <span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+          <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">textAlign</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">24</span><span class="s2">,</span>
+        <span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s2">{</span><span class="s1">stepLabels</span><span class="s2">[</span><span class="s1">step </span><span class="s2">- </span><span class="s4">1</span><span class="s2">]}</span>
+        <span class="s6">&lt;/Text&gt;</span>
+
+        <span class="s6">&lt;StepIndicator /&gt;</span>
+
+        <span class="s2">{</span><span class="s5">/* ══════════════════════════════════════════════ 
+            STEP 1 — The Bet 
+        ══════════════════════════════════════════════ */</span><span class="s2">}</span>
+        <span class="s2">{</span><span class="s1">step </span><span class="s2">=== </span><span class="s4">1 </span><span class="s2">&amp;&amp; (</span>
+          <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+            <span class="s1">borderWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+          <span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+              <span class="s1">letterSpacing</span><span class="s2">: </span><span class="s4">0.5</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">16</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s1">WHAT'S THE BET?</span>
+            <span class="s6">&lt;/Text&gt;</span>
+
+            <span class="s6">&lt;TextInput</span>
+              <span class="s2">label</span><span class="s3">=&quot;Bet title&quot;</span>
+              <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">title</span><span class="s2">}</span>
+              <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{</span><span class="s1">setTitle</span><span class="s2">}</span>
+              <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+              <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">4 </span><span class="s2">}}</span>
+              <span class="s2">placeholder</span><span class="s3">=&quot;e.g. Will Sophia wake up on time?&quot;</span>
+            <span class="s6">/&gt;</span>
+            <span class="s6">&lt;HelperText </span><span class="s2">type</span><span class="s3">=&quot;info&quot; </span><span class="s2">visible style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">8 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s2">{</span><span class="s1">title</span><span class="s2">.</span><span class="s1">length</span><span class="s2">}</span><span class="s1">/80 characters</span>
+            <span class="s6">&lt;/HelperText&gt;</span>
+
+            <span class="s6">&lt;TextInput</span>
+              <span class="s2">label</span><span class="s3">=&quot;Description&quot;</span>
+              <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">description</span><span class="s2">}</span>
+              <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{</span><span class="s1">setDescription</span><span class="s2">}</span>
+              <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+              <span class="s2">multiline</span>
+              <span class="s2">numberOfLines</span><span class="s3">=</span><span class="s2">{</span><span class="s4">3</span><span class="s2">}</span>
+              <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg </span><span class="s2">}}</span>
+              <span class="s2">placeholder</span><span class="s3">=&quot;Give some context about this bet...&quot;</span>
+            <span class="s6">/&gt;</span>
+
+            <span class="s6">&lt;Button</span>
+              <span class="s2">mode</span><span class="s3">=&quot;contained&quot;</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">2</span><span class="s2">)}</span>
+              <span class="s2">disabled</span><span class="s3">=</span><span class="s2">{!</span><span class="s1">canProceedStep1</span><span class="s2">}</span>
+              <span class="s2">contentStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">6 </span><span class="s2">}}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;800&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">15 </span><span class="s2">}}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">14</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s4">20 </span><span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s1">Next: Add Picks →</span>
+            <span class="s6">&lt;/Button&gt;</span>
+          <span class="s6">&lt;/Surface&gt;</span>
+        <span class="s2">)}</span>
+
+        <span class="s2">{</span><span class="s5">/* ══════════════════════════════════════════════ 
+            STEP 2 — The Picks (options) 
+        ══════════════════════════════════════════════ */</span><span class="s2">}</span>
+        <span class="s2">{</span><span class="s1">step </span><span class="s2">=== </span><span class="s4">2 </span><span class="s2">&amp;&amp; (</span>
+          <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+            <span class="s1">borderWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+          <span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+              <span class="s1">letterSpacing</span><span class="s2">: </span><span class="s4">0.5</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">4</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s1">PICKS</span>
+            <span class="s6">&lt;/Text&gt;</span>
+            <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodySmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">16 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s1">Add 2–4 options for people to choose from</span>
+            <span class="s6">&lt;/Text&gt;</span>
+
+            <span class="s2">{</span><span class="s1">options</span><span class="s2">.</span><span class="s1">map</span><span class="s2">((</span><span class="s1">opt</span><span class="s2">, </span><span class="s1">index</span><span class="s2">) =&gt; (</span>
+              <span class="s6">&lt;View </span><span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">index</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s2">{</span><span class="s5">/* Color badge */</span><span class="s2">}</span>
+                <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">width</span><span class="s2">:           </span><span class="s4">38</span><span class="s2">,</span>
+                  <span class="s1">height</span><span class="s2">:          </span><span class="s4">38</span><span class="s2">,</span>
+                  <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">19</span><span class="s2">,</span>
+                  <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">optionColors</span><span class="s2">[</span><span class="s1">index</span><span class="s2">],</span>
+                  <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                  <span class="s1">justifyContent</span><span class="s2">:  </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                  <span class="s1">marginRight</span><span class="s2">:     </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">shadowColor</span><span class="s2">:     </span><span class="s1">optionColors</span><span class="s2">[</span><span class="s1">index</span><span class="s2">],</span>
+                  <span class="s1">shadowOpacity</span><span class="s2">:   </span><span class="s4">0.4</span><span class="s2">,</span>
+                  <span class="s1">shadowRadius</span><span class="s2">:    </span><span class="s4">6</span><span class="s2">,</span>
+                  <span class="s1">elevation</span><span class="s2">:       </span><span class="s4">3</span><span class="s2">,</span>
+                <span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;#fff&quot;</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;800&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">14 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                    <span class="s2">{</span><span class="s1">String</span><span class="s2">.</span><span class="s1">fromCharCode</span><span class="s2">(</span><span class="s4">65 </span><span class="s2">+ </span><span class="s1">index</span><span class="s2">)}</span>
+                  <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;/View&gt;</span>
+
+                <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s6">&lt;TextInput</span>
+                    <span class="s2">label</span><span class="s3">=</span><span class="s2">{</span><span class="s3">`Option </span><span class="s1">$</span><span class="s2">{</span><span class="s1">String</span><span class="s2">.</span><span class="s1">fromCharCode</span><span class="s2">(</span><span class="s4">65 </span><span class="s2">+ </span><span class="s1">index</span><span class="s2">)}</span><span class="s3">`</span><span class="s2">}</span>
+                    <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">opt</span><span class="s2">}</span>
+                    <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{(</span><span class="s1">text</span><span class="s2">) =&gt; </span><span class="s1">updateOption</span><span class="s2">(</span><span class="s1">index</span><span class="s2">, </span><span class="s1">text</span><span class="s2">)}</span>
+                    <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+                    <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">10</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">optionColors</span><span class="s2">[</span><span class="s1">index</span><span class="s2">] }}</span>
+                    <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg </span><span class="s2">}}</span>
+                  <span class="s6">/&gt;</span>
+                <span class="s6">&lt;/View&gt;</span>
+
+                <span class="s2">{</span><span class="s5">/* Remove button (only if &gt; 2 options) */</span><span class="s2">}</span>
+                <span class="s2">{</span><span class="s1">options</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s4">2 </span><span class="s2">&amp;&amp; (</span>
+                  <span class="s6">&lt;Pressable </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">removeOption</span><span class="s2">(</span><span class="s1">index</span><span class="s2">)} style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginLeft</span><span class="s2">: </span><span class="s4">8</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">4 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                    <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;close-circle&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">22</span><span class="s2">} color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">error</span><span class="s2">} </span><span class="s6">/&gt;</span>
+                  <span class="s6">&lt;/Pressable&gt;</span>
+                <span class="s2">)}</span>
+              <span class="s6">&lt;/View&gt;</span>
+            <span class="s2">))}</span>
+
+            <span class="s2">{</span><span class="s5">/* Add option */</span><span class="s2">}</span>
+            <span class="s2">{</span><span class="s1">options</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&lt; </span><span class="s4">4 </span><span class="s2">&amp;&amp; (</span>
+              <span class="s6">&lt;Pressable</span>
+                <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setOptions</span><span class="s2">([</span><span class="s1">...options</span><span class="s2">, </span><span class="s3">&quot;&quot;</span><span class="s2">])}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">flexDirection</span><span class="s2">:  </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+                  <span class="s1">alignItems</span><span class="s2">:     </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                  <span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                  <span class="s1">padding</span><span class="s2">:        </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">borderRadius</span><span class="s2">:   </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">borderWidth</span><span class="s2">:    </span><span class="s4">1.5</span><span class="s2">,</span>
+                  <span class="s1">borderStyle</span><span class="s2">:    </span><span class="s3">&quot;dashed&quot;</span><span class="s2">,</span>
+                  <span class="s1">borderColor</span><span class="s2">:    </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+                  <span class="s1">marginTop</span><span class="s2">:      </span><span class="s4">4</span><span class="s2">,</span>
+                  <span class="s1">marginBottom</span><span class="s2">:   </span><span class="s4">16</span><span class="s2">,</span>
+                <span class="s2">}}</span>
+              <span class="s6">&gt;</span>
+                <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;add-circle-outline&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">18</span><span class="s2">} color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">} </span><span class="s6">/&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">marginLeft</span><span class="s2">: </span><span class="s4">6 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s1">Add Option </span><span class="s2">{</span><span class="s1">String</span><span class="s2">.</span><span class="s1">fromCharCode</span><span class="s2">(</span><span class="s4">65 </span><span class="s2">+ </span><span class="s1">options</span><span class="s2">.</span><span class="s1">length</span><span class="s2">)}</span>
+                <span class="s6">&lt;/Text&gt;</span>
+              <span class="s6">&lt;/Pressable&gt;</span>
+            <span class="s2">)}</span>
+
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s4">10 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;Button </span><span class="s2">mode</span><span class="s3">=&quot;outlined&quot; </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">1</span><span class="s2">)}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">14 </span><span class="s2">}}</span>
+                <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s1">← Back</span>
+              <span class="s6">&lt;/Button&gt;</span>
+              <span class="s6">&lt;Button </span><span class="s2">mode</span><span class="s3">=&quot;contained&quot; </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">3</span><span class="s2">)}</span>
+                <span class="s2">disabled</span><span class="s3">=</span><span class="s2">{!</span><span class="s1">canProceedStep2</span><span class="s2">}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">2</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">14 </span><span class="s2">}}</span>
+                <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;800&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s1">Next: Who &amp; Stakes →</span>
+              <span class="s6">&lt;/Button&gt;</span>
+            <span class="s6">&lt;/View&gt;</span>
+          <span class="s6">&lt;/Surface&gt;</span>
+        <span class="s2">)}</span>
+
+        <span class="s2">{</span><span class="s5">/* ══════════════════════════════════════════════ 
+            STEP 3 — Who's in &amp; Stakes 
+        ══════════════════════════════════════════════ */</span><span class="s2">}</span>
+        <span class="s2">{</span><span class="s1">step </span><span class="s2">=== </span><span class="s4">3 </span><span class="s2">&amp;&amp; (</span>
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">gap</span><span class="s2">: </span><span class="s4">16 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+
+            <span class="s2">{</span><span class="s5">/* ── Post To ── */</span><span class="s2">}</span>
+            <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+              <span class="s1">borderWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+                <span class="s1">letterSpacing</span><span class="s2">: </span><span class="s4">0.5</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">14</span><span class="s2">,</span>
+              <span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s1">POST TO</span>
+              <span class="s6">&lt;/Text&gt;</span>
+
+              <span class="s6">&lt;SegmentedButtons</span>
+                <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">postTo</span><span class="s2">}</span>
+                <span class="s2">onValueChange</span><span class="s3">=</span><span class="s2">{(</span><span class="s1">v</span><span class="s2">) =&gt; { </span><span class="s1">setPostTo</span><span class="s2">(</span><span class="s1">v </span><span class="s2">as </span><span class="s3">&quot;circles&quot; </span><span class="s2">| </span><span class="s3">&quot;friends&quot;</span><span class="s2">); </span><span class="s1">setSearchQuery</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">); </span><span class="s1">setSelectedTargetId</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); </span><span class="s1">setSelectedTargetName</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); }}</span>
+                <span class="s2">buttons</span><span class="s3">=</span><span class="s2">{[</span>
+                  <span class="s2">{ </span><span class="s1">value</span><span class="s2">: </span><span class="s3">&quot;circles&quot;</span><span class="s2">, </span><span class="s1">label</span><span class="s2">: </span><span class="s3">&quot;Circles&quot;</span><span class="s2">, </span><span class="s1">icon</span><span class="s2">: </span><span class="s3">&quot;people-outline&quot; </span><span class="s2">as </span><span class="s1">any </span><span class="s2">},</span>
+                  <span class="s2">{ </span><span class="s1">value</span><span class="s2">: </span><span class="s3">&quot;friends&quot;</span><span class="s2">, </span><span class="s1">label</span><span class="s2">: </span><span class="s3">&quot;Friends&quot;</span><span class="s2">, </span><span class="s1">icon</span><span class="s2">: </span><span class="s3">&quot;person-outline&quot; </span><span class="s2">as </span><span class="s1">any </span><span class="s2">},</span>
+                <span class="s2">]}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">16 </span><span class="s2">}}</span>
+              <span class="s6">/&gt;</span>
+
+              <span class="s2">{</span><span class="s5">/* Selected target chip */</span><span class="s2">}</span>
+              <span class="s2">{</span><span class="s1">selectedTargetId </span><span class="s2">&amp;&amp; !</span><span class="s1">searchQuery </span><span class="s2">&amp;&amp; (</span>
+                <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">flexDirection</span><span class="s2">:   </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+                  <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                  <span class="s1">justifyContent</span><span class="s2">:  </span><span class="s3">&quot;space-between&quot;</span><span class="s2">,</span>
+                  <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(46,108,246,0.2)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.1)&quot;</span><span class="s2">,</span>
+                  <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">padding</span><span class="s2">:         </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">marginBottom</span><span class="s2">:    </span><span class="s4">12</span><span class="s2">,</span>
+                  <span class="s1">borderWidth</span><span class="s2">:     </span><span class="s4">1</span><span class="s2">,</span>
+                  <span class="s1">borderColor</span><span class="s2">:     </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+                <span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                    <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;checkmark-circle&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">18</span><span class="s2">} color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">} </span><span class="s6">/&gt;</span>
+                    <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">marginLeft</span><span class="s2">: </span><span class="s4">8 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                      <span class="s2">{</span><span class="s1">selectedTargetName</span><span class="s2">}</span>
+                    <span class="s6">&lt;/Text&gt;</span>
+                  <span class="s6">&lt;/View&gt;</span>
+                  <span class="s6">&lt;Pressable </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; { </span><span class="s1">setSelectedTargetId</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); </span><span class="s1">setSelectedTargetName</span><span class="s2">(</span><span class="s0">null</span><span class="s2">); }}</span><span class="s6">&gt;</span>
+                    <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;close-circle-outline&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">20</span><span class="s2">} color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">} </span><span class="s6">/&gt;</span>
+                  <span class="s6">&lt;/Pressable&gt;</span>
+                <span class="s6">&lt;/View&gt;</span>
+              <span class="s2">)}</span>
+
+              <span class="s2">{</span><span class="s5">/* Search */</span><span class="s2">}</span>
+              <span class="s6">&lt;TextInput</span>
+                <span class="s2">label</span><span class="s3">=</span><span class="s2">{</span><span class="s3">`Search </span><span class="s1">$</span><span class="s2">{</span><span class="s1">postTo</span><span class="s2">}</span><span class="s3">`</span><span class="s2">}</span>
+                <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">searchQuery</span><span class="s2">}</span>
+                <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{</span><span class="s1">setSearchQuery</span><span class="s2">}</span>
+                <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+                <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg </span><span class="s2">}}</span>
+                <span class="s2">left</span><span class="s3">=</span><span class="s2">{</span><span class="s6">&lt;TextInput.Icon </span><span class="s2">icon</span><span class="s3">=&quot;magnify&quot; </span><span class="s6">/&gt;</span><span class="s2">}</span>
+              <span class="s6">/&gt;</span>
+
+              <span class="s2">{</span><span class="s5">/* Results */</span><span class="s2">}</span>
+              <span class="s2">{</span><span class="s1">searchQuery</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s4">0 </span><span class="s2">&amp;&amp; </span><span class="s1">filteredTargets</span><span class="s2">.</span><span class="s1">map</span><span class="s2">((</span><span class="s1">item</span><span class="s2">) =&gt; {</span>
+                <span class="s0">const </span><span class="s1">id   </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">id </span><span class="s2">?? </span><span class="s1">item</span><span class="s2">.</span><span class="s1">circle_id</span><span class="s2">;</span>
+                <span class="s0">const </span><span class="s1">name </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">name </span><span class="s2">?? </span><span class="s1">item</span><span class="s2">.</span><span class="s1">username</span><span class="s2">;</span>
+                <span class="s0">const </span><span class="s1">selected </span><span class="s2">= </span><span class="s1">selectedTargetId </span><span class="s2">=== </span><span class="s1">id</span><span class="s2">;</span>
+
+                <span class="s0">return </span><span class="s2">(</span>
+                  <span class="s6">&lt;Pressable</span>
+                    <span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">id</span><span class="s2">}</span>
+                    <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; { </span><span class="s1">setSelectedTargetId</span><span class="s2">(</span><span class="s1">id</span><span class="s2">); </span><span class="s1">setSelectedTargetName</span><span class="s2">(</span><span class="s1">name</span><span class="s2">); </span><span class="s1">setSearchQuery</span><span class="s2">(</span><span class="s3">&quot;&quot;</span><span class="s2">); }}</span>
+                    <span class="s2">style</span><span class="s3">=</span><span class="s2">{({ </span><span class="s1">pressed </span><span class="s2">}) =&gt; ({</span>
+                      <span class="s1">flexDirection</span><span class="s2">:   </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+                      <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                      <span class="s1">padding</span><span class="s2">:         </span><span class="s4">12</span><span class="s2">,</span>
+                      <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">12</span><span class="s2">,</span>
+                      <span class="s1">marginTop</span><span class="s2">:       </span><span class="s4">8</span><span class="s2">,</span>
+                      <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">selected</span>
+                        <span class="s2">? (</span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(46,108,246,0.2)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.1)&quot;</span><span class="s2">)</span>
+                        <span class="s2">: </span><span class="s1">subtleBg</span><span class="s2">,</span>
+                      <span class="s1">borderWidth</span><span class="s2">:     </span><span class="s4">1</span><span class="s2">,</span>
+                      <span class="s1">borderColor</span><span class="s2">:     </span><span class="s1">selected </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: </span><span class="s3">&quot;transparent&quot;</span><span class="s2">,</span>
+                      <span class="s1">opacity</span><span class="s2">:         </span><span class="s1">pressed </span><span class="s2">? </span><span class="s4">0.8 </span><span class="s2">: </span><span class="s4">1</span><span class="s2">,</span>
+                    <span class="s2">})}</span>
+                  <span class="s6">&gt;</span>
+                    <span class="s6">&lt;Ionicons</span>
+                      <span class="s2">name</span><span class="s3">=</span><span class="s2">{</span><span class="s1">postTo </span><span class="s2">=== </span><span class="s3">&quot;circles&quot; </span><span class="s2">? </span><span class="s3">&quot;people&quot; </span><span class="s2">: </span><span class="s3">&quot;person&quot;</span><span class="s2">}</span>
+                      <span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">18</span><span class="s2">}</span>
+                      <span class="s2">color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">selected </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">}</span>
+                    <span class="s6">/&gt;</span>
+                    <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                      <span class="s1">color</span><span class="s2">:      </span><span class="s1">selected </span><span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">,</span>
+                      <span class="s1">fontWeight</span><span class="s2">: </span><span class="s1">selected </span><span class="s2">? </span><span class="s3">&quot;700&quot; </span><span class="s2">: </span><span class="s3">&quot;500&quot;</span><span class="s2">,</span>
+                      <span class="s1">marginLeft</span><span class="s2">: </span><span class="s4">10</span><span class="s2">,</span>
+                    <span class="s2">}}</span><span class="s6">&gt;</span>
+                      <span class="s2">{</span><span class="s1">name</span><span class="s2">}</span>
+                    <span class="s6">&lt;/Text&gt;</span>
+                  <span class="s6">&lt;/Pressable&gt;</span>
+                <span class="s2">);</span>
+              <span class="s2">})}</span>
+
+              <span class="s2">{</span><span class="s1">searchQuery</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s4">0 </span><span class="s2">&amp;&amp; </span><span class="s1">filteredTargets</span><span class="s2">.</span><span class="s1">length </span><span class="s2">=== </span><span class="s4">0 </span><span class="s2">&amp;&amp; (</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodySmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">textAlign</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+                <span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s1">No </span><span class="s2">{</span><span class="s1">postTo</span><span class="s2">} </span><span class="s1">found matching &quot;</span><span class="s2">{</span><span class="s1">searchQuery</span><span class="s2">}</span><span class="s1">&quot;</span>
+                <span class="s6">&lt;/Text&gt;</span>
+              <span class="s2">)}</span>
+            <span class="s6">&lt;/Surface&gt;</span>
+
+            <span class="s2">{</span><span class="s5">/* ── Stake &amp; Close ── */</span><span class="s2">}</span>
+            <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+              <span class="s1">borderWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+                <span class="s1">letterSpacing</span><span class="s2">: </span><span class="s4">0.5</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">14</span><span class="s2">,</span>
+              <span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s1">STAKE &amp; DEADLINE</span>
+              <span class="s6">&lt;/Text&gt;</span>
+
+              <span class="s6">&lt;TextInput</span>
+                <span class="s2">label</span><span class="s3">=&quot;Stake (coins)&quot;</span>
+                <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">stake</span><span class="s2">}</span>
+                <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{</span><span class="s1">setStake</span><span class="s2">}</span>
+                <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+                <span class="s2">keyboardType</span><span class="s3">=&quot;numeric&quot;</span>
+                <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+                <span class="s2">left</span><span class="s3">=</span><span class="s2">{</span><span class="s6">&lt;TextInput.Icon </span><span class="s2">icon</span><span class="s3">=&quot;cash&quot; </span><span class="s6">/&gt;</span><span class="s2">}</span>
+              <span class="s6">/&gt;</span>
+
+              <span class="s6">&lt;TextInput</span>
+                <span class="s2">label</span><span class="s3">=&quot;Closes at (optional)&quot;</span>
+                <span class="s2">value</span><span class="s3">=</span><span class="s2">{</span><span class="s1">closeAt</span><span class="s2">}</span>
+                <span class="s2">onChangeText</span><span class="s3">=</span><span class="s2">{</span><span class="s1">setCloseAt</span><span class="s2">}</span>
+                <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+                <span class="s2">outlineStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">subtleBg </span><span class="s2">}}</span>
+                <span class="s2">left</span><span class="s3">=</span><span class="s2">{</span><span class="s6">&lt;TextInput.Icon </span><span class="s2">icon</span><span class="s3">=&quot;calendar&quot; </span><span class="s6">/&gt;</span><span class="s2">}</span>
+                <span class="s2">placeholder</span><span class="s3">=&quot;e.g. 2026-03-01&quot;</span>
+              <span class="s6">/&gt;</span>
+            <span class="s6">&lt;/Surface&gt;</span>
+
+            <span class="s2">{</span><span class="s5">/* ── Bet summary ── */</span><span class="s2">}</span>
+            <span class="s2">{</span><span class="s1">canSubmit </span><span class="s2">&amp;&amp; (</span>
+              <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(46,108,246,0.12)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.07)&quot;</span><span class="s2">,</span>
+                <span class="s1">padding</span><span class="s2">: </span><span class="s4">16</span><span class="s2">,</span>
+                <span class="s1">borderWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(46,108,246,0.3)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.2)&quot;</span><span class="s2">,</span>
+              <span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">10</span><span class="s2">,</span>
+                <span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s1">📋 BET SUMMARY</span>
+                <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;600&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">4 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">title</span><span class="s2">}</span>
+                <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodySmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">8 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">description</span><span class="s2">}</span>
+                <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">flexWrap</span><span class="s2">: </span><span class="s3">&quot;wrap&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s4">6</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">8 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">options</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Boolean</span><span class="s2">).</span><span class="s1">map</span><span class="s2">((</span><span class="s1">opt</span><span class="s2">, </span><span class="s1">i</span><span class="s2">) =&gt; (</span>
+                    <span class="s6">&lt;View </span><span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">i</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+                      <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">optionColors</span><span class="s2">[</span><span class="s1">i</span><span class="s2">],</span>
+                      <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">10</span><span class="s2">, </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">4</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">8</span><span class="s2">,</span>
+                    <span class="s2">}}</span><span class="s6">&gt;</span>
+                      <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;#fff&quot;</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                        <span class="s2">{</span><span class="s1">String</span><span class="s2">.</span><span class="s1">fromCharCode</span><span class="s2">(</span><span class="s4">65 </span><span class="s2">+ </span><span class="s1">i</span><span class="s2">)}</span><span class="s1">: </span><span class="s2">{</span><span class="s1">opt</span><span class="s2">}</span>
+                      <span class="s6">&lt;/Text&gt;</span>
+                    <span class="s6">&lt;/View&gt;</span>
+                  <span class="s2">))}</span>
+                <span class="s6">&lt;/View&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodySmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s1">📍 </span><span class="s2">{</span><span class="s1">selectedTargetName</span><span class="s2">} </span><span class="s1">· 🪙 </span><span class="s2">{</span><span class="s1">stake</span><span class="s2">} </span><span class="s1">coins</span>
+                <span class="s6">&lt;/Text&gt;</span>
+              <span class="s6">&lt;/Surface&gt;</span>
+            <span class="s2">)}</span>
+
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s4">10 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;Button </span><span class="s2">mode</span><span class="s3">=&quot;outlined&quot; </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setStep</span><span class="s2">(</span><span class="s4">2</span><span class="s2">)}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">14 </span><span class="s2">}}</span>
+                <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s1">← Back</span>
+              <span class="s6">&lt;/Button&gt;</span>
+              <span class="s6">&lt;Button</span>
+                <span class="s2">mode</span><span class="s3">=&quot;contained&quot;</span>
+                <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{</span><span class="s1">handleCreateBet</span><span class="s2">}</span>
+                <span class="s2">loading</span><span class="s3">=</span><span class="s2">{</span><span class="s1">loading</span><span class="s2">}</span>
+                <span class="s2">disabled</span><span class="s3">=</span><span class="s2">{!</span><span class="s1">canSubmit </span><span class="s2">|| </span><span class="s1">loading</span><span class="s2">}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">2</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">14 </span><span class="s2">}}</span>
+                <span class="s2">contentStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">6 </span><span class="s2">}}</span>
+                <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;900&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">15 </span><span class="s2">}}</span>
+              <span class="s6">&gt;</span>
+                <span class="s1">🎯 Place Bet</span>
+              <span class="s6">&lt;/Button&gt;</span>
+            <span class="s6">&lt;/View&gt;</span>
+
+            <span class="s6">&lt;Button </span><span class="s2">mode</span><span class="s3">=&quot;text&quot; </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">back</span><span class="s2">()}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s1">Cancel</span>
+            <span class="s6">&lt;/Button&gt;</span>
+          <span class="s6">&lt;/View&gt;</span>
+        <span class="s2">)}</span>
+      <span class="s6">&lt;/ScrollView&gt;</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s2">);</span>
+<span class="s2">}</span></pre>
+</body>
+</html>

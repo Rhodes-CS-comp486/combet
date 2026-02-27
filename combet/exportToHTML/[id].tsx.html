@@ -1,0 +1,249 @@
+<html>
+<head>
+<title>index.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #2aacb8;}
+.s5 { color: #d5b778;}
+.s6 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+index.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s2">{</span>
+  <span class="s1">View</span><span class="s2">,</span>
+  <span class="s1">Text</span><span class="s2">,</span>
+  <span class="s1">StyleSheet</span><span class="s2">,</span>
+  <span class="s1">TouchableOpacity</span><span class="s2">,</span>
+  <span class="s1">ScrollView</span><span class="s2">,</span>
+<span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useLocalSearchParams</span><span class="s2">, </span><span class="s1">useRouter </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;expo-router&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useEffect</span><span class="s2">, </span><span class="s1">useState </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Ionicons </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@expo/vector-icons&quot;</span><span class="s2">;</span>
+
+<span class="s0">export default function </span><span class="s1">CircleProfile</span><span class="s2">() {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">id </span><span class="s2">} = </span><span class="s1">useLocalSearchParams</span><span class="s2">();</span>
+  <span class="s0">const </span><span class="s1">router </span><span class="s2">= </span><span class="s1">useRouter</span><span class="s2">();</span>
+
+  <span class="s0">const </span><span class="s1">circleId </span><span class="s2">= </span><span class="s1">Array</span><span class="s2">.</span><span class="s1">isArray</span><span class="s2">(</span><span class="s1">id</span><span class="s2">) ? </span><span class="s1">id</span><span class="s2">[</span><span class="s4">0</span><span class="s2">] : </span><span class="s1">id</span><span class="s2">;</span>
+
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">circle</span><span class="s2">, </span><span class="s1">setCircle</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">any</span><span class="s2">&gt;(</span><span class="s0">null</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">activeTab</span><span class="s2">, </span><span class="s1">setActiveTab</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s3">&quot;history&quot; </span><span class="s2">| </span><span class="s3">&quot;live&quot;</span><span class="s2">&gt;(</span><span class="s3">&quot;history&quot;</span><span class="s2">);</span>
+
+  <span class="s1">useEffect</span><span class="s2">(() =&gt; {</span>
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">circleId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+
+    <span class="s1">fetch</span><span class="s2">(</span><span class="s3">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">`</span><span class="s2">)</span>
+      <span class="s2">.</span><span class="s1">then</span><span class="s2">((</span><span class="s1">res</span><span class="s2">) =&gt; </span><span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">())</span>
+      <span class="s2">.</span><span class="s1">then</span><span class="s2">((</span><span class="s1">data</span><span class="s2">) =&gt; </span><span class="s1">setCircle</span><span class="s2">(</span><span class="s1">data</span><span class="s2">))</span>
+      <span class="s2">.</span><span class="s1">catch</span><span class="s2">((</span><span class="s1">err</span><span class="s2">) =&gt; </span><span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s1">err</span><span class="s2">));</span>
+  <span class="s2">}, [</span><span class="s1">circleId</span><span class="s2">]);</span>
+
+  <span class="s0">if </span><span class="s2">(!</span><span class="s1">circle</span><span class="s2">) {</span>
+    <span class="s0">return </span><span class="s2">(</span>
+      <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">container</span><span class="s2">}</span><span class="s5">&gt;</span>
+        <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s4">100 </span><span class="s2">}}</span><span class="s5">&gt;</span>
+          <span class="s1">Loading...</span>
+        <span class="s5">&lt;/Text&gt;</span>
+      <span class="s5">&lt;/View&gt;</span>
+    <span class="s2">);</span>
+  <span class="s2">}</span>
+
+  <span class="s0">return </span><span class="s2">(</span>
+    <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">container</span><span class="s2">}</span><span class="s5">&gt;</span>
+      <span class="s2">{</span><span class="s6">/* HEADER */</span><span class="s2">}</span>
+      <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">topHeader</span><span class="s2">}</span><span class="s5">&gt;</span>
+        <span class="s5">&lt;TouchableOpacity</span>
+          <span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">backRow</span><span class="s2">}</span>
+          <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">back</span><span class="s2">()}</span>
+        <span class="s5">&gt;</span>
+          <span class="s5">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;arrow-back&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">22</span><span class="s2">} color</span><span class="s3">=&quot;white&quot; </span><span class="s5">/&gt;</span>
+          <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">backText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">Circle Profile</span><span class="s5">&lt;/Text&gt;</span>
+        <span class="s5">&lt;/TouchableOpacity&gt;</span>
+      <span class="s5">&lt;/View&gt;</span>
+
+      <span class="s5">&lt;ScrollView </span><span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s4">100 </span><span class="s2">}}</span><span class="s5">&gt;</span>
+        <span class="s2">{</span><span class="s6">/* PROFILE SECTION */</span><span class="s2">}</span>
+        <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">profileSection</span><span class="s2">}</span><span class="s5">&gt;</span>
+          <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">circleIcon</span><span class="s2">}</span><span class="s5">&gt;</span>
+            <span class="s5">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;people&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">40</span><span class="s2">} color</span><span class="s3">=&quot;white&quot; </span><span class="s5">/&gt;</span>
+          <span class="s5">&lt;/View&gt;</span>
+
+          <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">circleName</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">name</span><span class="s2">}</span><span class="s5">&lt;/Text&gt;</span>
+
+          <span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">description </span><span class="s2">? (</span>
+            <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">circleDescription</span><span class="s2">}</span><span class="s5">&gt;</span>
+              <span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">description</span><span class="s2">}</span>
+            <span class="s5">&lt;/Text&gt;</span>
+          <span class="s2">) : </span><span class="s0">null</span><span class="s2">}</span>
+
+          <span class="s2">{</span><span class="s6">/* BUTTON ROW */</span><span class="s2">}</span>
+          <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">buttonRow</span><span class="s2">}</span><span class="s5">&gt;</span>
+            <span class="s5">&lt;TouchableOpacity </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">sideButton</span><span class="s2">}</span><span class="s5">&gt;</span>
+              <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">sideButtonText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">See Members</span><span class="s5">&lt;/Text&gt;</span>
+            <span class="s5">&lt;/TouchableOpacity&gt;</span>
+
+            <span class="s5">&lt;TouchableOpacity</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">editButton</span><span class="s2">}</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt;</span>
+                <span class="s1">router</span><span class="s2">.</span><span class="s1">push</span><span class="s2">(</span>
+                    <span class="s2">{</span><span class="s1">pathname</span><span class="s2">:</span><span class="s3">`/circle-profile/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">/edit`</span><span class="s2">}</span>
+                <span class="s2">)</span>
+              <span class="s2">}</span>
+            <span class="s5">&gt;</span>
+              <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">editButtonText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">Edit Circle</span><span class="s5">&lt;/Text&gt;</span>
+            <span class="s5">&lt;/TouchableOpacity&gt;</span>
+
+            <span class="s5">&lt;TouchableOpacity </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">sideButton</span><span class="s2">}</span><span class="s5">&gt;</span>
+              <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">sideButtonText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">Add Friend</span><span class="s5">&lt;/Text&gt;</span>
+            <span class="s5">&lt;/TouchableOpacity&gt;</span>
+          <span class="s5">&lt;/View&gt;</span>
+        <span class="s5">&lt;/View&gt;</span>
+
+        <span class="s2">{</span><span class="s6">/* TABS */</span><span class="s2">}</span>
+        <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">tabs</span><span class="s2">}</span><span class="s5">&gt;</span>
+          <span class="s5">&lt;TouchableOpacity</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{</span>
+              <span class="s1">activeTab </span><span class="s2">=== </span><span class="s3">&quot;history&quot;</span>
+                <span class="s2">? </span><span class="s1">styles</span><span class="s2">.</span><span class="s1">activeTab</span>
+                <span class="s2">: </span><span class="s1">styles</span><span class="s2">.</span><span class="s1">inactiveTab</span>
+            <span class="s2">}</span>
+            <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setActiveTab</span><span class="s2">(</span><span class="s3">&quot;history&quot;</span><span class="s2">)}</span>
+          <span class="s5">&gt;</span>
+            <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">tabText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">Circle History</span><span class="s5">&lt;/Text&gt;</span>
+          <span class="s5">&lt;/TouchableOpacity&gt;</span>
+
+          <span class="s5">&lt;TouchableOpacity</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{</span>
+              <span class="s1">activeTab </span><span class="s2">=== </span><span class="s3">&quot;live&quot;</span>
+                <span class="s2">? </span><span class="s1">styles</span><span class="s2">.</span><span class="s1">activeTab</span>
+                <span class="s2">: </span><span class="s1">styles</span><span class="s2">.</span><span class="s1">inactiveTab</span>
+            <span class="s2">}</span>
+            <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setActiveTab</span><span class="s2">(</span><span class="s3">&quot;live&quot;</span><span class="s2">)}</span>
+          <span class="s5">&gt;</span>
+            <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">tabText</span><span class="s2">}</span><span class="s5">&gt;</span><span class="s1">Live Bets</span><span class="s5">&lt;/Text&gt;</span>
+          <span class="s5">&lt;/TouchableOpacity&gt;</span>
+        <span class="s5">&lt;/View&gt;</span>
+
+        <span class="s5">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">content</span><span class="s2">}</span><span class="s5">&gt;</span>
+          <span class="s5">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{</span><span class="s1">styles</span><span class="s2">.</span><span class="s1">historyItem</span><span class="s2">}</span><span class="s5">&gt;</span>
+            <span class="s1">History coming from DB soon</span>
+          <span class="s5">&lt;/Text&gt;</span>
+        <span class="s5">&lt;/View&gt;</span>
+      <span class="s5">&lt;/ScrollView&gt;</span>
+    <span class="s5">&lt;/View&gt;</span>
+  <span class="s2">);</span>
+<span class="s2">}</span>
+
+<span class="s0">const </span><span class="s1">styles </span><span class="s2">= </span><span class="s1">StyleSheet</span><span class="s2">.</span><span class="s1">create</span><span class="s2">({</span>
+  <span class="s1">container</span><span class="s2">: {</span>
+    <span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">,</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#0B1C2D&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">topHeader</span><span class="s2">: {</span>
+    <span class="s1">paddingTop</span><span class="s2">: </span><span class="s4">45</span><span class="s2">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">backRow</span><span class="s2">: {</span>
+    <span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">backText</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">fontSize</span><span class="s2">: </span><span class="s4">16</span><span class="s2">,</span>
+    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;600&quot;</span><span class="s2">,</span>
+    <span class="s1">marginLeft</span><span class="s2">: </span><span class="s4">8</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">profileSection</span><span class="s2">: {</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">30</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">circleIcon</span><span class="s2">: {</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#2E5BEA&quot;</span><span class="s2">,</span>
+    <span class="s1">width</span><span class="s2">: </span><span class="s4">120</span><span class="s2">,</span>
+    <span class="s1">height</span><span class="s2">: </span><span class="s4">120</span><span class="s2">,</span>
+    <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">60</span><span class="s2">,</span>
+    <span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">circleName</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">fontSize</span><span class="s2">: </span><span class="s4">24</span><span class="s2">,</span>
+    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">,</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">15</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">circleDescription</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;#8FA3BF&quot;</span><span class="s2">,</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">8</span><span class="s2">,</span>
+    <span class="s1">textAlign</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">30</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">buttonRow</span><span class="s2">: {</span>
+    <span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+    <span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">editButton</span><span class="s2">: {</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#2E5BEA&quot;</span><span class="s2">,</span>
+    <span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">22</span><span class="s2">,</span>
+    <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">marginHorizontal</span><span class="s2">: </span><span class="s4">10</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">editButtonText</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;600&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">sideButton</span><span class="s2">: {</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#14263F&quot;</span><span class="s2">,</span>
+    <span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">14</span><span class="s2">,</span>
+    <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">sideButtonText</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;600&quot;</span><span class="s2">,</span>
+    <span class="s1">fontSize</span><span class="s2">: </span><span class="s4">13</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">tabs</span><span class="s2">: {</span>
+    <span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">40</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">activeTab</span><span class="s2">: {</span>
+    <span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">,</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#4B6FE3&quot;</span><span class="s2">,</span>
+    <span class="s1">padding</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">inactiveTab</span><span class="s2">: {</span>
+    <span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">,</span>
+    <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;#14263F&quot;</span><span class="s2">,</span>
+    <span class="s1">padding</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">tabText</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;600&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">content</span><span class="s2">: {</span>
+    <span class="s1">marginTop</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+  <span class="s2">},</span>
+  <span class="s1">historyItem</span><span class="s2">: {</span>
+    <span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">,</span>
+    <span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">12</span><span class="s2">,</span>
+    <span class="s1">borderBottomWidth</span><span class="s2">: </span><span class="s4">1</span><span class="s2">,</span>
+    <span class="s1">borderBottomColor</span><span class="s2">: </span><span class="s3">&quot;#1F2E47&quot;</span><span class="s2">,</span>
+  <span class="s2">},</span>
+<span class="s2">});</span></pre>
+</body>
+</html>

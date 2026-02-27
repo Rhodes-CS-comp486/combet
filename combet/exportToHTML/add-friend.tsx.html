@@ -1,0 +1,287 @@
+<html>
+<head>
+<title>add-friend.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.s6 { color: #d5b778;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+add-friend.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">// &quot;Add Friend&quot; to circle screen in circle profile</span>
+<span class="s2">import </span><span class="s3">{</span>
+  <span class="s1">View</span><span class="s3">,</span>
+  <span class="s1">Text</span><span class="s3">,</span>
+  <span class="s1">TextInput</span><span class="s3">,</span>
+  <span class="s1">StyleSheet</span><span class="s3">,</span>
+  <span class="s1">TouchableOpacity</span><span class="s3">,</span>
+  <span class="s1">FlatList</span><span class="s3">,</span>
+<span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;react-native&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">useLocalSearchParams</span><span class="s3">, </span><span class="s1">router </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;expo-router&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">useEffect</span><span class="s3">, </span><span class="s1">useState </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;react&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">getSessionId </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;@/components/sessionStore&quot;</span><span class="s3">;</span>
+
+<span class="s1">type FriendResult </span><span class="s3">= {</span>
+  <span class="s1">id</span><span class="s3">: </span><span class="s1">string</span><span class="s3">;</span>
+  <span class="s1">username</span><span class="s3">: </span><span class="s1">string</span><span class="s3">;</span>
+  <span class="s1">status</span><span class="s3">: </span><span class="s4">&quot;pending&quot; </span><span class="s3">| </span><span class="s4">&quot;accepted&quot; </span><span class="s3">| </span><span class="s2">null</span><span class="s3">;</span>
+  <span class="s1">invitedByMe</span><span class="s3">?: </span><span class="s1">boolean</span><span class="s3">;</span>
+<span class="s3">};</span>
+
+<span class="s2">export default function </span><span class="s1">AddFriendToCircle</span><span class="s3">() {</span>
+  <span class="s2">const </span><span class="s3">{ </span><span class="s1">id </span><span class="s3">} = </span><span class="s1">useLocalSearchParams</span><span class="s3">();</span>
+  <span class="s2">const </span><span class="s1">circleId </span><span class="s3">= </span><span class="s1">id </span><span class="s3">as </span><span class="s1">string</span><span class="s3">;</span>
+
+  <span class="s2">const </span><span class="s3">[</span><span class="s1">query</span><span class="s3">, </span><span class="s1">setQuery</span><span class="s3">] = </span><span class="s1">useState</span><span class="s3">(</span><span class="s4">&quot;&quot;</span><span class="s3">);</span>
+  <span class="s2">const </span><span class="s3">[</span><span class="s1">results</span><span class="s3">, </span><span class="s1">setResults</span><span class="s3">] = </span><span class="s1">useState</span><span class="s3">&lt;</span><span class="s1">FriendResult</span><span class="s3">[]&gt;([]);</span>
+
+  <span class="s1">useEffect</span><span class="s3">(() =&gt; {</span>
+    <span class="s2">if </span><span class="s3">(</span><span class="s1">query</span><span class="s3">.</span><span class="s1">length </span><span class="s3">&gt; </span><span class="s5">0</span><span class="s3">) {</span>
+      <span class="s1">searchFriends</span><span class="s3">();</span>
+    <span class="s3">} </span><span class="s2">else </span><span class="s3">{</span>
+      <span class="s1">setResults</span><span class="s3">([]);</span>
+    <span class="s3">}</span>
+  <span class="s3">}, [</span><span class="s1">query</span><span class="s3">]);</span>
+
+  <span class="s2">const </span><span class="s1">searchFriends </span><span class="s3">= </span><span class="s1">async </span><span class="s3">() =&gt; {</span>
+    <span class="s2">try </span><span class="s3">{</span>
+      <span class="s2">const </span><span class="s1">sessionId </span><span class="s3">= </span><span class="s2">await </span><span class="s1">getSessionId</span><span class="s3">();</span>
+
+      <span class="s2">const </span><span class="s1">res </span><span class="s3">= </span><span class="s2">await </span><span class="s1">fetch</span><span class="s3">(</span>
+        <span class="s4">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">/search-friends?q=</span><span class="s1">$</span><span class="s3">{</span><span class="s1">query</span><span class="s3">}</span><span class="s4">`</span><span class="s3">,</span>
+        <span class="s3">{</span>
+          <span class="s1">headers</span><span class="s3">: {</span>
+            <span class="s4">&quot;session-id&quot;</span><span class="s3">: </span><span class="s1">sessionId </span><span class="s3">|| </span><span class="s4">&quot;&quot;</span><span class="s3">,</span>
+          <span class="s3">},</span>
+        <span class="s3">}</span>
+      <span class="s3">);</span>
+      <span class="s1">console</span><span class="s3">.</span><span class="s1">log</span><span class="s3">(</span><span class="s4">&quot;Inbox status:&quot;</span><span class="s3">, </span><span class="s1">res</span><span class="s3">.</span><span class="s1">status</span><span class="s3">);</span>
+
+      <span class="s2">const </span><span class="s1">data </span><span class="s3">= </span><span class="s2">await </span><span class="s1">res</span><span class="s3">.</span><span class="s1">json</span><span class="s3">();</span>
+      <span class="s1">setResults</span><span class="s3">(</span><span class="s1">data</span><span class="s3">);</span>
+    <span class="s3">} </span><span class="s2">catch </span><span class="s3">(</span><span class="s1">err</span><span class="s3">) {</span>
+      <span class="s1">console</span><span class="s3">.</span><span class="s1">error</span><span class="s3">(</span><span class="s4">&quot;Search error:&quot;</span><span class="s3">, </span><span class="s1">err</span><span class="s3">);</span>
+    <span class="s3">}</span>
+  <span class="s3">};</span>
+
+  <span class="s2">const </span><span class="s1">requestFriend </span><span class="s3">= </span><span class="s1">async </span><span class="s3">(</span><span class="s1">userId</span><span class="s3">: </span><span class="s1">string</span><span class="s3">) =&gt; {</span>
+    <span class="s2">try </span><span class="s3">{</span>
+      <span class="s2">const </span><span class="s1">sessionId </span><span class="s3">= </span><span class="s2">await </span><span class="s1">getSessionId</span><span class="s3">();</span>
+
+      <span class="s2">await </span><span class="s1">fetch</span><span class="s3">(</span>
+        <span class="s4">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">/invite`</span><span class="s3">,</span>
+        <span class="s3">{</span>
+          <span class="s1">method</span><span class="s3">: </span><span class="s4">&quot;POST&quot;</span><span class="s3">,</span>
+          <span class="s1">headers</span><span class="s3">: {</span>
+            <span class="s4">&quot;Content-Type&quot;</span><span class="s3">: </span><span class="s4">&quot;application/json&quot;</span><span class="s3">,</span>
+            <span class="s4">&quot;session-id&quot;</span><span class="s3">: </span><span class="s1">sessionId </span><span class="s3">|| </span><span class="s4">&quot;&quot;</span><span class="s3">,</span>
+          <span class="s3">},</span>
+          <span class="s1">body</span><span class="s3">: </span><span class="s1">JSON</span><span class="s3">.</span><span class="s1">stringify</span><span class="s3">({ </span><span class="s1">inviteeId</span><span class="s3">: </span><span class="s1">userId </span><span class="s3">}),</span>
+        <span class="s3">}</span>
+      <span class="s3">);</span>
+
+      <span class="s1">updateLocalStatus</span><span class="s3">(</span><span class="s1">userId</span><span class="s3">, </span><span class="s4">&quot;pending&quot;</span><span class="s3">);</span>
+    <span class="s3">} </span><span class="s2">catch </span><span class="s3">(</span><span class="s1">err</span><span class="s3">) {</span>
+      <span class="s1">console</span><span class="s3">.</span><span class="s1">error</span><span class="s3">(</span><span class="s4">&quot;Request error:&quot;</span><span class="s3">, </span><span class="s1">err</span><span class="s3">);</span>
+    <span class="s3">}</span>
+  <span class="s3">};</span>
+
+  <span class="s2">const </span><span class="s1">retractRequest </span><span class="s3">= </span><span class="s1">async </span><span class="s3">(</span><span class="s1">userId</span><span class="s3">: </span><span class="s1">string</span><span class="s3">) =&gt; {</span>
+    <span class="s2">try </span><span class="s3">{</span>
+      <span class="s2">const </span><span class="s1">sessionId </span><span class="s3">= </span><span class="s2">await </span><span class="s1">getSessionId</span><span class="s3">();</span>
+
+      <span class="s2">await </span><span class="s1">fetch</span><span class="s3">(</span>
+        <span class="s4">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">/retract/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">userId</span><span class="s3">}</span><span class="s4">`</span><span class="s3">,</span>
+        <span class="s3">{</span>
+          <span class="s1">method</span><span class="s3">: </span><span class="s4">&quot;DELETE&quot;</span><span class="s3">,</span>
+          <span class="s1">headers</span><span class="s3">: {</span>
+            <span class="s4">&quot;session-id&quot;</span><span class="s3">: </span><span class="s1">sessionId </span><span class="s3">|| </span><span class="s4">&quot;&quot;</span><span class="s3">,</span>
+          <span class="s3">},</span>
+        <span class="s3">}</span>
+      <span class="s3">);</span>
+
+      <span class="s1">updateLocalStatus</span><span class="s3">(</span><span class="s1">userId</span><span class="s3">, </span><span class="s2">null</span><span class="s3">);</span>
+    <span class="s3">} </span><span class="s2">catch </span><span class="s3">(</span><span class="s1">err</span><span class="s3">) {</span>
+      <span class="s1">console</span><span class="s3">.</span><span class="s1">error</span><span class="s3">(</span><span class="s4">&quot;Retract error:&quot;</span><span class="s3">, </span><span class="s1">err</span><span class="s3">);</span>
+    <span class="s3">}</span>
+  <span class="s3">};</span>
+
+  <span class="s2">const </span><span class="s1">updateLocalStatus </span><span class="s3">= (</span>
+    <span class="s1">userId</span><span class="s3">: </span><span class="s1">string</span><span class="s3">,</span>
+    <span class="s1">newStatus</span><span class="s3">: </span><span class="s4">&quot;pending&quot; </span><span class="s3">| </span><span class="s4">&quot;accepted&quot; </span><span class="s3">| </span><span class="s2">null</span>
+  <span class="s3">) =&gt; {</span>
+    <span class="s1">setResults</span><span class="s3">((</span><span class="s1">prev</span><span class="s3">) =&gt;</span>
+      <span class="s1">prev</span><span class="s3">.</span><span class="s1">map</span><span class="s3">((</span><span class="s1">user</span><span class="s3">) =&gt;</span>
+        <span class="s1">user</span><span class="s3">.</span><span class="s1">id </span><span class="s3">=== </span><span class="s1">userId </span><span class="s3">? { </span><span class="s1">...user</span><span class="s3">, </span><span class="s1">status</span><span class="s3">: </span><span class="s1">newStatus </span><span class="s3">} : </span><span class="s1">user</span>
+      <span class="s3">)</span>
+    <span class="s3">);</span>
+  <span class="s3">};</span>
+
+  <span class="s2">const </span><span class="s1">renderButton </span><span class="s3">= (</span><span class="s1">item</span><span class="s3">: </span><span class="s1">FriendResult</span><span class="s3">) =&gt; {</span>
+    <span class="s2">if </span><span class="s3">(!</span><span class="s1">item</span><span class="s3">.</span><span class="s1">status</span><span class="s3">) {</span>
+      <span class="s2">return </span><span class="s3">(</span>
+        <span class="s6">&lt;TouchableOpacity</span>
+          <span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">addButton</span><span class="s3">}</span>
+          <span class="s3">onPress</span><span class="s4">=</span><span class="s3">{() =&gt; </span><span class="s1">requestFriend</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">)}</span>
+        <span class="s6">&gt;</span>
+          <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">buttonText</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">Add to Circle</span><span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;/TouchableOpacity&gt;</span>
+      <span class="s3">);</span>
+    <span class="s3">}</span>
+
+    <span class="s2">if </span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">status </span><span class="s3">=== </span><span class="s4">&quot;pending&quot;</span><span class="s3">) {</span>
+        <span class="s2">if </span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">invitedByMe</span><span class="s3">) {</span>
+    <span class="s2">return </span><span class="s3">(</span>
+      <span class="s6">&lt;TouchableOpacity</span>
+        <span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">requestedButton</span><span class="s3">}</span>
+        <span class="s3">onPress</span><span class="s4">=</span><span class="s3">{() =&gt; </span><span class="s1">retractRequest</span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">)}</span>
+      <span class="s6">&gt;</span>
+        <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">buttonText</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">Requested</span><span class="s6">&lt;/Text&gt;</span>
+      <span class="s6">&lt;/TouchableOpacity&gt;</span>
+    <span class="s3">);</span>
+  <span class="s3">}</span>
+
+  <span class="s0">// someone else invited them</span>
+  <span class="s2">return </span><span class="s3">(</span>
+    <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">addedButton</span><span class="s3">}</span><span class="s6">&gt;</span>
+      <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">buttonText</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">Requested</span><span class="s6">&lt;/Text&gt;</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s3">);</span>
+<span class="s3">}</span>
+
+    <span class="s2">if </span><span class="s3">(</span><span class="s1">item</span><span class="s3">.</span><span class="s1">status </span><span class="s3">=== </span><span class="s4">&quot;accepted&quot;</span><span class="s3">) {</span>
+      <span class="s2">return </span><span class="s3">(</span>
+        <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">addedButton</span><span class="s3">}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">buttonText</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">Added</span><span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;/View&gt;</span>
+      <span class="s3">);</span>
+    <span class="s3">}</span>
+
+    <span class="s2">return null</span><span class="s3">;</span>
+  <span class="s3">};</span>
+
+  <span class="s2">return </span><span class="s3">(</span>
+    <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">container</span><span class="s3">}</span><span class="s6">&gt;</span>
+      <span class="s3">{</span><span class="s0">/* Back */</span><span class="s3">}</span>
+      <span class="s6">&lt;TouchableOpacity</span>
+        <span class="s3">onPress</span><span class="s4">=</span><span class="s3">{() =&gt;</span>
+          <span class="s1">router</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">(</span><span class="s4">`/circle-profile/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">`</span><span class="s3">)</span>
+        <span class="s3">}</span>
+      <span class="s6">&gt;</span>
+        <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">back</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">← Circle Profile</span><span class="s6">&lt;/Text&gt;</span>
+      <span class="s6">&lt;/TouchableOpacity&gt;</span>
+
+      <span class="s3">{</span><span class="s0">/* Header */</span><span class="s3">}</span>
+      <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">header</span><span class="s3">}</span><span class="s6">&gt;</span>
+        <span class="s1">Add Friends to Your Circle</span>
+      <span class="s6">&lt;/Text&gt;</span>
+
+      <span class="s3">{</span><span class="s0">/* Search */</span><span class="s3">}</span>
+      <span class="s6">&lt;TextInput</span>
+        <span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">search</span><span class="s3">}</span>
+        <span class="s3">placeholder</span><span class="s4">=&quot;Search your friends...&quot;</span>
+        <span class="s3">placeholderTextColor</span><span class="s4">=&quot;#999&quot;</span>
+        <span class="s3">value</span><span class="s4">=</span><span class="s3">{</span><span class="s1">query</span><span class="s3">}</span>
+        <span class="s3">onChangeText</span><span class="s4">=</span><span class="s3">{</span><span class="s1">setQuery</span><span class="s3">}</span>
+      <span class="s6">/&gt;</span>
+
+      <span class="s6">&lt;FlatList</span>
+        <span class="s3">data</span><span class="s4">=</span><span class="s3">{</span><span class="s1">results</span><span class="s3">}</span>
+        <span class="s3">keyExtractor</span><span class="s4">=</span><span class="s3">{(</span><span class="s1">item</span><span class="s3">) =&gt; </span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">}</span>
+        <span class="s3">renderItem</span><span class="s4">=</span><span class="s3">{({ </span><span class="s1">item </span><span class="s3">}) =&gt; (</span>
+          <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">card</span><span class="s3">}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;View&gt;</span>
+              <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">name</span><span class="s3">}</span><span class="s6">&gt;</span>
+                <span class="s3">{</span><span class="s1">item</span><span class="s3">.</span><span class="s1">username</span><span class="s3">}</span>
+              <span class="s6">&lt;/Text&gt;</span>
+              <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">handle</span><span class="s3">}</span><span class="s6">&gt;</span>
+                <span class="s1">@</span><span class="s3">{</span><span class="s1">item</span><span class="s3">.</span><span class="s1">username</span><span class="s3">}</span>
+              <span class="s6">&lt;/Text&gt;</span>
+            <span class="s6">&lt;/View&gt;</span>
+
+            <span class="s3">{</span><span class="s1">renderButton</span><span class="s3">(</span><span class="s1">item</span><span class="s3">)}</span>
+          <span class="s6">&lt;/View&gt;</span>
+        <span class="s3">)}</span>
+      <span class="s6">/&gt;</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s3">);</span>
+<span class="s3">}</span>
+
+<span class="s2">const </span><span class="s1">styles </span><span class="s3">= </span><span class="s1">StyleSheet</span><span class="s3">.</span><span class="s1">create</span><span class="s3">({</span>
+  <span class="s1">container</span><span class="s3">: {</span>
+    <span class="s1">flex</span><span class="s3">: </span><span class="s5">1</span><span class="s3">,</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#051120&quot;</span><span class="s3">,</span>
+    <span class="s1">padding</span><span class="s3">: </span><span class="s5">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">back</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">16</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s5">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">header</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">24</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">&quot;700&quot;</span><span class="s3">,</span>
+    <span class="s1">textAlign</span><span class="s3">: </span><span class="s4">&quot;center&quot;</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s5">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">search</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#1b2a40&quot;</span><span class="s3">,</span>
+    <span class="s1">padding</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s5">12</span><span class="s3">,</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s5">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">card</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#1b2a40&quot;</span><span class="s3">,</span>
+    <span class="s1">padding</span><span class="s3">: </span><span class="s5">16</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s5">12</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s5">12</span><span class="s3">,</span>
+    <span class="s1">flexDirection</span><span class="s3">: </span><span class="s4">&quot;row&quot;</span><span class="s3">,</span>
+    <span class="s1">justifyContent</span><span class="s3">: </span><span class="s4">&quot;space-between&quot;</span><span class="s3">,</span>
+    <span class="s1">alignItems</span><span class="s3">: </span><span class="s4">&quot;center&quot;</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">name</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">16</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">&quot;600&quot;</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">handle</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#999&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">addButton</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#2e6cff&quot;</span><span class="s3">,</span>
+    <span class="s1">paddingVertical</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">requestedButton</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#999&quot;</span><span class="s3">,</span>
+    <span class="s1">paddingVertical</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">addedButton</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#444&quot;</span><span class="s3">,</span>
+    <span class="s1">paddingVertical</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s5">8</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">buttonText</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">&quot;600&quot;</span><span class="s3">,</span>
+  <span class="s3">},</span>
+<span class="s3">});</span></pre>
+</body>
+</html>
