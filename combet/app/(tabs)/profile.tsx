@@ -1,27 +1,24 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, Alert, Platform } from "react-native";
+import { Alert, Platform } from "react-native";
+import { Surface, Text, Button, Switch, Divider, List } from "react-native-paper";
 import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
+import { useAppTheme } from "@/context/ThemeContext";
 
-const API_URL = "http://localhost:3001"; // changed from localhost
+const API_URL = "http://localhost:3001";
 
 export default function ProfileScreen() {
-  const doLogout = async () => {
-    console.log("Logout pressed");
+  const { isDark, toggleTheme, theme } = useAppTheme();
 
+  const doLogout = async () => {
     try {
       const sessionId = await getSessionId();
-      console.log("sessionId:", sessionId);
-
       if (sessionId) {
         await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
-          headers: {
-            "x-session-id": sessionId,
-          },
+          headers: { "x-session-id": sessionId },
         });
       }
-
       await deleteSessionId();
       router.replace("/login");
     } catch (e) {
@@ -30,14 +27,11 @@ export default function ProfileScreen() {
   };
 
   const onLogout = () => {
-    // Web: use confirm
     if (Platform.OS === "web") {
       const ok = window.confirm("Are you sure you want to logout?");
       if (ok) void doLogout();
       return;
     }
-
-    // Native: use Alert
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       { text: "Logout", style: "destructive", onPress: () => void doLogout() },
@@ -45,45 +39,77 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-
-      <Pressable
-        onPress={onLogout}
-        style={({ pressed }) => [
-          styles.logoutBtn,
-          pressed && { opacity: 0.8 },
-        ]}
+    <Surface
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.background,
+        padding: 20,
+      }}
+    >
+      {/* ── Appearance section ── */}
+      <Text
+        variant="titleMedium"
+        style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8, marginTop: 16 }}
       >
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
-    </View>
+        Appearance
+      </Text>
+
+      <Surface
+        elevation={1}
+        style={{
+          borderRadius: 12,
+          backgroundColor: theme.colors.surface,
+          marginBottom: 24,
+        }}
+      >
+        <List.Item
+          title="Dark Mode"
+          titleStyle={{ color: theme.colors.onSurface }}
+          description={isDark ? "On" : "Off"}
+          descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+          left={(props) => (
+            <List.Icon
+              {...props}
+              icon={isDark ? "weather-night" : "weather-sunny"}
+              color={theme.colors.primary}
+            />
+          )}
+          right={() => (
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              color={theme.colors.primary}
+            />
+          )}
+        />
+      </Surface>
+
+      <Divider style={{ backgroundColor: theme.colors.outline, marginBottom: 24 }} />
+
+      {/* ── Account section ── */}
+      <Text
+        variant="titleMedium"
+        style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}
+      >
+        Account
+      </Text>
+
+      <Surface
+        elevation={1}
+        style={{
+          borderRadius: 12,
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        <List.Item
+          title="Logout"
+          titleStyle={{ color: theme.colors.error }}
+          left={(props) => (
+            <List.Icon {...props} icon="logout" color={theme.colors.error} />
+          )}
+          onPress={onLogout}
+        />
+      </Surface>
+    </Surface>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#051120",
-    padding: 20,
-  },
-  title: {
-    color: "white",
-    fontSize: 28,
-    fontWeight: "900",
-    marginTop: 40,
-  },
-  logoutBtn: {
-    position: "absolute",
-    bottom: 30,
-    right: 20,
-    backgroundColor: "#E53935",
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    borderRadius: 30,
-  },
-  logoutText: {
-    color: "white",
-    fontWeight: "800",
-    fontSize: 14,
-  },
-});
