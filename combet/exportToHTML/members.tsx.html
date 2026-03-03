@@ -1,0 +1,126 @@
+<html>
+<head>
+<title>members.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #6aab73;}
+.s5 { color: #d5b778;}
+.s6 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+members.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">// &quot; See Members&quot; Screen in circles profile</span>
+<span class="s2">import </span><span class="s3">{</span>
+  <span class="s1">View</span><span class="s3">,</span>
+  <span class="s1">Text</span><span class="s3">,</span>
+  <span class="s1">StyleSheet</span><span class="s3">,</span>
+  <span class="s1">TouchableOpacity</span><span class="s3">,</span>
+  <span class="s1">FlatList</span><span class="s3">,</span>
+<span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;react-native&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">useLocalSearchParams</span><span class="s3">, </span><span class="s1">router </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;expo-router&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">useEffect</span><span class="s3">, </span><span class="s1">useState </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;react&quot;</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">getSessionId </span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;@/components/sessionStore&quot;</span><span class="s3">;</span>
+
+<span class="s2">export default function </span><span class="s1">MembersScreen</span><span class="s3">() {</span>
+  <span class="s2">const </span><span class="s3">{ </span><span class="s1">id </span><span class="s3">} = </span><span class="s1">useLocalSearchParams</span><span class="s3">();</span>
+  <span class="s2">const </span><span class="s1">circleId </span><span class="s3">= </span><span class="s1">id </span><span class="s3">as </span><span class="s1">string</span><span class="s3">;</span>
+
+  <span class="s2">const </span><span class="s3">[</span><span class="s1">members</span><span class="s3">, </span><span class="s1">setMembers</span><span class="s3">] = </span><span class="s1">useState</span><span class="s3">&lt;</span><span class="s1">any</span><span class="s3">[]&gt;([]);</span>
+
+  <span class="s1">useEffect</span><span class="s3">(() =&gt; {</span>
+    <span class="s1">loadMembers</span><span class="s3">();</span>
+  <span class="s3">}, []);</span>
+
+  <span class="s2">const </span><span class="s1">loadMembers </span><span class="s3">= </span><span class="s1">async </span><span class="s3">() =&gt; {</span>
+    <span class="s2">try </span><span class="s3">{</span>
+      <span class="s2">const </span><span class="s1">sessionId </span><span class="s3">= </span><span class="s2">await </span><span class="s1">getSessionId</span><span class="s3">();</span>
+
+      <span class="s2">const </span><span class="s1">res </span><span class="s3">= </span><span class="s2">await </span><span class="s1">fetch</span><span class="s3">(</span>
+        <span class="s4">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">/members`</span><span class="s3">,</span>
+        <span class="s3">{</span>
+          <span class="s1">headers</span><span class="s3">: {</span>
+            <span class="s4">&quot;user-id&quot;</span><span class="s3">: </span><span class="s1">sessionId </span><span class="s3">|| </span><span class="s4">&quot;&quot;</span><span class="s3">,</span>
+          <span class="s3">},</span>
+        <span class="s3">}</span>
+      <span class="s3">);</span>
+
+      <span class="s2">if </span><span class="s3">(!</span><span class="s1">res</span><span class="s3">.</span><span class="s1">ok</span><span class="s3">) </span><span class="s2">throw new </span><span class="s1">Error</span><span class="s3">(</span><span class="s4">&quot;Failed to fetch members&quot;</span><span class="s3">);</span>
+
+      <span class="s2">const </span><span class="s1">data </span><span class="s3">= </span><span class="s2">await </span><span class="s1">res</span><span class="s3">.</span><span class="s1">json</span><span class="s3">();</span>
+      <span class="s1">setMembers</span><span class="s3">(</span><span class="s1">data</span><span class="s3">);</span>
+    <span class="s3">} </span><span class="s2">catch </span><span class="s3">(</span><span class="s1">err</span><span class="s3">) {</span>
+      <span class="s1">console</span><span class="s3">.</span><span class="s1">error</span><span class="s3">(</span><span class="s4">&quot;Error loading members:&quot;</span><span class="s3">, </span><span class="s1">err</span><span class="s3">);</span>
+    <span class="s3">}</span>
+  <span class="s3">};</span>
+
+  <span class="s2">return </span><span class="s3">(</span>
+    <span class="s5">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">container</span><span class="s3">}</span><span class="s5">&gt;</span>
+      <span class="s3">{</span><span class="s0">/* Back Row */</span><span class="s3">}</span>
+      <span class="s5">&lt;TouchableOpacity</span>
+        <span class="s3">onPress</span><span class="s4">=</span><span class="s3">{() =&gt;</span>
+          <span class="s1">router</span><span class="s3">.</span><span class="s1">replace</span><span class="s3">(</span><span class="s4">`/circle-profile/</span><span class="s1">$</span><span class="s3">{</span><span class="s1">circleId</span><span class="s3">}</span><span class="s4">`</span><span class="s3">)</span>
+        <span class="s3">}</span>
+      <span class="s5">&gt;</span>
+        <span class="s5">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">back</span><span class="s3">}</span><span class="s5">&gt;</span><span class="s1">← See Circle Profile</span><span class="s5">&lt;/Text&gt;</span>
+      <span class="s5">&lt;/TouchableOpacity&gt;</span>
+
+      <span class="s3">{</span><span class="s0">/* Header */</span><span class="s3">}</span>
+      <span class="s5">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">header</span><span class="s3">}</span><span class="s5">&gt;</span><span class="s1">Members</span><span class="s5">&lt;/Text&gt;</span>
+
+      <span class="s3">{</span><span class="s0">/* Members List */</span><span class="s3">}</span>
+      <span class="s5">&lt;FlatList</span>
+        <span class="s3">data</span><span class="s4">=</span><span class="s3">{</span><span class="s1">members</span><span class="s3">}</span>
+        <span class="s3">keyExtractor</span><span class="s4">=</span><span class="s3">{(</span><span class="s1">item</span><span class="s3">) =&gt; </span><span class="s1">item</span><span class="s3">.</span><span class="s1">id</span><span class="s3">}</span>
+        <span class="s3">renderItem</span><span class="s4">=</span><span class="s3">{({ </span><span class="s1">item </span><span class="s3">}) =&gt; (</span>
+          <span class="s5">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">memberCard</span><span class="s3">}</span><span class="s5">&gt;</span>
+            <span class="s5">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">memberName</span><span class="s3">}</span><span class="s5">&gt;</span>
+              <span class="s3">{</span><span class="s1">item</span><span class="s3">.</span><span class="s1">username</span><span class="s3">}</span>
+            <span class="s5">&lt;/Text&gt;</span>
+          <span class="s5">&lt;/View&gt;</span>
+        <span class="s3">)}</span>
+        <span class="s3">contentContainerStyle</span><span class="s4">=</span><span class="s3">{{ </span><span class="s1">paddingTop</span><span class="s3">: </span><span class="s6">20 </span><span class="s3">}}</span>
+      <span class="s5">/&gt;</span>
+    <span class="s5">&lt;/View&gt;</span>
+  <span class="s3">);</span>
+<span class="s3">}</span>
+
+<span class="s2">const </span><span class="s1">styles </span><span class="s3">= </span><span class="s1">StyleSheet</span><span class="s3">.</span><span class="s1">create</span><span class="s3">({</span>
+  <span class="s1">container</span><span class="s3">: {</span>
+    <span class="s1">flex</span><span class="s3">: </span><span class="s6">1</span><span class="s3">,</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#051120&quot;</span><span class="s3">,</span>
+    <span class="s1">padding</span><span class="s3">: </span><span class="s6">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">back</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s6">16</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s6">20</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">header</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s6">24</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">&quot;700&quot;</span><span class="s3">,</span>
+    <span class="s1">textAlign</span><span class="s3">: </span><span class="s4">&quot;center&quot;</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">memberCard</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">&quot;#1b2a40&quot;</span><span class="s3">,</span>
+    <span class="s1">padding</span><span class="s3">: </span><span class="s6">16</span><span class="s3">,</span>
+    <span class="s1">borderRadius</span><span class="s3">: </span><span class="s6">12</span><span class="s3">,</span>
+    <span class="s1">marginBottom</span><span class="s3">: </span><span class="s6">12</span><span class="s3">,</span>
+  <span class="s3">},</span>
+  <span class="s1">memberName</span><span class="s3">: {</span>
+    <span class="s1">color</span><span class="s3">: </span><span class="s4">&quot;#fff&quot;</span><span class="s3">,</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s6">16</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">&quot;600&quot;</span><span class="s3">,</span>
+  <span class="s3">},</span>
+<span class="s3">});</span></pre>
+</body>
+</html>

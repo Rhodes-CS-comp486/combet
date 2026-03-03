@@ -1,90 +1,76 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, usePathname } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import { View } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import CombetHeader from '@/components/CombetHeader';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {JSX} from "react";
+import { Stack, usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+import { View } from "react-native";
+import { PaperProvider } from "react-native-paper";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { JSX } from "react";
 
-
+import CombetHeader from "@/components/CombetHeader";
+import { ThemeContextProvider, useAppTheme } from "@/context/ThemeContext";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
-export default function RootLayout(): JSX.Element {
-  const colorScheme = useColorScheme();
+// Inner layout reads from ThemeContext
+function AppLayout(): JSX.Element {
+  const { theme, isDark } = useAppTheme();
   const pathname = usePathname();
 
+  const isAuthScreen =
+    pathname.startsWith("/login") || pathname.startsWith("/register");
+
   return (
-    <SafeAreaProvider>
-      <ThemeProvider
-        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-      >
-        <View style={{ flex: 1, backgroundColor: "#091C32" }}>
-          {!pathname.startsWith("/login") && !pathname.startsWith("/register") && (<CombetHeader />
-              )}
+    <PaperProvider theme={theme}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {!isAuthScreen && <CombetHeader />}
 
-          <View style={{ flex: 1 }}>
-            <Stack
-              screenOptions={{
+        <View style={{ flex: 1 }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.colors.background },
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+
+            <Stack.Screen
+              name="create-circle"
+              options={{
+                presentation: "transparentModal",
+                animation: "fade",
                 headerShown: false,
-                contentStyle: { backgroundColor: "#091C32" },
+                contentStyle: { backgroundColor: "transparent" },
               }}
-            >
-              {/* Tabs */}
-              <Stack.Screen name="(tabs)" />
+            />
 
-              {/* Create Circle Modal */}
-              <Stack.Screen
-                name="create-circle"
-                options={{
-                  presentation: "transparentModal",
-                  animation: "fade",
-                  headerShown: false,
-                  contentStyle: {
-                    backgroundColor: "transparent",
-                  },
-                }}
-              />
-                <Stack.Screen
-                  name="add-bet"
-                  options={{
-                    headerShown: true,
-                      title: "Create Bet",
-                      headerStyle: {
-                          backgroundColor: "#0f223a",
-                      },
-                      headerTintColor: "white",
-                      headerTitleStyle: {
-                          fontWeight: "600",
-                      },
-                  }}
-                />
-            </Stack>
-          </View>
+            <Stack.Screen
+              name="add-bet"
+              options={{
+                headerShown: true,
+                title: "Create Bet",
+                headerStyle: { backgroundColor: theme.colors.surface },
+                headerTintColor: theme.colors.onSurface,
+                headerTitleStyle: { fontWeight: "600" },
+              }}
+            />
+          </Stack>
         </View>
+      </View>
 
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </SafeAreaProvider>
+      <StatusBar style={isDark ? "light" : "dark"} />
+    </PaperProvider>
   );
 }
 
-
-
-/*
-// changed for header
-    return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+// Outer layout provides the theme context
+export default function RootLayout(): JSX.Element {
+  return (
+    <SafeAreaProvider>
+      <ThemeContextProvider>
+        <AppLayout />
+      </ThemeContextProvider>
+    </SafeAreaProvider>
   );
-}*/
-
+}

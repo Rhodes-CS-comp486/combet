@@ -1,19 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
+import { useAppTheme } from "@/context/ThemeContext";
 
 const API_URL = "http://localhost:3001"; // change to LAN IP if using Expo Go on phone
 
 export default function Register() {
-  const [first_name, setFirst] = useState("");
-  const [last_name, setLast] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { theme } = useAppTheme();
 
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [first_name, setFirst]            = useState("");
+  const [last_name, setLast]              = useState("");
+  const [username, setUsername]           = useState("");
+  const [email, setEmail]                 = useState("");
+  const [password, setPassword]           = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [errorMsg, setErrorMsg]           = useState<string | null>(null);
+  const [loading, setLoading]             = useState(false);
 
   const onRegister = async () => {
     setErrorMsg(null);
@@ -30,23 +34,21 @@ export default function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           first_name: first_name.trim(),
-          last_name: last_name.trim(),
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
+          last_name:  last_name.trim(),
+          username:   username.trim(),
+          email:      email.trim().toLowerCase(),
           password,
         }),
       });
 
       const text = await res.text();
       if (!res.ok) {
-        // backend likely returns "Username or email already exists"
         setErrorMsg(text || "Unable to create account.");
         return;
       }
 
       const data = JSON.parse(text);
       await setSessionId(data.session_id);
-
       router.replace("/(tabs)");
     } catch {
       setErrorMsg("Unable to connect. Please try again.");
@@ -56,149 +58,148 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.brand}>COMBET</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 20 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* ── Brand ── */}
+        <Text
+          variant="headlineLarge"
+          style={{
+            textAlign:     "center",
+            color:         theme.colors.primary,
+            fontWeight:    "900",
+            letterSpacing: 3,
+            marginBottom:  24,
+          }}
+        >
+          COMBET
+        </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Enter your information below</Text>
+        {/* ── Card ── */}
+        <Surface
+          elevation={2}
+          style={{
+            borderRadius:    18,
+            padding:         24,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <Text
+            variant="titleLarge"
+            style={{
+              textAlign:    "center",
+              fontWeight:   "800",
+              color:        theme.colors.onSurface,
+              marginBottom: 4,
+            }}
+          >
+            Create account
+          </Text>
 
-          <Text style={styles.label}>First name</Text>
+          <Text
+            variant="bodyMedium"
+            style={{
+              textAlign:    "center",
+              color:        theme.colors.onSurfaceVariant,
+              marginBottom: 24,
+            }}
+          >
+            Enter your information below
+          </Text>
+
+          {/* ── First & Last name row ── */}
           <TextInput
+            label="First name"
             value={first_name}
             onChangeText={setFirst}
-            placeholder="First name"
-            placeholderTextColor="#8A94A6"
-            style={styles.input}
+            mode="outlined"
+            left={<TextInput.Icon icon="account" />}
+            style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.label}>Last name</Text>
           <TextInput
+            label="Last name"
             value={last_name}
             onChangeText={setLast}
-            placeholder="Last name"
-            placeholderTextColor="#8A94A6"
-            style={styles.input}
+            mode="outlined"
+            left={<TextInput.Icon icon="account" />}
+            style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.label}>Username</Text>
+          {/* ── Username ── */}
           <TextInput
+            label="Username"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
-            placeholder="Choose a username"
-            placeholderTextColor="#8A94A6"
-            style={styles.input}
+            mode="outlined"
+            left={<TextInput.Icon icon="at" />}
+            style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.label}>Email</Text>
+          {/* ── Email ── */}
           <TextInput
+            label="Email"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            placeholder="you@example.com"
-            placeholderTextColor="#8A94A6"
-            style={styles.input}
+            mode="outlined"
+            left={<TextInput.Icon icon="email" />}
+            style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.label}>Password</Text>
+          {/* ── Password ── */}
           <TextInput
+            label="Password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Create a password"
-            placeholderTextColor="#8A94A6"
-            style={styles.input}
+            secureTextEntry={!passwordVisible}
+            mode="outlined"
+            left={<TextInput.Icon icon="lock" />}
+            right={
+              <TextInput.Icon
+                icon={passwordVisible ? "eye-off" : "eye"}
+                onPress={() => setPasswordVisible((v) => !v)}
+              />
+            }
+            style={{ marginBottom: 4 }}
           />
 
-          {errorMsg ? <Text style={styles.error}>{errorMsg}</Text> : null}
+          {/* ── Error ── */}
+          <HelperText type="error" visible={!!errorMsg} style={{ marginBottom: 8 }}>
+            {errorMsg}
+          </HelperText>
 
-          <Pressable
+          {/* ── Register Button ── */}
+          <Button
+            mode="contained"
             onPress={onRegister}
+            loading={loading}
             disabled={loading}
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              (pressed || loading) && { opacity: 0.85 },
-            ]}
+            contentStyle={{ paddingVertical: 6 }}
+            labelStyle={{ fontWeight: "900", fontSize: 16 }}
+            style={{ borderRadius: 12, marginTop: 4 }}
           >
-            <Text style={styles.primaryBtnText}>
-              {loading ? "Creating..." : "Create account"}
-            </Text>
-          </Pressable>
+            {loading ? "Creating..." : "Create account"}
+          </Button>
 
-          <Pressable
+          {/* ── Back to login ── */}
+          <Button
+            mode="text"
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.linkBtn, pressed && { opacity: 0.8 }]}
+            style={{ marginTop: 8 }}
+            labelStyle={{ color: theme.colors.onSurfaceVariant }}
           >
-            <Text style={styles.linkText}>Back to login</Text>
-          </Pressable>
-        </View>
+            Back to login
+          </Button>
+        </Surface>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#091C32" },
-  container: { flexGrow: 1, justifyContent: "center", padding: 20 },
-  brand: {
-    textAlign: "center",
-    color: "white",
-    fontSize: 34,
-    fontWeight: "900",
-    letterSpacing: 2,
-    marginBottom: 18,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  title: {
-  color: "white",
-  fontSize: 22,
-  fontWeight: "800",
-  textAlign: "center",
-},
-
-subtitle: {
-  color: "rgba(255,255,255,0.75)",
-  marginTop: 4,
-  marginBottom: 16,
-  textAlign: "center",
-},
-
-  label: { color: "rgba(255,255,255,0.85)", marginBottom: 6, fontWeight: "600" },
-  input: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  error: {
-    color: "#FF6B6B",
-    marginTop: 2,
-    marginBottom: 10,
-    fontWeight: "600",
-  },
-  primaryBtn: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  primaryBtnText: {
-    color: "#091C32",
-    fontWeight: "900",
-    fontSize: 16,
-  },
-  linkBtn: { marginTop: 12, paddingVertical: 10, alignItems: "center" },
-  linkText: { color: "white", fontWeight: "700" },
-});

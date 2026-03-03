@@ -1,7 +1,7 @@
-// Community screen
-import { View, Text, FlatList } from 'react-native';
 import React, { useMemo, useState } from "react";
-import SearchBar from "../../components/searchbar";
+import { FlatList, View } from "react-native";
+import { Text, Searchbar, Surface } from "react-native-paper";
+import { useAppTheme } from "@/context/ThemeContext";
 
 // placeholder data
 const COMMUNITIES = [
@@ -10,6 +10,7 @@ const COMMUNITIES = [
 ];
 
 export default function CommunityScreen() {
+  const { theme } = useAppTheme();
   const [q, setQ] = useState("");
 
   const results = useMemo(() => {
@@ -21,40 +22,56 @@ export default function CommunityScreen() {
   return (
     <View
       style={{
-        flex: 1,
-        backgroundColor: "#051120",
-        padding: 16,
-        gap: 12,
+        flex:            1,
+        backgroundColor: theme.colors.background,
+        padding:         16,
+        gap:             12,
       }}
     >
-      <SearchBar
+      {/* ── Search Bar ── */}
+      <Searchbar
+        placeholder="Search communities..."
         value={q}
         onChangeText={setQ}
-        placeholder="Search communities..."
+        style={{
+          borderRadius:    12,
+          backgroundColor: theme.colors.surface,
+        }}
+        inputStyle={{ color: theme.colors.onSurface }}
+        iconColor={theme.colors.onSurfaceVariant}
+        placeholderTextColor={theme.colors.onSurfaceVariant}
       />
 
+      {/* ── Community List ── */}
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View
+          <Surface
+            elevation={1}
             style={{
-              padding: 14,
-              borderRadius: 12,
-              backgroundColor: "#0f223a",
-              marginBottom: 10,
+              padding:         14,
+              borderRadius:    12,
+              backgroundColor: theme.colors.surface,
+              marginBottom:    10,
             }}
           >
             <Text
-              style={{
-                fontWeight: "600",
-                color: "#FFFFFF",
-              }}
+              variant="bodyLarge"
+              style={{ fontWeight: "600", color: theme.colors.onSurface }}
             >
               {item.name}
             </Text>
-          </View>
+          </Surface>
         )}
+        ListEmptyComponent={
+          <Text
+            variant="bodyMedium"
+            style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40 }}
+          >
+            No communities found
+          </Text>
+        }
       />
     </View>
   );

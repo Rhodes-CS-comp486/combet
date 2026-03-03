@@ -1,0 +1,108 @@
+<html>
+<head>
+<title>CombetHeader.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.s6 { color: #d5b778;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+CombetHeader.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">// combet header with inbox and coin display</span>
+
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">View</span><span class="s3">, </span><span class="s1">Text</span><span class="s3">, </span><span class="s1">TouchableOpacity</span><span class="s3">, </span><span class="s1">StyleSheet </span><span class="s3">} </span><span class="s1">from </span><span class="s4">'react-native'</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">Ionicons </span><span class="s3">} </span><span class="s1">from </span><span class="s4">'@expo/vector-icons'</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">router </span><span class="s3">} </span><span class="s1">from </span><span class="s4">'expo-router'</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{ </span><span class="s1">useSafeAreaInsets </span><span class="s3">} </span><span class="s1">from </span><span class="s4">'react-native-safe-area-context'</span><span class="s3">;</span>
+<span class="s2">import </span><span class="s3">{</span><span class="s1">JSX</span><span class="s3">} </span><span class="s1">from </span><span class="s4">&quot;react&quot;</span><span class="s3">;</span>
+
+
+<span class="s2">export default function </span><span class="s1">CombetHeader</span><span class="s3">(): </span><span class="s1">JSX</span><span class="s3">.</span><span class="s1">Element </span><span class="s3">{</span>
+  <span class="s2">const </span><span class="s1">coinBalance </span><span class="s3">= </span><span class="s5">120</span><span class="s3">; </span><span class="s0">// later implement coin function here</span>
+  <span class="s2">const </span><span class="s1">insets </span><span class="s3">= </span><span class="s1">useSafeAreaInsets</span><span class="s3">();</span>
+
+  <span class="s2">return </span><span class="s3">(</span>
+    <span class="s0">// OUTER container paints the safe area</span>
+    <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{[</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">safeArea</span><span class="s3">, { </span><span class="s1">paddingTop</span><span class="s3">: </span><span class="s1">insets</span><span class="s3">.</span><span class="s1">top </span><span class="s3">}]}</span><span class="s6">&gt;</span>
+      <span class="s3">{</span><span class="s0">/* navbar */</span><span class="s3">}</span>
+      <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">container</span><span class="s3">}</span><span class="s6">&gt;</span>
+        <span class="s3">{</span><span class="s0">/* Left */</span><span class="s3">}</span>
+        <span class="s6">&lt;TouchableOpacity</span>
+          <span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">left</span><span class="s3">}</span>
+          <span class="s3">onPress</span><span class="s4">=</span><span class="s3">{() =&gt; </span><span class="s1">router</span><span class="s3">.</span><span class="s1">push</span><span class="s3">(</span><span class="s4">'/inbox'</span><span class="s3">)}</span>
+        <span class="s6">&gt;</span>
+          <span class="s6">&lt;Ionicons </span><span class="s3">name</span><span class="s4">=&quot;menu&quot; </span><span class="s3">size</span><span class="s4">=</span><span class="s3">{</span><span class="s5">26</span><span class="s3">} color</span><span class="s4">=&quot;#FFFFFF&quot; </span><span class="s6">/&gt;</span>
+        <span class="s6">&lt;/TouchableOpacity&gt;</span>
+
+        <span class="s3">{</span><span class="s0">/* Center */</span><span class="s3">}</span>
+        <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">title</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s1">COMBET</span><span class="s6">&lt;/Text&gt;</span>
+
+        <span class="s3">{</span><span class="s0">/* Right */</span><span class="s3">}</span>
+        <span class="s6">&lt;View </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">right</span><span class="s3">}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;Ionicons </span><span class="s3">name</span><span class="s4">=&quot;ellipse-outline&quot; </span><span class="s3">size</span><span class="s4">=</span><span class="s3">{</span><span class="s5">20</span><span class="s3">} color</span><span class="s4">=&quot;#FFFFFF&quot; </span><span class="s6">/&gt;</span>
+          <span class="s6">&lt;Text </span><span class="s3">style</span><span class="s4">=</span><span class="s3">{</span><span class="s1">styles</span><span class="s3">.</span><span class="s1">balance</span><span class="s3">}</span><span class="s6">&gt;</span><span class="s3">{</span><span class="s1">coinBalance</span><span class="s3">}</span><span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;/View&gt;</span>
+      <span class="s6">&lt;/View&gt;</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s3">);</span>
+<span class="s3">}</span>
+<span class="s2">const </span><span class="s1">styles </span><span class="s3">= </span><span class="s1">StyleSheet</span><span class="s3">.</span><span class="s1">create</span><span class="s3">({</span>
+  <span class="s0">// Paints behind the notch / status bar</span>
+  <span class="s1">safeArea</span><span class="s3">: {</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">'#0f223a'</span><span class="s3">,</span>
+  <span class="s3">},</span>
+
+  <span class="s0">// Actual header height (do NOT include safe area here)</span>
+  <span class="s1">container</span><span class="s3">: {</span>
+    <span class="s1">height</span><span class="s3">: </span><span class="s5">56</span><span class="s3">,</span>
+    <span class="s1">flexDirection</span><span class="s3">: </span><span class="s4">'row'</span><span class="s3">,</span>
+    <span class="s1">alignItems</span><span class="s3">: </span><span class="s4">'center'</span><span class="s3">,</span>
+    <span class="s1">justifyContent</span><span class="s3">: </span><span class="s4">'space-between'</span><span class="s3">,</span>
+    <span class="s1">paddingHorizontal</span><span class="s3">: </span><span class="s5">16</span><span class="s3">,</span>
+    <span class="s1">backgroundColor</span><span class="s3">: </span><span class="s4">'#0f223a'</span><span class="s3">,</span>
+    <span class="s1">borderBottomWidth</span><span class="s3">: </span><span class="s5">1</span><span class="s3">,</span>
+    <span class="s1">borderColor</span><span class="s3">: </span><span class="s4">'#0f223a'</span><span class="s3">,</span>
+  <span class="s3">},</span>
+
+  <span class="s1">left</span><span class="s3">: {</span>
+    <span class="s1">width</span><span class="s3">: </span><span class="s5">40</span><span class="s3">,</span>
+    <span class="s1">alignItems</span><span class="s3">: </span><span class="s4">'flex-start'</span><span class="s3">,</span>
+    <span class="s1">justifyContent</span><span class="s3">: </span><span class="s4">'center'</span><span class="s3">,</span>
+  <span class="s3">},</span>
+
+  <span class="s1">right</span><span class="s3">: {</span>
+    <span class="s1">minWidth</span><span class="s3">: </span><span class="s5">40</span><span class="s3">,</span>
+    <span class="s1">flexDirection</span><span class="s3">: </span><span class="s4">'row'</span><span class="s3">,</span>
+    <span class="s1">alignItems</span><span class="s3">: </span><span class="s4">'center'</span><span class="s3">,</span>
+    <span class="s1">justifyContent</span><span class="s3">: </span><span class="s4">'flex-end'</span><span class="s3">,</span>
+    <span class="s1">gap</span><span class="s3">: </span><span class="s5">6</span><span class="s3">,</span>
+  <span class="s3">},</span>
+
+  <span class="s1">title</span><span class="s3">: {</span>
+
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">18</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">'700'</span><span class="s3">,</span>
+    <span class="s1">letterSpacing</span><span class="s3">: </span><span class="s5">1</span><span class="s3">,</span>
+      <span class="s1">color</span><span class="s3">: </span><span class="s4">'#FFFFFF'</span><span class="s3">,</span>
+  <span class="s3">},</span>
+
+  <span class="s1">balance</span><span class="s3">: {</span>
+    <span class="s1">fontSize</span><span class="s3">: </span><span class="s5">14</span><span class="s3">,</span>
+    <span class="s1">fontWeight</span><span class="s3">: </span><span class="s4">'600'</span><span class="s3">,</span>
+      <span class="s1">color</span><span class="s3">: </span><span class="s4">'#FFFFFF'</span><span class="s3">,</span>
+  <span class="s3">},</span>
+<span class="s3">});</span>
+
+</pre>
+</body>
+</html>

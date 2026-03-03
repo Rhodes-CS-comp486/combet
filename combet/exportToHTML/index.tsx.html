@@ -1,0 +1,276 @@
+<html>
+<head>
+<title>index.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #2aacb8;}
+.s5 { color: #7a7e85;}
+.s6 { color: #d5b778;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+index.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">React</span><span class="s2">, { </span><span class="s1">useState</span><span class="s2">, </span><span class="s1">useCallback </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">View</span><span class="s2">, </span><span class="s1">ScrollView</span><span class="s2">, </span><span class="s1">Alert </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Text</span><span class="s2">, </span><span class="s1">Surface</span><span class="s2">, </span><span class="s1">Button</span><span class="s2">, </span><span class="s1">Chip </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native-paper&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Ionicons </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@expo/vector-icons&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useLocalSearchParams</span><span class="s2">, </span><span class="s1">useRouter </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;expo-router&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useFocusEffect </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@react-navigation/native&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">getSessionId </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/components/sessionStore&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useAppTheme </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/context/ThemeContext&quot;</span><span class="s2">;</span>
+
+<span class="s1">type Circle </span><span class="s2">= {</span>
+  <span class="s1">circle_id</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">name</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">description</span><span class="s2">?: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">icon</span><span class="s2">?: </span><span class="s1">string</span><span class="s2">;</span>
+<span class="s2">};</span>
+
+<span class="s0">export default function </span><span class="s1">CircleProfile</span><span class="s2">() {</span>
+  <span class="s0">const </span><span class="s1">router   </span><span class="s2">= </span><span class="s1">useRouter</span><span class="s2">();</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">theme</span><span class="s2">, </span><span class="s1">isDark </span><span class="s2">} = </span><span class="s1">useAppTheme</span><span class="s2">();</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">id </span><span class="s2">}   = </span><span class="s1">useLocalSearchParams</span><span class="s2">();</span>
+  <span class="s0">const </span><span class="s1">circleId </span><span class="s2">= </span><span class="s1">Array</span><span class="s2">.</span><span class="s1">isArray</span><span class="s2">(</span><span class="s1">id</span><span class="s2">) ? </span><span class="s1">id</span><span class="s2">[</span><span class="s4">0</span><span class="s2">] : </span><span class="s1">id</span><span class="s2">;</span>
+
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">circle</span><span class="s2">, </span><span class="s1">setCircle</span><span class="s2">]       = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">Circle </span><span class="s2">| </span><span class="s0">null</span><span class="s2">&gt;(</span><span class="s0">null</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">activeTab</span><span class="s2">, </span><span class="s1">setActiveTab</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s3">&quot;history&quot; </span><span class="s2">| </span><span class="s3">&quot;live&quot;</span><span class="s2">&gt;(</span><span class="s3">&quot;history&quot;</span><span class="s2">);</span>
+
+  <span class="s5">// ── Fetch circle ────────────────────────────────────────────────────────────</span>
+  <span class="s1">useFocusEffect</span><span class="s2">(</span>
+    <span class="s1">useCallback</span><span class="s2">(() =&gt; {</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">circleId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+      <span class="s1">fetch</span><span class="s2">(</span><span class="s3">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">`</span><span class="s2">)</span>
+        <span class="s2">.</span><span class="s1">then</span><span class="s2">((</span><span class="s1">res</span><span class="s2">) =&gt; </span><span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">())</span>
+        <span class="s2">.</span><span class="s1">then</span><span class="s2">((</span><span class="s1">data</span><span class="s2">) =&gt; </span><span class="s1">setCircle</span><span class="s2">(</span><span class="s1">data</span><span class="s2">))</span>
+        <span class="s2">.</span><span class="s1">catch</span><span class="s2">((</span><span class="s1">err</span><span class="s2">) =&gt; </span><span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s1">err</span><span class="s2">));</span>
+    <span class="s2">}, [</span><span class="s1">circleId</span><span class="s2">])</span>
+  <span class="s2">);</span>
+
+  <span class="s5">// ── Leave circle ─────────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">handleLeaveCircle </span><span class="s2">= () =&gt; {</span>
+    <span class="s1">Alert</span><span class="s2">.</span><span class="s1">alert</span><span class="s2">(</span><span class="s3">&quot;Leave Circle&quot;</span><span class="s2">, </span><span class="s3">&quot;Are you sure you want to leave this circle?&quot;</span><span class="s2">, [</span>
+      <span class="s2">{ </span><span class="s1">text</span><span class="s2">: </span><span class="s3">&quot;Cancel&quot;</span><span class="s2">, </span><span class="s1">style</span><span class="s2">: </span><span class="s3">&quot;cancel&quot; </span><span class="s2">},</span>
+      <span class="s2">{</span>
+        <span class="s1">text</span><span class="s2">: </span><span class="s3">&quot;Leave&quot;</span><span class="s2">,</span>
+        <span class="s1">style</span><span class="s2">: </span><span class="s3">&quot;destructive&quot;</span><span class="s2">,</span>
+        <span class="s1">onPress</span><span class="s2">: </span><span class="s1">async </span><span class="s2">() =&gt; {</span>
+          <span class="s0">try </span><span class="s2">{</span>
+            <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+            <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+
+            <span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s3">`http://localhost:3001/circles/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">/leave`</span><span class="s2">, {</span>
+              <span class="s1">method</span><span class="s2">: </span><span class="s3">&quot;DELETE&quot;</span><span class="s2">,</span>
+              <span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">},</span>
+            <span class="s2">});</span>
+
+            <span class="s1">router</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s3">&quot;/(tabs)/circles&quot;</span><span class="s2">);</span>
+          <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+            <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Leave circle error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+          <span class="s2">}</span>
+        <span class="s2">},</span>
+      <span class="s2">},</span>
+    <span class="s2">]);</span>
+  <span class="s2">};</span>
+
+  <span class="s0">if </span><span class="s2">(!</span><span class="s1">circle</span><span class="s2">) </span><span class="s0">return null</span><span class="s2">;</span>
+
+  <span class="s0">const </span><span class="s1">cardBg </span><span class="s2">= </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#0F223A&quot; </span><span class="s2">: </span><span class="s3">&quot;#ffffff&quot;</span><span class="s2">;</span>
+
+  <span class="s0">return </span><span class="s2">(</span>
+    <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">background </span><span class="s2">}}</span><span class="s6">&gt;</span>
+      <span class="s6">&lt;ScrollView</span>
+        <span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s4">120 </span><span class="s2">}}</span>
+        <span class="s2">showsVerticalScrollIndicator</span><span class="s3">=</span><span class="s2">{</span><span class="s0">false</span><span class="s2">}</span>
+      <span class="s6">&gt;</span>
+        <span class="s2">{</span><span class="s5">/* ── Hero section ── */</span><span class="s2">}</span>
+        <span class="s6">&lt;Surface</span>
+          <span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">}</span>
+          <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+            <span class="s1">paddingTop</span><span class="s2">:      </span><span class="s4">32</span><span class="s2">,</span>
+            <span class="s1">paddingBottom</span><span class="s2">:   </span><span class="s4">28</span><span class="s2">,</span>
+            <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">background</span><span class="s2">,</span>
+          <span class="s2">}}</span>
+        <span class="s6">&gt;</span>
+          <span class="s2">{</span><span class="s5">/* Icon bubble */</span><span class="s2">}</span>
+          <span class="s6">&lt;View</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">width</span><span class="s2">:           </span><span class="s4">120</span><span class="s2">,</span>
+              <span class="s1">height</span><span class="s2">:          </span><span class="s4">120</span><span class="s2">,</span>
+              <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">60</span><span class="s2">,</span>
+              <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+              <span class="s1">justifyContent</span><span class="s2">:  </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+              <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+              <span class="s1">marginBottom</span><span class="s2">:    </span><span class="s4">16</span><span class="s2">,</span>
+              <span class="s1">shadowColor</span><span class="s2">:     </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+              <span class="s1">shadowOpacity</span><span class="s2">:   </span><span class="s4">0.45</span><span class="s2">,</span>
+              <span class="s1">shadowRadius</span><span class="s2">:    </span><span class="s4">20</span><span class="s2">,</span>
+              <span class="s1">shadowOffset</span><span class="s2">:    { </span><span class="s1">width</span><span class="s2">: </span><span class="s4">0</span><span class="s2">, </span><span class="s1">height</span><span class="s2">: </span><span class="s4">8 </span><span class="s2">},</span>
+              <span class="s1">elevation</span><span class="s2">:       </span><span class="s4">10</span><span class="s2">,</span>
+            <span class="s2">}}</span>
+          <span class="s6">&gt;</span>
+            <span class="s6">&lt;Ionicons</span>
+              <span class="s2">name</span><span class="s3">=</span><span class="s2">{(</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">icon </span><span class="s2">as </span><span class="s1">any</span><span class="s2">) || </span><span class="s3">&quot;people&quot;</span><span class="s2">}</span>
+              <span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">48</span><span class="s2">}</span>
+              <span class="s2">color</span><span class="s3">=&quot;white&quot;</span>
+            <span class="s6">/&gt;</span>
+          <span class="s6">&lt;/View&gt;</span>
+
+          <span class="s2">{</span><span class="s5">/* Name */</span><span class="s2">}</span>
+          <span class="s6">&lt;Text</span>
+            <span class="s2">variant</span><span class="s3">=&quot;headlineSmall&quot;</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">color</span><span class="s2">:        </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">,</span>
+              <span class="s1">fontWeight</span><span class="s2">:   </span><span class="s3">&quot;800&quot;</span><span class="s2">,</span>
+              <span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">6</span><span class="s2">,</span>
+              <span class="s1">textAlign</span><span class="s2">:    </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+            <span class="s2">}}</span>
+          <span class="s6">&gt;</span>
+            <span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">name</span><span class="s2">}</span>
+          <span class="s6">&lt;/Text&gt;</span>
+
+          <span class="s2">{</span><span class="s5">/* Description */</span><span class="s2">}</span>
+          <span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">description </span><span class="s2">? (</span>
+            <span class="s6">&lt;Text</span>
+              <span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot;</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">color</span><span class="s2">:            </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">,</span>
+                <span class="s1">textAlign</span><span class="s2">:        </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s4">30</span><span class="s2">,</span>
+                <span class="s1">marginBottom</span><span class="s2">:     </span><span class="s4">20</span><span class="s2">,</span>
+              <span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s2">{</span><span class="s1">circle</span><span class="s2">.</span><span class="s1">description</span><span class="s2">}</span>
+            <span class="s6">&lt;/Text&gt;</span>
+          <span class="s2">) : (</span>
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">20 </span><span class="s2">}} </span><span class="s6">/&gt;</span>
+          <span class="s2">)}</span>
+
+          <span class="s2">{</span><span class="s5">/* ── Action buttons ── */</span><span class="s2">}</span>
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">flexWrap</span><span class="s2">: </span><span class="s3">&quot;wrap&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s4">10</span><span class="s2">, </span><span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;Button</span>
+              <span class="s2">mode</span><span class="s3">=&quot;contained-tonal&quot;</span>
+              <span class="s2">icon</span><span class="s3">=&quot;account-group&quot;</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">push</span><span class="s2">(</span><span class="s3">`/circle-profile/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">/members`</span><span class="s2">)}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">10 </span><span class="s2">}}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">13 </span><span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s1">Members</span>
+            <span class="s6">&lt;/Button&gt;</span>
+
+            <span class="s6">&lt;Button</span>
+              <span class="s2">mode</span><span class="s3">=&quot;contained&quot;</span>
+              <span class="s2">icon</span><span class="s3">=&quot;pencil&quot;</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">push</span><span class="s2">(</span><span class="s3">`/circle-profile/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">/edit`</span><span class="s2">)}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">10 </span><span class="s2">}}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">13 </span><span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s1">Edit Circle</span>
+            <span class="s6">&lt;/Button&gt;</span>
+
+            <span class="s6">&lt;Button</span>
+              <span class="s2">mode</span><span class="s3">=&quot;contained-tonal&quot;</span>
+              <span class="s2">icon</span><span class="s3">=&quot;account-plus&quot;</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">push</span><span class="s2">(</span><span class="s3">`/circle-profile/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">circleId</span><span class="s2">}</span><span class="s3">/add-friend`</span><span class="s2">)}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">10 </span><span class="s2">}}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">13 </span><span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s1">Add Friend</span>
+            <span class="s6">&lt;/Button&gt;</span>
+
+            <span class="s6">&lt;Button</span>
+              <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+              <span class="s2">icon</span><span class="s3">=&quot;exit-to-app&quot;</span>
+              <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{</span><span class="s1">handleLeaveCircle</span><span class="s2">}</span>
+              <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">10</span><span class="s2">,</span>
+                <span class="s1">borderColor</span><span class="s2">:  </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">error</span><span class="s2">,</span>
+              <span class="s2">}}</span>
+              <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">13</span><span class="s2">, </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">error </span><span class="s2">}}</span>
+            <span class="s6">&gt;</span>
+              <span class="s1">Leave</span>
+            <span class="s6">&lt;/Button&gt;</span>
+          <span class="s6">&lt;/View&gt;</span>
+        <span class="s6">&lt;/Surface&gt;</span>
+
+        <span class="s2">{</span><span class="s5">/* ── Tabs ── */</span><span class="s2">}</span>
+        <span class="s6">&lt;View</span>
+          <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">flexDirection</span><span class="s2">:   </span><span class="s3">&quot;row&quot;</span><span class="s2">,</span>
+            <span class="s1">marginHorizontal</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+            <span class="s1">marginBottom</span><span class="s2">:    </span><span class="s4">16</span><span class="s2">,</span>
+            <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s4">12</span><span class="s2">,</span>
+            <span class="s1">overflow</span><span class="s2">:        </span><span class="s3">&quot;hidden&quot;</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#0F223A&quot; </span><span class="s2">: </span><span class="s3">&quot;#e8edf5&quot;</span><span class="s2">,</span>
+          <span class="s2">}}</span>
+        <span class="s6">&gt;</span>
+          <span class="s2">{([</span><span class="s3">&quot;history&quot;</span><span class="s2">, </span><span class="s3">&quot;live&quot;</span><span class="s2">] as </span><span class="s0">const</span><span class="s2">).</span><span class="s1">map</span><span class="s2">((</span><span class="s1">tab</span><span class="s2">) =&gt; {</span>
+            <span class="s0">const </span><span class="s1">active </span><span class="s2">= </span><span class="s1">activeTab </span><span class="s2">=== </span><span class="s1">tab</span><span class="s2">;</span>
+            <span class="s0">return </span><span class="s2">(</span>
+              <span class="s6">&lt;View</span>
+                <span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">tab</span><span class="s2">}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1 </span><span class="s2">}}</span>
+              <span class="s6">&gt;</span>
+                <span class="s6">&lt;Button</span>
+                  <span class="s2">mode</span><span class="s3">=</span><span class="s2">{</span><span class="s1">active </span><span class="s2">? </span><span class="s3">&quot;contained&quot; </span><span class="s2">: </span><span class="s3">&quot;text&quot;</span><span class="s2">}</span>
+                  <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setActiveTab</span><span class="s2">(</span><span class="s1">tab</span><span class="s2">)}</span>
+                  <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                    <span class="s1">borderRadius</span><span class="s2">: </span><span class="s4">0</span><span class="s2">,</span>
+                    <span class="s1">margin</span><span class="s2">:       </span><span class="s4">0</span><span class="s2">,</span>
+                  <span class="s2">}}</span>
+                  <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{</span>
+                    <span class="s1">color</span><span class="s2">:      </span><span class="s1">active </span><span class="s2">? </span><span class="s3">&quot;white&quot; </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">,</span>
+                    <span class="s1">fontWeight</span><span class="s2">: </span><span class="s1">active </span><span class="s2">? </span><span class="s3">&quot;700&quot; </span><span class="s2">: </span><span class="s3">&quot;400&quot;</span><span class="s2">,</span>
+                    <span class="s1">fontSize</span><span class="s2">:   </span><span class="s4">14</span><span class="s2">,</span>
+                  <span class="s2">}}</span>
+                <span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">tab </span><span class="s2">=== </span><span class="s3">&quot;history&quot; </span><span class="s2">? </span><span class="s3">&quot;Circle History&quot; </span><span class="s2">: </span><span class="s3">&quot;Live Bets&quot;</span><span class="s2">}</span>
+                <span class="s6">&lt;/Button&gt;</span>
+              <span class="s6">&lt;/View&gt;</span>
+            <span class="s2">);</span>
+          <span class="s2">})}</span>
+        <span class="s6">&lt;/View&gt;</span>
+
+        <span class="s2">{</span><span class="s5">/* ── Tab content ── */</span><span class="s2">}</span>
+        <span class="s6">&lt;Surface</span>
+          <span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s4">0</span><span class="s2">}</span>
+          <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">marginHorizontal</span><span class="s2">: </span><span class="s4">20</span><span class="s2">,</span>
+            <span class="s1">borderRadius</span><span class="s2">:     </span><span class="s4">16</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">:  </span><span class="s1">cardBg</span><span class="s2">,</span>
+            <span class="s1">padding</span><span class="s2">:          </span><span class="s4">24</span><span class="s2">,</span>
+            <span class="s1">borderWidth</span><span class="s2">:      </span><span class="s4">1</span><span class="s2">,</span>
+            <span class="s1">borderColor</span><span class="s2">:      </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+            <span class="s1">alignItems</span><span class="s2">:       </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+          <span class="s2">}}</span>
+        <span class="s6">&gt;</span>
+          <span class="s6">&lt;Ionicons</span>
+            <span class="s2">name</span><span class="s3">=</span><span class="s2">{</span><span class="s1">activeTab </span><span class="s2">=== </span><span class="s3">&quot;history&quot; </span><span class="s2">? </span><span class="s3">&quot;time-outline&quot; </span><span class="s2">: </span><span class="s3">&quot;flash-outline&quot;</span><span class="s2">}</span>
+            <span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s4">36</span><span class="s2">}</span>
+            <span class="s2">color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">}</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s4">12 </span><span class="s2">}}</span>
+          <span class="s6">/&gt;</span>
+          <span class="s6">&lt;Text</span>
+            <span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot;</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">textAlign</span><span class="s2">: </span><span class="s3">&quot;center&quot; </span><span class="s2">}}</span>
+          <span class="s6">&gt;</span>
+            <span class="s2">{</span><span class="s1">activeTab </span><span class="s2">=== </span><span class="s3">&quot;history&quot;</span>
+              <span class="s2">? </span><span class="s3">&quot;Circle bet history coming soon&quot;</span>
+              <span class="s2">: </span><span class="s3">&quot;Live bets coming soon&quot;</span><span class="s2">}</span>
+          <span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;/Surface&gt;</span>
+      <span class="s6">&lt;/ScrollView&gt;</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s2">);</span>
+<span class="s2">}</span></pre>
+</body>
+</html>

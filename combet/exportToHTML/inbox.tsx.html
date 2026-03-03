@@ -1,0 +1,360 @@
+<html>
+<head>
+<title>inbox.tsx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+.s6 { color: #d5b778;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+inbox.tsx</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">React</span><span class="s2">, { </span><span class="s1">useEffect</span><span class="s2">, </span><span class="s1">useState</span><span class="s2">, </span><span class="s1">useMemo </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">View</span><span class="s2">, </span><span class="s1">FlatList </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Text</span><span class="s2">, </span><span class="s1">Surface</span><span class="s2">, </span><span class="s1">Button</span><span class="s2">, </span><span class="s1">Chip</span><span class="s2">, </span><span class="s1">ActivityIndicator </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;react-native-paper&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">Ionicons </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@expo/vector-icons&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">getSessionId </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/components/sessionStore&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">useAppTheme </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;@/context/ThemeContext&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{</span><span class="s1">router</span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;expo-router&quot;</span><span class="s2">;</span>
+
+<span class="s0">const </span><span class="s1">BASE_URL </span><span class="s2">= </span><span class="s3">&quot;http://localhost:3001&quot;</span><span class="s2">;</span>
+
+<span class="s1">type Notification </span><span class="s2">= {</span>
+  <span class="s1">notification_id</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">type</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">entity_id</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+  <span class="s1">actor_username</span><span class="s2">: </span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">;</span>
+  <span class="s1">circle_name</span><span class="s2">: </span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">;</span>
+  <span class="s1">invite_id</span><span class="s2">: </span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">;</span>
+  <span class="s1">status</span><span class="s2">: </span><span class="s1">string </span><span class="s2">| </span><span class="s0">null</span><span class="s2">;</span>
+  <span class="s1">is_read</span><span class="s2">: </span><span class="s1">boolean</span><span class="s2">;</span>
+  <span class="s1">created_at</span><span class="s2">: </span><span class="s1">string</span><span class="s2">;</span>
+<span class="s2">};</span>
+
+<span class="s4">// ── Filter config ────────────────────────────────────────────────────────────</span>
+<span class="s4">// Add new filters here as you add new notification types</span>
+<span class="s0">const </span><span class="s1">FILTERS </span><span class="s2">= [</span>
+  <span class="s2">{ </span><span class="s1">key</span><span class="s2">: </span><span class="s3">&quot;all&quot;</span><span class="s2">,           </span><span class="s1">label</span><span class="s2">: </span><span class="s3">&quot;All&quot;</span><span class="s2">,      </span><span class="s1">icon</span><span class="s2">: </span><span class="s3">&quot;notifications-outline&quot; </span><span class="s2">},</span>
+  <span class="s2">{ </span><span class="s1">key</span><span class="s2">: </span><span class="s3">&quot;circle_invite&quot;</span><span class="s2">, </span><span class="s1">label</span><span class="s2">: </span><span class="s3">&quot;Invites&quot;</span><span class="s2">,  </span><span class="s1">icon</span><span class="s2">: </span><span class="s3">&quot;people-outline&quot;        </span><span class="s2">},</span>
+  <span class="s2">{ </span><span class="s1">key</span><span class="s2">: </span><span class="s3">&quot;pending&quot;</span><span class="s2">,       </span><span class="s1">label</span><span class="s2">: </span><span class="s3">&quot;Pending&quot;</span><span class="s2">,  </span><span class="s1">icon</span><span class="s2">: </span><span class="s3">&quot;time-outline&quot;          </span><span class="s2">},</span>
+  <span class="s4">// future: { key: &quot;bet_result&quot;, label: &quot;Results&quot;, icon: &quot;trophy-outline&quot; },</span>
+  <span class="s4">// future: { key: &quot;follow&quot;,     label: &quot;Follows&quot;,  icon: &quot;person-add-outline&quot; },</span>
+<span class="s2">] as </span><span class="s0">const</span><span class="s2">;</span>
+
+<span class="s1">type FilterKey </span><span class="s2">= </span><span class="s0">typeof </span><span class="s1">FILTERS</span><span class="s2">[</span><span class="s1">number</span><span class="s2">][</span><span class="s3">&quot;key&quot;</span><span class="s2">];</span>
+
+<span class="s0">export default function </span><span class="s1">InboxScreen</span><span class="s2">() {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">theme</span><span class="s2">, </span><span class="s1">isDark </span><span class="s2">} = </span><span class="s1">useAppTheme</span><span class="s2">();</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">notifications</span><span class="s2">, </span><span class="s1">setNotifications</span><span class="s2">] = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">Notification</span><span class="s2">[]&gt;([]);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">loading</span><span class="s2">, </span><span class="s1">setLoading</span><span class="s2">]             = </span><span class="s1">useState</span><span class="s2">(</span><span class="s0">true</span><span class="s2">);</span>
+  <span class="s0">const </span><span class="s2">[</span><span class="s1">activeFilter</span><span class="s2">, </span><span class="s1">setActiveFilter</span><span class="s2">]   = </span><span class="s1">useState</span><span class="s2">&lt;</span><span class="s1">FilterKey</span><span class="s2">&gt;(</span><span class="s3">&quot;all&quot;</span><span class="s2">);</span>
+
+  <span class="s1">useEffect</span><span class="s2">(() =&gt; { </span><span class="s1">fetchInbox</span><span class="s2">(); }, []);</span>
+
+  <span class="s0">const </span><span class="s1">fetchInbox </span><span class="s2">= </span><span class="s1">async </span><span class="s2">() =&gt; {</span>
+    <span class="s0">try </span><span class="s2">{</span>
+      <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+      <span class="s0">const </span><span class="s1">res </span><span class="s2">= </span><span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">BASE_URL</span><span class="s2">}</span><span class="s3">/inbox`</span><span class="s2">, {</span>
+        <span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">},</span>
+      <span class="s2">});</span>
+      <span class="s1">setNotifications</span><span class="s2">(</span><span class="s0">await </span><span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">());</span>
+    <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+      <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Inbox error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s2">} </span><span class="s0">finally </span><span class="s2">{</span>
+      <span class="s1">setLoading</span><span class="s2">(</span><span class="s0">false</span><span class="s2">);</span>
+    <span class="s2">}</span>
+  <span class="s2">};</span>
+
+  <span class="s0">const </span><span class="s1">handleAccept </span><span class="s2">= </span><span class="s1">async </span><span class="s2">(</span><span class="s1">inviteId</span><span class="s2">: </span><span class="s1">string</span><span class="s2">) =&gt; {</span>
+    <span class="s0">try </span><span class="s2">{</span>
+      <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+      <span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">BASE_URL</span><span class="s2">}</span><span class="s3">/inbox/invites/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">inviteId</span><span class="s2">}</span><span class="s3">/accept`</span><span class="s2">, {</span>
+        <span class="s1">method</span><span class="s2">: </span><span class="s3">&quot;POST&quot;</span><span class="s2">,</span>
+        <span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">},</span>
+      <span class="s2">});</span>
+      <span class="s1">setNotifications</span><span class="s2">((</span><span class="s1">prev</span><span class="s2">) =&gt;</span>
+        <span class="s1">prev</span><span class="s2">.</span><span class="s1">map</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">invite_id </span><span class="s2">=== </span><span class="s1">inviteId </span><span class="s2">? { </span><span class="s1">...n</span><span class="s2">, </span><span class="s1">status</span><span class="s2">: </span><span class="s3">&quot;accepted&quot; </span><span class="s2">} : </span><span class="s1">n</span><span class="s2">)</span>
+      <span class="s2">);</span>
+    <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+      <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Accept error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s2">}</span>
+  <span class="s2">};</span>
+
+  <span class="s0">const </span><span class="s1">handleDecline </span><span class="s2">= </span><span class="s1">async </span><span class="s2">(</span><span class="s1">inviteId</span><span class="s2">: </span><span class="s1">string</span><span class="s2">) =&gt; {</span>
+    <span class="s0">try </span><span class="s2">{</span>
+      <span class="s0">const </span><span class="s1">sessionId </span><span class="s2">= </span><span class="s0">await </span><span class="s1">getSessionId</span><span class="s2">();</span>
+      <span class="s0">if </span><span class="s2">(!</span><span class="s1">sessionId</span><span class="s2">) </span><span class="s0">return</span><span class="s2">;</span>
+      <span class="s0">await </span><span class="s1">fetch</span><span class="s2">(</span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">BASE_URL</span><span class="s2">}</span><span class="s3">/inbox/invites/</span><span class="s1">$</span><span class="s2">{</span><span class="s1">inviteId</span><span class="s2">}</span><span class="s3">/decline`</span><span class="s2">, {</span>
+        <span class="s1">method</span><span class="s2">: </span><span class="s3">&quot;POST&quot;</span><span class="s2">,</span>
+        <span class="s1">headers</span><span class="s2">: { </span><span class="s3">&quot;x-session-id&quot;</span><span class="s2">: </span><span class="s1">sessionId </span><span class="s2">},</span>
+      <span class="s2">});</span>
+      <span class="s1">setNotifications</span><span class="s2">((</span><span class="s1">prev</span><span class="s2">) =&gt; </span><span class="s1">prev</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">invite_id </span><span class="s2">!== </span><span class="s1">inviteId</span><span class="s2">));</span>
+    <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+      <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Decline error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s2">}</span>
+  <span class="s2">};</span>
+
+  <span class="s4">// ── Filtered list ─────────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">filtered </span><span class="s2">= </span><span class="s1">useMemo</span><span class="s2">(() =&gt; {</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">activeFilter </span><span class="s2">=== </span><span class="s3">&quot;all&quot;</span><span class="s2">)     </span><span class="s0">return </span><span class="s1">notifications</span><span class="s2">;</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">activeFilter </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">) </span><span class="s0">return </span><span class="s1">notifications</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">status </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">);</span>
+    <span class="s0">return </span><span class="s1">notifications</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">type </span><span class="s2">=== </span><span class="s1">activeFilter</span><span class="s2">);</span>
+  <span class="s2">}, [</span><span class="s1">notifications</span><span class="s2">, </span><span class="s1">activeFilter</span><span class="s2">]);</span>
+
+  <span class="s4">// ── Badge counts ──────────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">pendingCount </span><span class="s2">= </span><span class="s1">notifications</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">status </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">).</span><span class="s1">length</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">inviteCount  </span><span class="s2">= </span><span class="s1">notifications</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">((</span><span class="s1">n</span><span class="s2">) =&gt; </span><span class="s1">n</span><span class="s2">.</span><span class="s1">type </span><span class="s2">=== </span><span class="s3">&quot;circle_invite&quot;</span><span class="s2">).</span><span class="s1">length</span><span class="s2">;</span>
+
+  <span class="s0">const </span><span class="s1">getBadge </span><span class="s2">= (</span><span class="s1">key</span><span class="s2">: </span><span class="s1">FilterKey</span><span class="s2">) =&gt; {</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">key </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">)       </span><span class="s0">return </span><span class="s1">pendingCount</span><span class="s2">;</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">key </span><span class="s2">=== </span><span class="s3">&quot;circle_invite&quot;</span><span class="s2">) </span><span class="s0">return </span><span class="s1">inviteCount</span><span class="s2">;</span>
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">key </span><span class="s2">=== </span><span class="s3">&quot;all&quot;</span><span class="s2">)           </span><span class="s0">return </span><span class="s1">notifications</span><span class="s2">.</span><span class="s1">length</span><span class="s2">;</span>
+    <span class="s0">return </span><span class="s5">0</span><span class="s2">;</span>
+  <span class="s2">};</span>
+
+  <span class="s0">const </span><span class="s1">cardBg </span><span class="s2">= </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#0D1F35&quot; </span><span class="s2">: </span><span class="s3">&quot;#ffffff&quot;</span><span class="s2">;</span>
+
+  <span class="s4">// ── Notification card ─────────────────────────────────────────────────────</span>
+  <span class="s0">const </span><span class="s1">renderItem </span><span class="s2">= ({ </span><span class="s1">item </span><span class="s2">}: { </span><span class="s1">item</span><span class="s2">: </span><span class="s1">Notification </span><span class="s2">}) =&gt; {</span>
+    <span class="s0">const </span><span class="s1">isPending  </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">status </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">;</span>
+    <span class="s0">const </span><span class="s1">isAccepted </span><span class="s2">= </span><span class="s1">item</span><span class="s2">.</span><span class="s1">status </span><span class="s2">=== </span><span class="s3">&quot;accepted&quot;</span><span class="s2">;</span>
+
+    <span class="s0">const </span><span class="s1">timeAgo </span><span class="s2">= (</span><span class="s1">dateStr</span><span class="s2">: </span><span class="s1">string</span><span class="s2">) =&gt; {</span>
+      <span class="s0">const </span><span class="s1">diff </span><span class="s2">= </span><span class="s1">Date</span><span class="s2">.</span><span class="s1">now</span><span class="s2">() - </span><span class="s0">new </span><span class="s1">Date</span><span class="s2">(</span><span class="s1">dateStr</span><span class="s2">).</span><span class="s1">getTime</span><span class="s2">();</span>
+      <span class="s0">const </span><span class="s1">mins  </span><span class="s2">= </span><span class="s1">Math</span><span class="s2">.</span><span class="s1">floor</span><span class="s2">(</span><span class="s1">diff </span><span class="s2">/ </span><span class="s5">60000</span><span class="s2">);</span>
+      <span class="s0">const </span><span class="s1">hours </span><span class="s2">= </span><span class="s1">Math</span><span class="s2">.</span><span class="s1">floor</span><span class="s2">(</span><span class="s1">diff </span><span class="s2">/ </span><span class="s5">3600000</span><span class="s2">);</span>
+      <span class="s0">const </span><span class="s1">days  </span><span class="s2">= </span><span class="s1">Math</span><span class="s2">.</span><span class="s1">floor</span><span class="s2">(</span><span class="s1">diff </span><span class="s2">/ </span><span class="s5">86400000</span><span class="s2">);</span>
+      <span class="s0">if </span><span class="s2">(</span><span class="s1">mins </span><span class="s2">&lt; </span><span class="s5">1</span><span class="s2">)   </span><span class="s0">return </span><span class="s3">&quot;just now&quot;</span><span class="s2">;</span>
+      <span class="s0">if </span><span class="s2">(</span><span class="s1">mins </span><span class="s2">&lt; </span><span class="s5">60</span><span class="s2">)  </span><span class="s0">return </span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">mins</span><span class="s2">}</span><span class="s3">m ago`</span><span class="s2">;</span>
+      <span class="s0">if </span><span class="s2">(</span><span class="s1">hours </span><span class="s2">&lt; </span><span class="s5">24</span><span class="s2">) </span><span class="s0">return </span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">hours</span><span class="s2">}</span><span class="s3">h ago`</span><span class="s2">;</span>
+      <span class="s0">return </span><span class="s3">`</span><span class="s1">$</span><span class="s2">{</span><span class="s1">days</span><span class="s2">}</span><span class="s3">d ago`</span><span class="s2">;</span>
+    <span class="s2">};</span>
+
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">item</span><span class="s2">.</span><span class="s1">type </span><span class="s2">=== </span><span class="s3">&quot;circle_invite&quot;</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s2">(</span>
+        <span class="s6">&lt;Surface</span>
+          <span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s5">1</span><span class="s2">}</span>
+          <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s5">16</span><span class="s2">,</span>
+            <span class="s1">marginBottom</span><span class="s2">:    </span><span class="s5">12</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">,</span>
+            <span class="s1">overflow</span><span class="s2">:        </span><span class="s3">&quot;hidden&quot;</span><span class="s2">,</span>
+          <span class="s2">}}</span>
+        <span class="s6">&gt;</span>
+          <span class="s2">{</span><span class="s4">/* Accent bar — blue for pending, green for accepted */</span><span class="s2">}</span>
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">height</span><span class="s2">:          </span><span class="s5">3</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">isAccepted </span><span class="s2">? </span><span class="s3">&quot;#22c55e&quot; </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+          <span class="s2">}} </span><span class="s6">/&gt;</span>
+
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">padding</span><span class="s2">: </span><span class="s5">16 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s2">{</span><span class="s4">/* ── Top row: icon + text + time ── */</span><span class="s2">}</span>
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;flex-start&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                <span class="s1">width</span><span class="s2">:           </span><span class="s5">40</span><span class="s2">,</span>
+                <span class="s1">height</span><span class="s2">:          </span><span class="s5">40</span><span class="s2">,</span>
+                <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s5">20</span><span class="s2">,</span>
+                <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">isAccepted</span>
+                  <span class="s2">? </span><span class="s3">&quot;rgba(34,197,94,0.15)&quot;</span>
+                  <span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.15)&quot;</span><span class="s2">,</span>
+                <span class="s1">borderWidth</span><span class="s2">:     </span><span class="s5">1.5</span><span class="s2">,</span>
+                <span class="s1">borderColor</span><span class="s2">:     </span><span class="s1">isAccepted </span><span class="s2">? </span><span class="s3">&quot;rgba(34,197,94,0.4)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.4)&quot;</span><span class="s2">,</span>
+                <span class="s1">alignItems</span><span class="s2">:      </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                <span class="s1">justifyContent</span><span class="s2">:  </span><span class="s3">&quot;center&quot;</span><span class="s2">,</span>
+                <span class="s1">marginRight</span><span class="s2">:     </span><span class="s5">12</span><span class="s2">,</span>
+              <span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s6">&lt;Ionicons</span>
+                  <span class="s2">name</span><span class="s3">=&quot;people&quot;</span>
+                  <span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s5">18</span><span class="s2">}</span>
+                  <span class="s2">color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">isAccepted </span><span class="s2">? </span><span class="s3">&quot;#22c55e&quot; </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">}</span>
+                <span class="s6">/&gt;</span>
+              <span class="s6">&lt;/View&gt;</span>
+
+              <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">, </span><span class="s1">lineHeight</span><span class="s2">: </span><span class="s5">20 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span><span class="s1">@</span><span class="s2">{</span><span class="s1">item</span><span class="s2">.</span><span class="s1">actor_username</span><span class="s2">}</span><span class="s6">&lt;/Text&gt;</span>
+                  <span class="s2">{</span><span class="s3">&quot; invited you to join &quot;</span><span class="s2">}</span>
+                  <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                    <span class="s1">&quot;</span><span class="s2">{</span><span class="s1">item</span><span class="s2">.</span><span class="s1">circle_name</span><span class="s2">}</span><span class="s1">&quot;</span>
+                  <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;/Text&gt;</span>
+                <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelSmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s5">4 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                  <span class="s2">{</span><span class="s1">timeAgo</span><span class="s2">(</span><span class="s1">item</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">)}</span>
+                <span class="s6">&lt;/Text&gt;</span>
+              <span class="s6">&lt;/View&gt;</span>
+
+              <span class="s2">{</span><span class="s4">/* Status chip */</span><span class="s2">}</span>
+              <span class="s2">{</span><span class="s1">isAccepted </span><span class="s2">&amp;&amp; (</span>
+                <span class="s6">&lt;Chip</span>
+                  <span class="s2">icon</span><span class="s3">=&quot;check-circle&quot;</span>
+                  <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;rgba(34,197,94,0.15)&quot;</span><span class="s2">, </span><span class="s1">height</span><span class="s2">: </span><span class="s5">28 </span><span class="s2">}}</span>
+                  <span class="s2">textStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;#22c55e&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s5">11 </span><span class="s2">}}</span>
+                <span class="s6">&gt;</span>
+                  <span class="s1">Joined</span>
+                <span class="s6">&lt;/Chip&gt;</span>
+              <span class="s2">)}</span>
+            <span class="s6">&lt;/View&gt;</span>
+
+            <span class="s2">{</span><span class="s4">/* ── Action buttons (only when pending) ── */</span><span class="s2">}</span>
+            <span class="s2">{</span><span class="s1">isPending </span><span class="s2">&amp;&amp; </span><span class="s1">item</span><span class="s2">.</span><span class="s1">invite_id </span><span class="s2">&amp;&amp; (</span>
+              <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s5">10</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s5">14 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s6">&lt;Button</span>
+                  <span class="s2">mode</span><span class="s3">=&quot;contained&quot;</span>
+                  <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">handleAccept</span><span class="s2">(</span><span class="s1">item</span><span class="s2">.</span><span class="s1">invite_id</span><span class="s2">!)}</span>
+                  <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s5">10 </span><span class="s2">}}</span>
+                  <span class="s2">contentStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s5">2 </span><span class="s2">}}</span>
+                  <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s5">13 </span><span class="s2">}}</span>
+                <span class="s6">&gt;</span>
+                  <span class="s1">Accept</span>
+                <span class="s6">&lt;/Button&gt;</span>
+                <span class="s6">&lt;Button</span>
+                  <span class="s2">mode</span><span class="s3">=&quot;outlined&quot;</span>
+                  <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">handleDecline</span><span class="s2">(</span><span class="s1">item</span><span class="s2">.</span><span class="s1">invite_id</span><span class="s2">!)}</span>
+                  <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s5">10</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">error </span><span class="s2">}}</span>
+                  <span class="s2">contentStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s5">2 </span><span class="s2">}}</span>
+                  <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s5">13</span><span class="s2">, </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">error </span><span class="s2">}}</span>
+                <span class="s6">&gt;</span>
+                  <span class="s1">Decline</span>
+                <span class="s6">&lt;/Button&gt;</span>
+              <span class="s6">&lt;/View&gt;</span>
+            <span class="s2">)}</span>
+          <span class="s6">&lt;/View&gt;</span>
+        <span class="s6">&lt;/Surface&gt;</span>
+      <span class="s2">);</span>
+    <span class="s2">}</span>
+
+    <span class="s4">// ── Fallback for future notification types ──</span>
+    <span class="s0">return </span><span class="s2">(</span>
+      <span class="s6">&lt;Surface </span><span class="s2">elevation</span><span class="s3">=</span><span class="s2">{</span><span class="s5">1</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{</span>
+        <span class="s1">borderRadius</span><span class="s2">: </span><span class="s5">16</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s5">12</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">cardBg</span><span class="s2">, </span><span class="s1">padding</span><span class="s2">: </span><span class="s5">16</span><span class="s2">,</span>
+      <span class="s2">}}</span><span class="s6">&gt;</span>
+        <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+            <span class="s1">width</span><span class="s2">: </span><span class="s5">40</span><span class="s2">, </span><span class="s1">height</span><span class="s2">: </span><span class="s5">40</span><span class="s2">, </span><span class="s1">borderRadius</span><span class="s2">: </span><span class="s5">20</span><span class="s2">,</span>
+            <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.15)&quot;</span><span class="s2">,</span>
+            <span class="s1">borderWidth</span><span class="s2">: </span><span class="s5">1.5</span><span class="s2">, </span><span class="s1">borderColor</span><span class="s2">: </span><span class="s3">&quot;rgba(46,108,246,0.4)&quot;</span><span class="s2">,</span>
+            <span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">marginRight</span><span class="s2">: </span><span class="s5">12</span><span class="s2">,</span>
+          <span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;Ionicons </span><span class="s2">name</span><span class="s3">=&quot;notifications&quot; </span><span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s5">18</span><span class="s2">} color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">} </span><span class="s6">/&gt;</span>
+          <span class="s6">&lt;/View&gt;</span>
+          <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodyMedium&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s1">You have a new notification</span>
+            <span class="s6">&lt;/Text&gt;</span>
+            <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;labelSmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">, </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s5">2 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s2">{</span><span class="s1">timeAgo</span><span class="s2">(</span><span class="s1">item</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">)}</span>
+            <span class="s6">&lt;/Text&gt;</span>
+          <span class="s6">&lt;/View&gt;</span>
+        <span class="s6">&lt;/View&gt;</span>
+      <span class="s6">&lt;/Surface&gt;</span>
+    <span class="s2">);</span>
+
+
+  <span class="s2">};</span>
+
+  <span class="s0">return </span><span class="s2">(</span>
+    <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">background </span><span class="s2">}}</span><span class="s6">&gt;</span>
+
+      <span class="s2">{</span><span class="s4">/* ── Header ── */</span><span class="s2">}</span>
+      <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+        <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s5">20</span><span class="s2">,</span>
+        <span class="s1">paddingTop</span><span class="s2">:        </span><span class="s5">16</span><span class="s2">,</span>
+        <span class="s1">paddingBottom</span><span class="s2">:     </span><span class="s5">12</span><span class="s2">,</span>
+        <span class="s1">borderBottomWidth</span><span class="s2">: </span><span class="s5">1</span><span class="s2">,</span>
+        <span class="s1">borderColor</span><span class="s2">:       </span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;rgba(255,255,255,0.07)&quot; </span><span class="s2">: </span><span class="s3">&quot;rgba(0,0,0,0.07)&quot;</span><span class="s2">,</span>
+      <span class="s2">}}</span><span class="s6">&gt;</span>
+
+    <span class="s6">&lt;Button</span>
+        <span class="s2">icon</span><span class="s3">=&quot;arrow-left&quot;</span>
+        <span class="s2">mode</span><span class="s3">=&quot;text&quot;</span>
+        <span class="s2">compact</span>
+        <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">back</span><span class="s2">()}</span>
+        <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant </span><span class="s2">}}</span>
+    <span class="s6">&gt;</span><span class="s1">Back </span><span class="s6">&lt;/Button&gt;</span>
+        <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;space-between&quot;</span><span class="s2">, </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s5">16 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;headlineSmall&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurface</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;800&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s1">Inbox</span>
+          <span class="s6">&lt;/Text&gt;</span>
+          <span class="s2">{</span><span class="s1">pendingCount </span><span class="s2">&gt; </span><span class="s5">0 </span><span class="s2">&amp;&amp; (</span>
+            <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+              <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">,</span>
+              <span class="s1">borderRadius</span><span class="s2">:    </span><span class="s5">12</span><span class="s2">,</span>
+              <span class="s1">paddingHorizontal</span><span class="s2">: </span><span class="s5">10</span><span class="s2">,</span>
+              <span class="s1">paddingVertical</span><span class="s2">:   </span><span class="s5">3</span><span class="s2">,</span>
+            <span class="s2">}}</span><span class="s6">&gt;</span>
+              <span class="s6">&lt;Text </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s3">&quot;white&quot;</span><span class="s2">, </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;700&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s5">12 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                <span class="s2">{</span><span class="s1">pendingCount</span><span class="s2">} </span><span class="s1">pending</span>
+              <span class="s6">&lt;/Text&gt;</span>
+            <span class="s6">&lt;/View&gt;</span>
+          <span class="s2">)}</span>
+        <span class="s6">&lt;/View&gt;</span>
+
+        <span class="s2">{</span><span class="s4">/* ── Filter chips ── */</span><span class="s2">}</span>
+        <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flexDirection</span><span class="s2">: </span><span class="s3">&quot;row&quot;</span><span class="s2">, </span><span class="s1">gap</span><span class="s2">: </span><span class="s5">8 </span><span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s2">{</span><span class="s1">FILTERS</span><span class="s2">.</span><span class="s1">map</span><span class="s2">(({ </span><span class="s1">key</span><span class="s2">, </span><span class="s1">label</span><span class="s2">, </span><span class="s1">icon </span><span class="s2">}) =&gt; {</span>
+            <span class="s0">const </span><span class="s1">active </span><span class="s2">= </span><span class="s1">activeFilter </span><span class="s2">=== </span><span class="s1">key</span><span class="s2">;</span>
+            <span class="s0">const </span><span class="s1">badge  </span><span class="s2">= </span><span class="s1">getBadge</span><span class="s2">(</span><span class="s1">key</span><span class="s2">);</span>
+            <span class="s0">return </span><span class="s2">(</span>
+              <span class="s6">&lt;Chip</span>
+                <span class="s2">key</span><span class="s3">=</span><span class="s2">{</span><span class="s1">key</span><span class="s2">}</span>
+                <span class="s2">selected</span><span class="s3">=</span><span class="s2">{</span><span class="s1">active</span><span class="s2">}</span>
+                <span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">setActiveFilter</span><span class="s2">(</span><span class="s1">key</span><span class="s2">)}</span>
+                <span class="s2">icon</span><span class="s3">=</span><span class="s2">{</span><span class="s1">icon </span><span class="s2">as </span><span class="s1">any</span><span class="s2">}</span>
+                <span class="s2">style</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">active</span>
+                    <span class="s2">? </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span>
+                    <span class="s2">: (</span><span class="s1">isDark </span><span class="s2">? </span><span class="s3">&quot;#0F223A&quot; </span><span class="s2">: </span><span class="s3">&quot;#e8edf5&quot;</span><span class="s2">),</span>
+                <span class="s2">}}</span>
+                <span class="s2">textStyle</span><span class="s3">=</span><span class="s2">{{</span>
+                  <span class="s1">color</span><span class="s2">:      </span><span class="s1">active </span><span class="s2">? </span><span class="s3">&quot;white&quot; </span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">,</span>
+                  <span class="s1">fontWeight</span><span class="s2">: </span><span class="s1">active </span><span class="s2">? </span><span class="s3">&quot;700&quot; </span><span class="s2">: </span><span class="s3">&quot;400&quot;</span><span class="s2">,</span>
+                  <span class="s1">fontSize</span><span class="s2">:   </span><span class="s5">13</span><span class="s2">,</span>
+                <span class="s2">}}</span>
+              <span class="s6">&gt;</span>
+                <span class="s2">{</span><span class="s1">label</span><span class="s2">}{</span><span class="s1">badge </span><span class="s2">&gt; </span><span class="s5">0 </span><span class="s2">? </span><span class="s3">` (</span><span class="s1">$</span><span class="s2">{</span><span class="s1">badge</span><span class="s2">}</span><span class="s3">)` </span><span class="s2">: </span><span class="s3">&quot;&quot;</span><span class="s2">}</span>
+              <span class="s6">&lt;/Chip&gt;</span>
+            <span class="s2">);</span>
+          <span class="s2">})}</span>
+        <span class="s6">&lt;/View&gt;</span>
+      <span class="s6">&lt;/View&gt;</span>
+
+      <span class="s2">{</span><span class="s4">/* ── Content ── */</span><span class="s2">}</span>
+      <span class="s2">{</span><span class="s1">loading </span><span class="s2">? (</span>
+        <span class="s6">&lt;ActivityIndicator </span><span class="s2">animating color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">primary</span><span class="s2">} style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s5">60 </span><span class="s2">}} </span><span class="s6">/&gt;</span>
+      <span class="s2">) : </span><span class="s1">filtered</span><span class="s2">.</span><span class="s1">length </span><span class="s2">=== </span><span class="s5">0 </span><span class="s2">? (</span>
+        <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s5">1</span><span class="s2">, </span><span class="s1">alignItems</span><span class="s2">: </span><span class="s3">&quot;center&quot;</span><span class="s2">, </span><span class="s1">justifyContent</span><span class="s2">: </span><span class="s3">&quot;center&quot; </span><span class="s2">}}</span><span class="s6">&gt;</span>
+          <span class="s6">&lt;Ionicons</span>
+            <span class="s2">name</span><span class="s3">=&quot;notifications-off-outline&quot;</span>
+            <span class="s2">size</span><span class="s3">=</span><span class="s2">{</span><span class="s5">48</span><span class="s2">}</span>
+            <span class="s2">color</span><span class="s3">=</span><span class="s2">{</span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant</span><span class="s2">}</span>
+            <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginBottom</span><span class="s2">: </span><span class="s5">12 </span><span class="s2">}}</span>
+          <span class="s6">/&gt;</span>
+          <span class="s6">&lt;Text </span><span class="s2">variant</span><span class="s3">=&quot;bodyLarge&quot; </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant </span><span class="s2">}}</span><span class="s6">&gt;</span>
+            <span class="s2">{</span><span class="s1">activeFilter </span><span class="s2">=== </span><span class="s3">&quot;all&quot; </span><span class="s2">? </span><span class="s3">&quot;No notifications yet&quot; </span><span class="s2">: </span><span class="s3">`No </span><span class="s1">$</span><span class="s2">{</span><span class="s1">activeFilter</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s3">&quot;_&quot;</span><span class="s2">, </span><span class="s3">&quot; &quot;</span><span class="s2">)}</span><span class="s3">s`</span><span class="s2">}</span>
+          <span class="s6">&lt;/Text&gt;</span>
+        <span class="s6">&lt;/View&gt;</span>
+      <span class="s2">) : (</span>
+        <span class="s6">&lt;FlatList</span>
+          <span class="s2">data</span><span class="s3">=</span><span class="s2">{</span><span class="s1">filtered</span><span class="s2">}</span>
+          <span class="s2">keyExtractor</span><span class="s3">=</span><span class="s2">{(</span><span class="s1">item</span><span class="s2">) =&gt; </span><span class="s1">item</span><span class="s2">.</span><span class="s1">notification_id</span><span class="s2">}</span>
+          <span class="s2">renderItem</span><span class="s3">=</span><span class="s2">{</span><span class="s1">renderItem</span><span class="s2">}</span>
+          <span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">padding</span><span class="s2">: </span><span class="s5">16</span><span class="s2">, </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s5">120 </span><span class="s2">}}</span>
+          <span class="s2">showsVerticalScrollIndicator</span><span class="s3">=</span><span class="s2">{</span><span class="s0">false</span><span class="s2">}</span>
+        <span class="s6">/&gt;</span>
+      <span class="s2">)}</span>
+    <span class="s6">&lt;/View&gt;</span>
+  <span class="s2">);</span>
+<span class="s2">}</span></pre>
+</body>
+</html>

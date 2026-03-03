@@ -1,20 +1,12 @@
-// Circles Screen
-
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import React, { useMemo, useState, useCallback } from "react";
+import { FlatList, View } from "react-native";
+import { Text, Searchbar, Surface, FAB } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import SearchBar from "../../components/searchbar";
 import { useFocusEffect } from "@react-navigation/native";
-import {getSessionId} from "@/components/sessionStore";
-
-
+import { getSessionId } from "@/components/sessionStore";
+import { useAppTheme } from "@/context/ThemeContext";
+import { TouchableOpacity } from "react-native";
 
 type Circle = {
   circle_id: string;
@@ -24,156 +16,127 @@ type Circle = {
 
 export default function CirclesScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
 
   const [circles, setCircles] = useState<Circle[]>([]);
   const [q, setQ] = useState("");
 
+  // ── Fetch circles on focus ────────────────────────────────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-  // Fetch circles
-   useFocusEffect(
-  useCallback(() => {
-    let isActive = true;
+      const loadCircles = async () => {
+        try {
+          const sessionId = await getSessionId();
+          if (!sessionId) return;
 
-    const loadCircles = async () => {
-      try {
-        const sessionId = await getSessionId();
+          const res = await fetch("http://localhost:3001/circles/my", {
+            headers: { "x-session-id": sessionId },
+          });
 
-        if (!sessionId) {
-          console.log("No session found");
-          return;
+          if (!res.ok) return;
+
+          const data = await res.json();
+          if (isActive) setCircles(data);
+        } catch (err) {
+          console.error("Error fetching circles:", err);
         }
+      };
 
-        const res = await fetch("http://localhost:3001/circles/my", {
-          headers: {
-            "user-id": sessionId,
-          },
-        });
+      loadCircles();
+      return () => { isActive = false; };
+    }, [])
+  );
 
-        if (!res.ok) {
-          console.log("Failed to fetch circles");
-          return;
-        }
-
-        const data = await res.json();
-
-        if (isActive) {
-          setCircles(data);
-        }
-      } catch (err) {
-        console.error("Error fetching circles:", err);
-      }
-    };
-
-    loadCircles();
-
-    return () => {
-      isActive = false;
-    };
-  }, [])
-);
-
-  // Search filtering
+  // ── Search filtering ──────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query) return circles;
-
-    return circles.filter((c) =>
-      c.name.toLowerCase().includes(query)
-    );
+    return circles.filter((c) => c.name.toLowerCase().includes(query));
   }, [q, circles]);
 
+  // ── Circle card ───────────────────────────────────────────────────────────
   const renderItem = ({ item }: { item: Circle }) => (
     <TouchableOpacity
-      style={styles.circleContainer}
-      onPress={() => {
-        console.log("Navigating to:", item.circle_id);
-        router.push(`/circle-profile/${item.circle_id}`);
-      }}
+      style={{ width: "33.33%", alignItems: "center", marginBottom: 28 }}
+      onPress={() => router.push(`/circle-profile/${item.circle_id}`)}
     >
-      <View style={styles.iconWrapper}>
+      <Surface
+        elevation={2}
+        style={{
+          width:            80,
+          height:           80,
+          borderRadius:     40,
+          backgroundColor:  theme.colors.surface,
+          justifyContent:   "center",
+          alignItems:       "center",
+          marginBottom:     8,
+        }}
+      >
         <Ionicons
           name={(item.icon as any) || "people"}
           size={28}
-          color="white"
+          color={theme.colors.primary}
         />
-      </View>
-      <Text style={styles.circleName}>{item.name}</Text>
+      </Surface>
+      <Text
+        variant="bodySmall"
+        style={{ color: theme.colors.onSurface, textAlign: "center" }}
+      >
+        {item.name}
+      </Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Floating Add Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => router.push("/create-circle")}
-      >
-        <Ionicons name="add" size={26} color="white" />
-      </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>
 
-      {/* Search Bar */}
-      <SearchBar
+      {/* ── Search Bar ── */}
+      <Searchbar
+        placeholder="Search circles..."
         value={q}
         onChangeText={setQ}
-        placeholder="Search circles..."
+        style={{
+          marginBottom:    16,
+          borderRadius:    12,
+          backgroundColor: theme.colors.surface,
+        }}
+        inputStyle={{ color: theme.colors.onSurface }}
+        iconColor={theme.colors.onSurfaceVariant}
+        placeholderTextColor={theme.colors.onSurfaceVariant}
       />
 
-      {/* Circles Grid */}
+      {/* ── Circles Grid ── */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.circle_id}
         renderItem={renderItem}
         numColumns={3}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+        ListEmptyComponent={
+          <Text
+            variant="bodyMedium"
+            style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40 }}
+          >
+            No circles yet
+          </Text>
+        }
+      />
+
+      {/* ── FAB (floating add button) ── */}
+      <FAB
+        icon="plus"
+        onPress={() => router.push("/create-circle")}
+        style={{
+          position:         "absolute",
+          bottom:           24,
+          right:            20,
+          backgroundColor:  theme.colors.primary,
+        }}
+        color="white"
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#051120",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  addButton: {
-    position: "absolute",
-    top: 12,
-    right: 16,
-    backgroundColor: "#2E6CF6",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10,
-  },
-  listContent: {
-    paddingTop: 60,
-    paddingHorizontal: 8,
-  },
-  row: {
-    justifyContent: "space-between",
-  },
-  circleContainer: {
-    width: "33.33%",
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  iconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#0F223A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  circleName: {
-    color: "white",
-    fontSize: 14,
-    textAlign: "center",
-  },
-});
