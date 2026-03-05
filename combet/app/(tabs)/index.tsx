@@ -245,8 +245,8 @@ export default function HomeScreen() {
                       },
                       body: JSON.stringify({ selectedOptionId: opt.id }),
                     });
+                    setFeed((prev) => prev.filter((b) => b.id !== item.id));
                     setAccepting(null);
-                    fetchFeed();
                   }}
                   style={{
                     flex:             1,
