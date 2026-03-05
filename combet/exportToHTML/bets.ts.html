@@ -1,0 +1,131 @@
+<html>
+<head>
+<title>bets.ts</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+bets.ts</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s2">{ </span><span class="s1">Router </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;express&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">pool </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;../db&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">AuthRequest </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;../middleware/auth&quot;</span><span class="s2">;</span>
+
+<span class="s0">export const </span><span class="s1">betsRouter </span><span class="s2">= </span><span class="s1">Router</span><span class="s2">();</span>
+
+<span class="s4">// ─── Create Bet ───────────────────────────────────────────────────────────────</span>
+<span class="s1">betsRouter</span><span class="s2">.</span><span class="s1">post</span><span class="s2">(</span><span class="s3">&quot;/&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s1">client </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">connect</span><span class="s2">();</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s2">{ </span><span class="s1">title</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">stake</span><span class="s2">, </span><span class="s1">closesAt</span><span class="s2">, </span><span class="s1">options</span><span class="s2">, </span><span class="s1">targetType</span><span class="s2">, </span><span class="s1">targetId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">body</span><span class="s2">;</span>
+    <span class="s0">const </span><span class="s1">creatorUserId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">targetType </span><span class="s2">|| !</span><span class="s1">targetId</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Target required&quot; </span><span class="s2">});</span>
+    <span class="s2">}</span>
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">title </span><span class="s2">|| !</span><span class="s1">description </span><span class="s2">|| !</span><span class="s1">stake </span><span class="s2">|| !</span><span class="s1">options </span><span class="s2">|| </span><span class="s1">options</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&lt; </span><span class="s5">2</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Missing required fields&quot; </span><span class="s2">});</span>
+    <span class="s2">}</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;BEGIN&quot;</span><span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">betResult </span><span class="s2">= </span><span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO bets (title, description, stake_amount, closes_at, creator_user_id, status, post_to, target_id) 
+      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7) 
+      RETURNING id 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">title</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">stake</span><span class="s2">, </span><span class="s1">closesAt</span><span class="s2">, </span><span class="s1">creatorUserId</span><span class="s2">, </span><span class="s1">targetType</span><span class="s2">, </span><span class="s1">targetId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">betId </span><span class="s2">= </span><span class="s1">betResult</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">id</span><span class="s2">;</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO bet_targets (bet_id, target_type, target_id) 
+      VALUES ($1, $2, $3) 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">betId</span><span class="s2">, </span><span class="s1">targetType</span><span class="s2">, </span><span class="s1">targetId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">for </span><span class="s2">(</span><span class="s0">let </span><span class="s1">i </span><span class="s2">= </span><span class="s5">0</span><span class="s2">; </span><span class="s1">i </span><span class="s2">&lt; </span><span class="s1">options</span><span class="s2">.</span><span class="s1">length</span><span class="s2">; </span><span class="s1">i</span><span class="s2">++) {</span>
+      <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s3">`</span>
+        <span class="s3">INSERT INTO bet_options (bet_id, label, option_text) 
+        VALUES ($1, $2, $3) 
+        `</span><span class="s2">,</span>
+        <span class="s2">[</span><span class="s1">betId</span><span class="s2">, </span><span class="s1">String</span><span class="s2">.</span><span class="s1">fromCharCode</span><span class="s2">(</span><span class="s5">65 </span><span class="s2">+ </span><span class="s1">i</span><span class="s2">), </span><span class="s1">options</span><span class="s2">[</span><span class="s1">i</span><span class="s2">]]</span>
+      <span class="s2">);</span>
+    <span class="s2">}</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;COMMIT&quot;</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">201</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true</span><span class="s2">, </span><span class="s1">betId </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">error</span><span class="s2">) {</span>
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;ROLLBACK&quot;</span><span class="s2">);</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;CREATE BET ERROR:&quot;</span><span class="s2">, </span><span class="s1">error</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Failed to create bet&quot; </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">finally </span><span class="s2">{</span>
+    <span class="s1">client</span><span class="s2">.</span><span class="s1">release</span><span class="s2">();</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Accept Bet ───────────────────────────────────────────────────────────────</span>
+<span class="s1">betsRouter</span><span class="s2">.</span><span class="s1">post</span><span class="s2">(</span><span class="s3">&quot;/:betId/accept&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">betId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">selectedOptionId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">body</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id) 
+      VALUES ($1, $2, 'accepted', $3) 
+      ON CONFLICT (bet_id, user_id) DO UPDATE SET 
+        status = 'accepted', 
+        selected_option_id = EXCLUDED.selected_option_id, 
+        responded_at = now() 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">betId</span><span class="s2">, </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">, </span><span class="s1">selectedOptionId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;ACCEPT BET ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Decline Bet ──────────────────────────────────────────────────────────────</span>
+<span class="s1">betsRouter</span><span class="s2">.</span><span class="s1">post</span><span class="s2">(</span><span class="s3">&quot;/:betId/decline&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">betId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO bet_responses (bet_id, user_id, status) 
+      VALUES ($1, $2, 'declined') 
+      ON CONFLICT (bet_id, user_id) DO UPDATE SET 
+        status = 'declined', 
+        responded_at = now() 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">betId</span><span class="s2">, </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;DECLINE BET ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span></pre>
+</body>
+</html>

@@ -316,3 +316,89 @@ circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, r
     client.release();
   }
 });
+
+// ─── Circle History ───────────────────────────────────────────────────────────
+// Add this route to circles.ts BEFORE the /:circleId catch-all GET route
+// Returns: circle info, members with join dates, and bets posted to this circle
+
+circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+
+  try {
+    // Circle info (created_at)
+    const circleResult = await pool.query(
+      `SELECT circle_id, name, description, icon, created_at
+       FROM circles WHERE circle_id = $1`,
+      [circleId]
+    );
+    if (!circleResult.rows.length) {
+      return res.status(404).json({ error: "Circle not found" });
+    }
+    const circle = circleResult.rows[0];
+
+    // Members with join dates
+    const membersResult = await pool.query(
+      `SELECT u.id, u.username, cm.joined_at
+       FROM circle_members cm
+       JOIN users u ON cm.user_id = u.id
+       WHERE cm.circle_id = $1 AND cm.status = 'accepted'
+       ORDER BY cm.joined_at ASC`,
+      [circleId]
+    );
+
+    // Bets posted to this circle, with options and current user's response
+    const betsResult = await pool.query(
+      `SELECT
+         b.id,
+         b.title,
+         b.description,
+         b.stake_amount,
+         b.closes_at,
+         b.created_at,
+         b.status,
+         b.creator_user_id,
+         u.username AS creator_username,
+         br.status AS my_response,
+         br.selected_option_id AS my_selected_option_id
+       FROM bets b
+       JOIN bet_targets bt ON bt.bet_id = b.id
+       JOIN users u ON u.id = b.creator_user_id
+       LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $2
+       WHERE bt.target_type = 'circle' AND bt.target_id = $1
+       ORDER BY b.created_at DESC`,
+      [circleId, userId]
+    );
+
+    // Attach options to each bet
+    const betIds = betsResult.rows.map((b: any) => b.id);
+    let optionsByBet: Record<string, any[]> = {};
+
+    if (betIds.length > 0) {
+      const optionsResult = await pool.query(
+        `SELECT bet_id, id, label, option_text
+         FROM bet_options
+         WHERE bet_id = ANY($1)`,
+        [betIds]
+      );
+      for (const opt of optionsResult.rows) {
+        if (!optionsByBet[String(opt.bet_id)]) optionsByBet[String(opt.bet_id)] = [];
+        optionsByBet[String(opt.bet_id)]!.push(opt);
+      }
+    }
+
+    const bets = betsResult.rows.map((b: any) => ({
+      ...b,
+      options: optionsByBet[b.id] || [],
+    }));
+
+    res.json({
+      circle,
+      members: membersResult.rows,
+      bets,
+    });
+  } catch (err) {
+    console.error("CIRCLE HISTORY ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
