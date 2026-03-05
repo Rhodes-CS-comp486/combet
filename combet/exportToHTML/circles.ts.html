@@ -1,0 +1,339 @@
+<html>
+<head>
+<title>circles.ts</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+circles.ts</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s2">{ </span><span class="s1">Router </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;express&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">pool </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;../db&quot;</span><span class="s2">;</span>
+<span class="s0">import </span><span class="s2">{ </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">AuthRequest </span><span class="s2">} </span><span class="s1">from </span><span class="s3">&quot;../middleware/auth&quot;</span><span class="s2">;</span>
+
+<span class="s0">export const </span><span class="s1">circlesRouter </span><span class="s2">= </span><span class="s1">Router</span><span class="s2">();</span>
+
+<span class="s4">// ─── Create Circle ────────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">post</span><span class="s2">(</span><span class="s3">&quot;/&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">name</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">icon </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">body</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">userId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+  <span class="s0">if </span><span class="s2">(!</span><span class="s1">name </span><span class="s2">|| </span><span class="s1">name</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&lt; </span><span class="s5">5 </span><span class="s2">|| </span><span class="s1">name</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s5">15</span><span class="s2">) {</span>
+    <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Name must be 5-15 characters&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+  <span class="s0">if </span><span class="s2">(</span><span class="s1">description </span><span class="s2">&amp;&amp; </span><span class="s1">description</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s5">100</span><span class="s2">) {</span>
+    <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Description max 100 characters&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">circleResult </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO circles (name, description, icon) 
+      VALUES ($1, $2, $3) 
+      RETURNING circle_id 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">name</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">icon</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">circleId </span><span class="s2">= </span><span class="s1">circleResult</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">circle_id</span><span class="s2">;</span>
+
+    <span class="s4">// Insert creator as accepted member</span>
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO circle_members (circle_id, user_id, status) 
+      VALUES ($1, $2, 'accepted') 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">userId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">201</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">circle_id</span><span class="s2">: </span><span class="s1">circleId </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;CREATE CIRCLE ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Get My Circles ───────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;/my&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">result </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">SELECT c.circle_id, c.name, c.icon 
+      FROM circles c 
+      JOIN circle_members m ON m.circle_id = c.circle_id 
+      WHERE m.user_id = $1 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">(</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">);</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;GET /circles/my error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Get Single Circle ────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;/:circleId&quot;</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">result </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">&quot;SELECT * FROM circles WHERE circle_id = $1&quot;</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">.</span><span class="s1">length</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">404</span><span class="s2">).</span><span class="s1">send</span><span class="s2">(</span><span class="s3">&quot;Circle not found&quot;</span><span class="s2">);</span>
+    <span class="s2">}</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">(</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]);</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;GET circle error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Update Circle ────────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">put</span><span class="s2">(</span><span class="s3">&quot;/:circleId&quot;</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">name</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">icon </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">body</span><span class="s2">;</span>
+
+  <span class="s0">if </span><span class="s2">(!</span><span class="s1">name </span><span class="s2">|| </span><span class="s1">name</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&lt; </span><span class="s5">5 </span><span class="s2">|| </span><span class="s1">name</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s5">15</span><span class="s2">) {</span>
+    <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Name must be 5–15 characters&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+  <span class="s0">if </span><span class="s2">(</span><span class="s1">description </span><span class="s2">&amp;&amp; </span><span class="s1">description</span><span class="s2">.</span><span class="s1">length </span><span class="s2">&gt; </span><span class="s5">100</span><span class="s2">) {</span>
+    <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Description max 100 characters&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">result </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">UPDATE circles 
+      SET name = $1, 
+          description = $2, 
+          icon = $3 
+      WHERE circle_id = $4 
+      RETURNING circle_id, name, description, icon 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">name</span><span class="s2">, </span><span class="s1">description</span><span class="s2">, </span><span class="s1">icon</span><span class="s2">, </span><span class="s1">circleId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">.</span><span class="s1">length</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">404</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Circle not found&quot; </span><span class="s2">});</span>
+    <span class="s2">}</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">(</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]);</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;PUT circle error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Get Circle Members ───────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;/:id/members&quot;</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s1">circleId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">.</span><span class="s1">id</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">result </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">SELECT u.id, u.username 
+      FROM circle_members cm 
+      JOIN users u ON cm.user_id = u.id 
+      WHERE cm.circle_id = $1 
+      AND cm.status = 'accepted' 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">(</span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">);</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;GET members error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Search Friends to Add ───────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;/:circleId/search-friends&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">query </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">q</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">currentUserId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">result </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">SELECT 
+        u.id, 
+        u.username, 
+        cm.status AS member_status, 
+        ci.status AS invite_status, 
+        ci.inviter_id 
+      FROM follows f 
+      JOIN users u ON u.id = f.following_id 
+      LEFT JOIN circle_members cm 
+        ON cm.user_id = u.id 
+        AND cm.circle_id = $2 
+      LEFT JOIN circle_invites ci 
+        ON ci.invitee_id = u.id 
+        AND ci.circle_id = $2 
+        AND ci.status = 'pending' 
+      WHERE f.follower_id = $1 
+      AND u.username ILIKE $3 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">currentUserId</span><span class="s2">, </span><span class="s1">circleId</span><span class="s2">, </span><span class="s3">`%</span><span class="s1">$</span><span class="s2">{</span><span class="s1">query</span><span class="s2">}</span><span class="s3">%`</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">normalized </span><span class="s2">= </span><span class="s1">result</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">.</span><span class="s1">map</span><span class="s2">((</span><span class="s1">row</span><span class="s2">) =&gt; {</span>
+      <span class="s0">let </span><span class="s1">status</span><span class="s2">: </span><span class="s3">&quot;accepted&quot; </span><span class="s2">| </span><span class="s3">&quot;pending&quot; </span><span class="s2">| </span><span class="s0">null </span><span class="s2">= </span><span class="s0">null</span><span class="s2">;</span>
+      <span class="s0">let </span><span class="s1">invitedByMe </span><span class="s2">= </span><span class="s0">false</span><span class="s2">;</span>
+
+      <span class="s0">if </span><span class="s2">(</span><span class="s1">row</span><span class="s2">.</span><span class="s1">member_status </span><span class="s2">=== </span><span class="s3">&quot;accepted&quot;</span><span class="s2">) {</span>
+        <span class="s1">status </span><span class="s2">= </span><span class="s3">&quot;accepted&quot;</span><span class="s2">;</span>
+      <span class="s2">} </span><span class="s0">else if </span><span class="s2">(</span><span class="s1">row</span><span class="s2">.</span><span class="s1">invite_status </span><span class="s2">=== </span><span class="s3">&quot;pending&quot;</span><span class="s2">) {</span>
+        <span class="s1">status </span><span class="s2">= </span><span class="s3">&quot;pending&quot;</span><span class="s2">;</span>
+        <span class="s1">invitedByMe </span><span class="s2">= </span><span class="s1">row</span><span class="s2">.</span><span class="s1">inviter_id </span><span class="s2">=== </span><span class="s1">currentUserId</span><span class="s2">;</span>
+      <span class="s2">}</span>
+
+      <span class="s0">return </span><span class="s2">{ </span><span class="s1">id</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">id</span><span class="s2">, </span><span class="s1">username</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">username</span><span class="s2">, </span><span class="s1">status</span><span class="s2">, </span><span class="s1">invitedByMe </span><span class="s2">};</span>
+    <span class="s2">});</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">(</span><span class="s1">normalized</span><span class="s2">);</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;search-friends error:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Invite Friend to Circle ──────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">post</span><span class="s2">(</span><span class="s3">&quot;/:circleId/invite&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">inviteeId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">body</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">inviterId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">existing </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">SELECT 1 FROM circle_invites 
+      WHERE circle_id = $1 
+      AND invitee_id = $2 
+      AND status = 'pending' 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">inviteeId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">existing</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">.</span><span class="s1">length</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">400</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Already invited&quot; </span><span class="s2">});</span>
+    <span class="s2">}</span>
+
+    <span class="s0">const </span><span class="s1">invite </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO circle_invites (circle_id, inviter_id, invitee_id, status) 
+      VALUES ($1, $2, $3, 'pending') 
+      RETURNING invite_id 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">inviterId</span><span class="s2">, </span><span class="s1">inviteeId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">inviteId </span><span class="s2">= </span><span class="s1">invite</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">invite_id</span><span class="s2">;</span>
+
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id) 
+      VALUES ($1, $2, 'circle_invite', 'circle_invite', $3) 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">inviteeId</span><span class="s2">, </span><span class="s1">inviterId</span><span class="s2">, </span><span class="s1">inviteId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true</span><span class="s2">, </span><span class="s1">inviteId </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;INVITE ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Retract Invite ───────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s3">&quot;/:circleId/retract/:inviteeId&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">inviteeId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+  <span class="s0">const </span><span class="s1">currentUserId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s1">invite </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">SELECT invite_id 
+      FROM circle_invites 
+      WHERE circle_id = $1 
+      AND invitee_id = $2 
+      AND inviter_id = $3 
+      AND status = 'pending' 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">inviteeId</span><span class="s2">, </span><span class="s1">currentUserId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">if </span><span class="s2">(!</span><span class="s1">invite</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">.</span><span class="s1">length</span><span class="s2">) {</span>
+      <span class="s0">return </span><span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">403</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Cannot retract this invite&quot; </span><span class="s2">});</span>
+    <span class="s2">}</span>
+
+    <span class="s0">const </span><span class="s1">inviteId </span><span class="s2">= </span><span class="s1">invite</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">invite_id</span><span class="s2">;</span>
+
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">`DELETE FROM circle_invites WHERE invite_id = $1`</span><span class="s2">, [</span><span class="s1">inviteId</span><span class="s2">]);</span>
+    <span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`</span>
+      <span class="s3">DELETE FROM notifications 
+      WHERE recipient_id = $1 
+      AND entity_id = $2 
+      AND entity_type = 'circle_invite' 
+      `</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">inviteeId</span><span class="s2">, </span><span class="s1">inviteId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;RETRACT ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">}</span>
+<span class="s2">});</span>
+
+<span class="s4">// ─── Leave Circle ─────────────────────────────────────────────────────────────</span>
+<span class="s1">circlesRouter</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s3">&quot;/:circleId/leave&quot;</span><span class="s2">, </span><span class="s1">requireAuth</span><span class="s2">, </span><span class="s1">async </span><span class="s2">(</span><span class="s1">req</span><span class="s2">: </span><span class="s1">AuthRequest</span><span class="s2">, </span><span class="s1">res</span><span class="s2">) =&gt; {</span>
+  <span class="s0">const </span><span class="s1">client </span><span class="s2">= </span><span class="s0">await </span><span class="s1">pool</span><span class="s2">.</span><span class="s1">connect</span><span class="s2">();</span>
+
+  <span class="s0">try </span><span class="s2">{</span>
+    <span class="s0">const </span><span class="s2">{ </span><span class="s1">circleId </span><span class="s2">} = </span><span class="s1">req</span><span class="s2">.</span><span class="s1">params</span><span class="s2">;</span>
+    <span class="s0">const </span><span class="s1">userId </span><span class="s2">= </span><span class="s1">req</span><span class="s2">.</span><span class="s1">userId</span><span class="s2">;</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;BEGIN&quot;</span><span class="s2">);</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">, </span><span class="s1">userId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">const </span><span class="s1">remaining </span><span class="s2">= </span><span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+      <span class="s3">`SELECT COUNT(*) FROM circle_members WHERE circle_id = $1`</span><span class="s2">,</span>
+      <span class="s2">[</span><span class="s1">circleId</span><span class="s2">]</span>
+    <span class="s2">);</span>
+
+    <span class="s0">if </span><span class="s2">(</span><span class="s1">parseInt</span><span class="s2">(</span><span class="s1">remaining</span><span class="s2">.</span><span class="s1">rows</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">count</span><span class="s2">, </span><span class="s5">10</span><span class="s2">) === </span><span class="s5">0</span><span class="s2">) {</span>
+      <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">`DELETE FROM circles WHERE circle_id = $1`</span><span class="s2">, [</span><span class="s1">circleId</span><span class="s2">]);</span>
+    <span class="s2">}</span>
+
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;COMMIT&quot;</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">success</span><span class="s2">: </span><span class="s0">true </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">catch </span><span class="s2">(</span><span class="s1">err</span><span class="s2">) {</span>
+    <span class="s0">await </span><span class="s1">client</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s3">&quot;ROLLBACK&quot;</span><span class="s2">);</span>
+    <span class="s1">console</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;LEAVE CIRCLE ERROR:&quot;</span><span class="s2">, </span><span class="s1">err</span><span class="s2">);</span>
+    <span class="s1">res</span><span class="s2">.</span><span class="s1">status</span><span class="s2">(</span><span class="s5">500</span><span class="s2">).</span><span class="s1">json</span><span class="s2">({ </span><span class="s1">error</span><span class="s2">: </span><span class="s3">&quot;Server error&quot; </span><span class="s2">});</span>
+  <span class="s2">} </span><span class="s0">finally </span><span class="s2">{</span>
+    <span class="s1">client</span><span class="s2">.</span><span class="s1">release</span><span class="s2">();</span>
+  <span class="s2">}</span>
+<span class="s2">});</span></pre>
+</body>
+</html>
