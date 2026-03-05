@@ -50,10 +50,12 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         AND cm.user_id = $1
         AND cm.status = 'accepted'
       WHERE
-        (bt.target_type = 'user'   AND bt.target_id = $1)
+        ((bt.target_type = 'user'   AND bt.target_id = $1)
         OR
-        (bt.target_type = 'circle' AND cm.user_id IS NOT NULL)
-      GROUP BY
+        (bt.target_type = 'circle' AND cm.user_id IS NOT NULL))
+        AND b.id NOT IN (
+        SELECT bet_id FROM bet_responses WHERE user_id = $1)
+       GROUP BY
         b.id,
         creator.username,
         bt.target_type,
