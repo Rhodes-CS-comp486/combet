@@ -129,8 +129,8 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
-      setProfile(updated);
-      setEditVisible(false);
+setProfile(prev => prev ? { ...prev, display_name: updated.display_name, bio: updated.bio } : prev);
+setEditVisible(false);
     } catch (e) {
       Alert.alert("Error", "Could not save profile. Please try again.");
     } finally {
