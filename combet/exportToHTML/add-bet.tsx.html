@@ -183,7 +183,7 @@ add-bet.tsx</font>
   <span class="s0">return </span><span class="s2">(</span>
     <span class="s6">&lt;View </span><span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">flex</span><span class="s2">: </span><span class="s4">1</span><span class="s2">, </span><span class="s1">backgroundColor</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">background </span><span class="s2">}}</span><span class="s6">&gt;</span>
       <span class="s6">&lt;ScrollView</span>
-        <span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s4">120 </span><span class="s2">}}</span>
+        <span class="s2">contentContainerStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">padding</span><span class="s2">: </span><span class="s4">20</span><span class="s2">, </span><span class="s1">paddingBottom</span><span class="s2">: </span><span class="s4">140 </span><span class="s2">}}</span>
         <span class="s2">showsVerticalScrollIndicator</span><span class="s3">=</span><span class="s2">{</span><span class="s0">false</span><span class="s2">}</span>
         <span class="s2">keyboardShouldPersistTaps</span><span class="s3">=&quot;handled&quot;</span>
       <span class="s6">&gt;</span>
@@ -553,7 +553,7 @@ add-bet.tsx</font>
                 <span class="s2">contentStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">paddingVertical</span><span class="s2">: </span><span class="s4">6 </span><span class="s2">}}</span>
                 <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">fontWeight</span><span class="s2">: </span><span class="s3">&quot;900&quot;</span><span class="s2">, </span><span class="s1">fontSize</span><span class="s2">: </span><span class="s4">15 </span><span class="s2">}}</span>
               <span class="s6">&gt;</span>
-                <span class="s1">🎯 Place Bet</span>
+                 <span class="s1">Place Bet</span>
               <span class="s6">&lt;/Button&gt;</span>
             <span class="s6">&lt;/View&gt;</span>
 
@@ -563,6 +563,11 @@ add-bet.tsx</font>
             <span class="s6">&lt;/Button&gt;</span>
           <span class="s6">&lt;/View&gt;</span>
         <span class="s2">)}</span>
+            <span class="s6">&lt;Button </span><span class="s2">mode</span><span class="s3">=&quot;text&quot; </span><span class="s2">onPress</span><span class="s3">=</span><span class="s2">{() =&gt; </span><span class="s1">router</span><span class="s2">.</span><span class="s1">back</span><span class="s2">()}</span>
+                    <span class="s2">style</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">marginTop</span><span class="s2">: </span><span class="s4">6 </span><span class="s2">}}</span>
+                    <span class="s2">labelStyle</span><span class="s3">=</span><span class="s2">{{ </span><span class="s1">color</span><span class="s2">: </span><span class="s1">theme</span><span class="s2">.</span><span class="s1">colors</span><span class="s2">.</span><span class="s1">onSurfaceVariant </span><span class="s2">}}</span><span class="s6">&gt;</span>
+                    <span class="s1">Cancel</span>
+            <span class="s6">&lt;/Button&gt;</span>
       <span class="s6">&lt;/ScrollView&gt;</span>
     <span class="s6">&lt;/View&gt;</span>
   <span class="s2">);</span>
