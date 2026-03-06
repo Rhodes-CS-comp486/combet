@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, Searchbar, Surface, Button, ActivityIndicator, Chip } from "react-native-paper";
+import { Text, Searchbar, ActivityIndicator, Chip, Button } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -10,6 +10,21 @@ type SearchResult =
   | { type: "circle"; id: string; label: string; subtitle: string; isFriend: null };
 
 const API_BASE = "http://localhost:3001";
+
+function timeAgo(dateStr: string) {
+  const diff  = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return "just now";
+  if (mins < 60)  return `${mins}m`;
+  if (hours < 24) return `${hours}h`;
+  return `${days}d`;
+}
+
+function fmtDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export default function HomeScreen() {
   const { theme, isDark } = useAppTheme();
@@ -21,7 +36,6 @@ export default function HomeScreen() {
   const [accepting, setAccepting] = useState<string | null>(null);
   const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Feed ──────────────────────────────────────────────────────────────────
   useEffect(() => { fetchFeed(); }, []);
 
   async function fetchFeed() {
@@ -37,7 +51,6 @@ export default function HomeScreen() {
     }
   }
 
-  // ── Search ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = q.trim();
@@ -51,10 +64,9 @@ export default function HomeScreen() {
           `${API_BASE}/users/search?q=${encodeURIComponent(query)}`,
           { headers: { "x-session-id": sessionId ?? "" } }
         );
-        if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+        if (!res.ok) throw new Error();
         setResults(await res.json());
-      } catch (err) {
-        console.error("Search error:", err);
+      } catch {
         setResults([]);
       } finally {
         setSearching(false);
@@ -64,7 +76,6 @@ export default function HomeScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [q]);
 
-  // ── Follow ────────────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
     setResults((prev) =>
       prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: true } : r)
@@ -84,35 +95,26 @@ export default function HomeScreen() {
     }
   };
 
-  // ── Search result card ────────────────────────────────────────────────────
   const renderSearchResult = ({ item }: { item: SearchResult }) => {
     const isUser = item.type === "user";
     return (
-      <Surface
-        elevation={1}
-        style={{
-          borderRadius:    14,
-          marginBottom:    10,
-          backgroundColor: isDark ? "#0F2A44" : "#ffffff",
-          padding:         14,
-          flexDirection:   "row",
-          alignItems:      "center",
-        }}
-      >
+      <View style={{
+        flexDirection: "row", alignItems: "center",
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+      }}>
         <View style={{
-          width: 42, height: 42, borderRadius: 21,
-          backgroundColor: "rgba(46,108,246,0.15)",
-          borderWidth: 1, borderColor: "rgba(46,108,246,0.35)",
+          width: 46, height: 46, borderRadius: 23,
+          backgroundColor: isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.1)",
           alignItems: "center", justifyContent: "center", marginRight: 12,
         }}>
-          <Ionicons name={isUser ? "person" : "people"} size={20} color={theme.colors.primary} />
+          <Ionicons name={isUser ? "person" : "people"} size={22} color={theme.colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "600" }}>
-            {item.label}
-          </Text>
-          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
-            {isUser ? (item.isFriend ? "Friend" : `@${item.subtitle}`) : "Circle"}
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 15 }}>{item.label}</Text>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginTop: 1 }}>
+            {isUser ? `@${item.subtitle}` : "Circle"}
           </Text>
         </View>
         {isUser && !item.isFriend && (
@@ -123,202 +125,158 @@ export default function HomeScreen() {
         )}
         {isUser && item.isFriend && (
           <Chip icon="check"
-            style={{ backgroundColor: isDark ? "#0F2A44" : "#e8f0fe" }}
+            style={{ backgroundColor: isDark ? "rgba(46,108,246,0.15)" : "#e8f0fe" }}
             textStyle={{ color: theme.colors.primary, fontSize: 12 }}>
             Following
           </Chip>
         )}
-      </Surface>
+      </View>
     );
   };
 
-  // ── Bet card ──────────────────────────────────────────────────────────────
   const renderFeedItem = ({ item }: { item: any }) => {
-    const optionColors = ["#1D4ED8", "#2E6CF6", "#60A5FA", "#93C5FD"];
+    const options = item.options ?? [];
+    const cardBg = isDark ? "#0D1E33" : "#ffffff";
+    const borderColor = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
 
     return (
-      <Surface
-        elevation={2}
-        style={{
-          borderRadius:    20,
-          marginBottom:    16,
-          backgroundColor: isDark ? "#0D1F35" : "#ffffff",
-          overflow:        "hidden",
-        }}
-      >
-        {/* ── Coloured top accent bar ── */}
+      <View style={{
+        borderRadius: 18,
+        marginBottom: 14,
+        backgroundColor: cardBg,
+        borderWidth: 1,
+        borderColor,
+        flexDirection: "row",
+        overflow: "hidden",
+        minHeight: 160,
+      }}>
+
+        {/* ── LEFT: icon centered + circle name below ── */}
         <View style={{
-          height:          4,
-          backgroundColor: theme.colors.primary,
-          opacity:         0.85,
-        }} />
-
-        <View style={{ padding: 16 }}>
-          {/* ── Header row: avatar + meta ── */}
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-            {/* Circle avatar */}
-            <View style={{
-              width:           44,
-              height:          44,
-              borderRadius:    22,
-              backgroundColor: "rgba(46,108,246,0.18)",
-              borderWidth:     1.5,
-              borderColor:     "rgba(46,108,246,0.4)",
-              alignItems:      "center",
-              justifyContent:  "center",
-              marginRight:     12,
-            }}>
-              <Ionicons
-                name={(item.icon as any) || "ellipse-outline"}
-                size={22}
-                color={theme.colors.primary}
-              />
-            </View>
-
-            {/* Title + meta */}
-            <View style={{ flex: 1 }}>
-              <Text
-                variant="titleMedium"
-                style={{
-                  color:      theme.colors.onSurface,
-                  fontWeight: "800",
-                  lineHeight: 22,
-                }}
-                numberOfLines={2}
-              >
-                {item.title}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 8 }}>
-                <View style={{
-                  backgroundColor: "rgba(46,108,246,0.15)",
-                  borderRadius:    6,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                }}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.primary, fontWeight: "700" }}>
-                    {item.target_name}
-                  </Text>
-                </View>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {new Date(item.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-            </View>
+          width: 90,
+          borderRightWidth: 1,
+          borderRightColor: borderColor,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 16,
+          gap: 8,
+        }}>
+          <View style={{
+            width: 58, height: 58, borderRadius: 29,
+            backgroundColor: isDark ? "rgba(46,108,246,0.2)" : "rgba(46,108,246,0.12)",
+            borderWidth: 2, borderColor: "rgba(46,108,246,0.4)",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
           </View>
+          <Text style={{
+            color: theme.colors.primary, fontWeight: "700", fontSize: 11,
+            textAlign: "center", paddingHorizontal: 6,
+          }} numberOfLines={2}>
+            {item.target_name}
+          </Text>
+        </View>
 
-          {/* ── Description ── */}
+        {/* ── MIDDLE: bet info ── */}
+        <View style={{ flex: 1, padding: 16, justifyContent: "center", gap: 6 }}>
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "800", fontSize: 17, lineHeight: 22 }}>
+            {item.title}
+          </Text>
           {item.description ? (
-            <Text
-              variant="bodyMedium"
-              style={{
-                color:        theme.colors.onSurfaceVariant,
-                marginBottom: 16,
-                lineHeight:   20,
-              }}
-            >
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, lineHeight: 19 }}>
               {item.description}
             </Text>
           ) : null}
-
-          {/* ── Divider ── */}
-          <View style={{
-            height:          1,
-            backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-            marginBottom:    14,
-          }} />
-
-          {/* ── Options row ── */}
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            {item.options?.map((opt: any, i: number) => {
-              const color = optionColors[i % optionColors.length];
-              return (
-                <TouchableOpacity
-                  key={opt.id}
-                  onPress={async () => {
-                    setAccepting(`${item.id}-${opt.id}`);
-                    const sessionId = await getSessionId();
-                    await fetch(`${API_BASE}/bets/${item.id}/accept`, {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "x-session-id": sessionId ?? "",
-                      },
-                      body: JSON.stringify({ selectedOptionId: opt.id }),
-                    });
-                    setFeed((prev) => prev.filter((b) => b.id !== item.id));
-                    setAccepting(null);
-                  }}
-                  style={{
-                    flex:             1,
-                    minWidth:         80,
-                    backgroundColor:  color,
-                    paddingVertical:  12,
-                    paddingHorizontal: 10,
-                    borderRadius:     12,
-                    alignItems:       "center",
-                    opacity:          accepting === `${item.id}-${opt.id}` ? 0.7 : 1,
-                    shadowColor:      color,
-                    shadowOpacity:    0.35,
-                    shadowRadius:     8,
-                    shadowOffset:     { width: 0, height: 3 },
-                    elevation:        4,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
-                    {opt.label}
-                  </Text>
-                  {opt.text ? (
-                    <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 11, marginTop: 2 }}>
-                      {opt.text}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-
-            {/* Decline */}
-            <TouchableOpacity
-              onPress={async () => {
-                const sessionId = await getSessionId();
-                await fetch(`${API_BASE}/bets/${item.id}/decline`, {
-                  method: "POST",
-                  headers: { "x-session-id": sessionId ?? "" },
-                });
-                setFeed((prev) => prev.filter((b) => b.id !== item.id));
-              }}
-              style={{
-                flex:             1,
-                minWidth:         80,
-                backgroundColor:  "transparent",
-                paddingVertical:  12,
-                paddingHorizontal: 10,
-                borderRadius:     12,
-                alignItems:       "center",
-                borderWidth:      1.5,
-                borderColor:      theme.colors.error,
-              }}
-            >
-              <Text style={{ color: theme.colors.error, fontWeight: "700", fontSize: 14 }}>
-                Decline
+          <View style={{ gap: 2, marginTop: 4 }}>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+              Posted {fmtDate(item.created_at)}
+            </Text>
+            {item.closes_at ? (
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+                Closes {fmtDate(item.closes_at)}
               </Text>
-            </TouchableOpacity>
+            ) : null}
           </View>
         </View>
-      </Surface>
+
+        {/* ── RIGHT: stacked option buttons + decline ── */}
+        <View style={{
+          width: 90,
+          borderLeftWidth: 1,
+          borderLeftColor: borderColor,
+        }}>
+          {options.map((opt: any, i: number) => (
+            <TouchableOpacity
+              key={opt.id}
+              onPress={async () => {
+                setAccepting(`${item.id}-${opt.id}`);
+                const sessionId = await getSessionId();
+                await fetch(`${API_BASE}/bets/${item.id}/accept`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+                  body: JSON.stringify({ selectedOptionId: opt.id }),
+                });
+                setFeed((prev) => prev.filter((b) => b.id !== item.id));
+                setAccepting(null);
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: i % 2 === 0 ? "#2563EB" : "#3B82F6",
+                alignItems: "center",
+                justifyContent: "center",
+                borderBottomWidth: 1,
+                borderBottomColor: "rgba(255,255,255,0.1)",
+                opacity: accepting === `${item.id}-${opt.id}` ? 0.5 : 1,
+                paddingHorizontal: 6,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>{opt.label}</Text>
+              {opt.option_text ? (
+                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2, textAlign: "center" }}>
+                  {opt.option_text}
+                </Text>
+              ) : null}
+            </TouchableOpacity>
+          ))}
+
+          {/* Decline */}
+          <TouchableOpacity
+            onPress={async () => {
+              const sessionId = await getSessionId();
+              await fetch(`${API_BASE}/bets/${item.id}/decline`, {
+                method: "POST",
+                headers: { "x-session-id": sessionId ?? "" },
+              });
+              setFeed((prev) => prev.filter((b) => b.id !== item.id));
+            }}
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? "#091828" : "#dbeafe",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="close" size={16} color={isDark ? "#60a5fa" : "#2563EB"} />
+            <Text style={{ color: isDark ? "#60a5fa" : "#2563EB", fontWeight: "700", fontSize: 11, marginTop: 2 }}>
+              Decline
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
     );
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, padding: 16 }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>
       <Searchbar
         placeholder="Search users, circles..."
         value={q}
         onChangeText={setQ}
         style={{
-          borderRadius:    12,
+          borderRadius: 12,
           backgroundColor: isDark ? "#0F223A" : "#ffffff",
-          marginBottom:    12,
+          marginBottom: 12,
         }}
         inputStyle={{ color: theme.colors.onSurface }}
         iconColor={theme.colors.onSurfaceVariant}
@@ -329,8 +287,7 @@ export default function HomeScreen() {
         searching ? (
           <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 24 }} />
         ) : results.length === 0 ? (
-          <Text variant="bodyMedium"
-            style={{ color: theme.colors.onSurfaceVariant, marginTop: 16, textAlign: "center" }}>
+          <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 24, textAlign: "center", fontSize: 14 }}>
             No matches found
           </Text>
         ) : (
@@ -349,8 +306,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
           ListEmptyComponent={
-            <Text variant="bodyMedium"
-              style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40 }}>
+            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
               No bets yet — create one or join a circle!
             </Text>
           }
