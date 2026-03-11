@@ -8,8 +8,6 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 
 const API = "http://localhost:3001";
-const optionColors = ["#1D4ED8", "#2E6CF6", "#60A5FA", "#93C5FD"];
-
 type Member = { id: string; username: string; joined_at: string };
 type BetOption = { id: string; label: string; option_text: string };
 type Bet = {
@@ -107,25 +105,36 @@ export default function CircleProfile() {
     }
   };
 
-  const handleLeave = () => {
-    Alert.alert("Leave Circle", "Are you sure you want to leave this circle?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Leave", style: "destructive",
-        onPress: async () => {
-          try {
-            const sessionId = await getSessionId();
-            await fetch(`${API}/circles/${circleId}/leave`, {
-              method: "DELETE",
-              headers: { "x-session-id": sessionId ?? "" },
-            });
-            router.replace("/(tabs)/circles");
-          } catch (err) {
-            console.error("Leave error:", err);
-          }
-        },
-      },
-    ]);
+  const handleLeave = async () => {
+    const confirmed =
+      typeof window !== "undefined"
+        ? window.confirm("Are you sure you want to leave this circle?")
+        : await new Promise<boolean>((resolve) =>
+            Alert.alert("Leave Circle", "Are you sure you want to leave this circle?", [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Leave", style: "destructive", onPress: () => resolve(true) },
+            ])
+          );
+
+    if (!confirmed) return;
+
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) { alert("Not authenticated"); return; }
+      const res = await fetch(`${API}/circles/${circleId}/leave`, {
+        method: "DELETE",
+        headers: { "x-session-id": sessionId },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not leave circle");
+        return;
+      }
+      router.replace("/circles");
+    } catch (err) {
+      console.error("Leave error:", err);
+      alert("Could not connect to server");
+    }
   };
 
   const timeAgo = (dateStr: string) => {
@@ -152,152 +161,152 @@ export default function CircleProfile() {
     const pending  = !bet.my_response;
     const accepted = bet.my_response === "accepted";
     const declined = bet.my_response === "declined";
+    const borderColor = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
 
     return (
-      <Surface key={bet.id} elevation={1} style={{
-        borderRadius: 18, marginBottom: 14,
-        backgroundColor: cardBg, overflow: "hidden",
+      <View key={bet.id} style={{
+        borderRadius: 16, marginBottom: 12,
+        backgroundColor: cardBg,
+        borderWidth: 1, borderColor,
+        flexDirection: "row",
+        overflow: "hidden",
+        minHeight: 140,
       }}>
-        {/* Accent bar */}
+
+        {/* ── LEFT: creator icon + name ── */}
         <View style={{
-          height: 3,
-          backgroundColor: accepted ? "#22c55e" : declined ? theme.colors.error : theme.colors.primary,
-        }} />
+          width: 82,
+          borderRightWidth: 1, borderRightColor: borderColor,
+          alignItems: "center", justifyContent: "center",
+          paddingVertical: 14, gap: 6,
+        }}>
+          <View style={{
+            width: 50, height: 50, borderRadius: 25,
+            backgroundColor: isDark ? "rgba(46,108,246,0.2)" : "rgba(46,108,246,0.12)",
+            borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name="person" size={22} color={theme.colors.primary} />
+          </View>
+          <Text style={{
+            color: theme.colors.primary, fontWeight: "700", fontSize: 10,
+            textAlign: "center", paddingHorizontal: 4,
+          }} numberOfLines={2}>
+            @{bet.creator_username}
+          </Text>
+        </View>
 
-        <View style={{ padding: 14 }}>
-          {/* Header */}
-          <View style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="titleSmall" style={{
-                color: theme.colors.onSurface, fontWeight: "800", marginBottom: 3,
-              }}>
-                {bet.title}
+        {/* ── MIDDLE: bet info ── */}
+        <View style={{ flex: 1, padding: 14, justifyContent: "center", gap: 5 }}>
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "800", fontSize: 15, lineHeight: 20 }}>
+            {bet.title}
+          </Text>
+          {bet.description ? (
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, lineHeight: 18 }}>
+              {bet.description}
+            </Text>
+          ) : null}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
+              {timeAgo(bet.created_at)}
+            </Text>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
+              🪙 {bet.stake_amount}
+            </Text>
+            {bet.closes_at ? (
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
+                Closes {new Date(bet.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </Text>
-              {bet.description ? (
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4 }}>
-                  {bet.description}
-                </Text>
-              ) : null}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <View style={{
-                  backgroundColor: "rgba(46,108,246,0.15)", borderRadius: 6,
-                  paddingHorizontal: 8, paddingVertical: 2,
-                }}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.primary, fontWeight: "700" }}>
-                    by @{bet.creator_username}
-                  </Text>
-                </View>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  {timeAgo(bet.created_at)}
-                </Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  🪙 {bet.stake_amount}
-                </Text>
-              </View>
-            </View>
-
-            {/* Response status chip */}
-            {accepted && (
-              <Chip icon="check-circle" style={{ backgroundColor: "rgba(34,197,94,0.15)", height: 28 }}
-                textStyle={{ color: "#22c55e", fontSize: 11 }}>
-                Accepted
-              </Chip>
-            )}
-            {declined && (
-              <Chip icon="close-circle" style={{ backgroundColor: "rgba(239,68,68,0.15)", height: 28 }}
-                textStyle={{ color: theme.colors.error, fontSize: 11 }}>
-                Declined
-              </Chip>
-            )}
+            ) : null}
           </View>
 
-          {/* Divider */}
-          <View style={{ height: 1, backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", marginBottom: 12 }} />
-
-          {/* Options */}
-          {pending && (
-            <View style={{ gap: 8 }}>
-              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 4, fontWeight: "700" }}>
-                PICK YOUR SIDE
-              </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {bet.options.map((opt, i) => (
-                  <TouchableOpacity
-                    key={opt.id}
-                    onPress={() => handleAccept(bet.id, opt.id)}
-                    disabled={!!responding}
-                    style={{
-                      flex: 1, minWidth: 70,
-                      backgroundColor: optionColors[i % optionColors.length],
-                      paddingVertical: 10, paddingHorizontal: 8,
-                      borderRadius: 12, alignItems: "center",
-                      opacity: responding === `${bet.id}-${opt.id}` ? 0.6 : 1,
-                      shadowColor: optionColors[i % optionColors.length],
-                      shadowOpacity: 0.35, shadowRadius: 6, elevation: 3,
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
-                      {opt.label}
-                    </Text>
-                    {opt.option_text ? (
-                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 2, textAlign: "center" }}>
-                        {opt.option_text}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                ))}
-
-                {/* Decline */}
-                <TouchableOpacity
-                  onPress={() => handleDecline(bet.id)}
-                  disabled={!!responding}
-                  style={{
-                    flex: 1, minWidth: 70,
-                    paddingVertical: 10, paddingHorizontal: 8,
-                    borderRadius: 12, alignItems: "center",
-                    borderWidth: 1.5, borderColor: theme.colors.error,
-                  }}
-                >
-                  <Text style={{ color: theme.colors.error, fontWeight: "700", fontSize: 13 }}>
-                    Decline
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Accepted — show which option they picked */}
+          {/* Accepted state — show chosen option */}
           {accepted && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
               {bet.options.map((opt, i) => {
                 const chosen = opt.id === bet.my_selected_option_id;
                 return (
                   <View key={opt.id} style={{
-                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-                    backgroundColor: chosen ? optionColors[i % optionColors.length] : subtleBg,
+                    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                    backgroundColor: chosen ? "#2563EB" : (isDark ? "rgba(255,255,255,0.06)" : "#f0f4ff"),
                     borderWidth: chosen ? 0 : 1,
-                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
                   }}>
                     <Text style={{
                       color: chosen ? "#fff" : theme.colors.onSurfaceVariant,
-                      fontWeight: chosen ? "800" : "400", fontSize: 13,
+                      fontWeight: chosen ? "800" : "400", fontSize: 12,
                     }}>
                       {opt.label}{opt.option_text ? `: ${opt.option_text}` : ""}
                     </Text>
                   </View>
                 );
               })}
+              <View style={{
+                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                backgroundColor: "rgba(34,197,94,0.12)",
+              }}>
+                <Text style={{ color: "#22c55e", fontSize: 11, fontWeight: "700" }}>✓ Accepted</Text>
+              </View>
             </View>
           )}
 
           {/* Declined state */}
           {declined && (
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic" }}>
-              You declined this bet
-            </Text>
+            <View style={{
+              marginTop: 6, paddingHorizontal: 8, paddingVertical: 4,
+              borderRadius: 8, backgroundColor: "rgba(239,68,68,0.1)",
+              alignSelf: "flex-start",
+            }}>
+              <Text style={{ color: theme.colors.error, fontSize: 11, fontWeight: "700" }}>✕ Declined</Text>
+            </View>
           )}
         </View>
-      </Surface>
+
+        {/* ── RIGHT: stacked option buttons + decline (only when pending) ── */}
+        {pending && (
+          <View style={{
+            width: 82,
+            borderLeftWidth: 1, borderLeftColor: borderColor,
+          }}>
+            {bet.options.map((opt, i) => (
+              <TouchableOpacity
+                key={opt.id}
+                onPress={() => handleAccept(bet.id, opt.id)}
+                disabled={!!responding}
+                style={{
+                  flex: 1,
+                  backgroundColor: i % 2 === 0 ? "#2563EB" : "#3B82F6",
+                  alignItems: "center", justifyContent: "center",
+                  borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)",
+                  opacity: responding === `${bet.id}-${opt.id}` ? 0.5 : 1,
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>{opt.label}</Text>
+                {opt.option_text ? (
+                  <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, marginTop: 1, textAlign: "center" }}>
+                    {opt.option_text}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => handleDecline(bet.id)}
+              disabled={!!responding}
+              style={{
+                flex: 1,
+                backgroundColor: isDark ? "#091828" : "#dbeafe",
+                alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <Ionicons name="close" size={15} color={isDark ? "#60a5fa" : "#2563EB"} />
+              <Text style={{ color: isDark ? "#60a5fa" : "#2563EB", fontWeight: "700", fontSize: 10, marginTop: 2 }}>
+                Decline
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -377,29 +386,12 @@ export default function CircleProfile() {
         {/* ── Pending bets ── */}
         {pendingBets.length > 0 && (
           <View style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
-              <Text variant="labelLarge" style={{
-                color: theme.colors.onSurfaceVariant, fontWeight: "700", letterSpacing: 0.5,
-              }}>
-                AWAITING YOUR RESPONSE ({pendingBets.length})
-              </Text>
-            </View>
             {pendingBets.map(renderBet)}
           </View>
         )}
 
-        {/* ── Responded bets ── */}
         {resolvedBets.length > 0 && (
           <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Ionicons name="checkmark-done-outline" size={16} color={theme.colors.onSurfaceVariant} />
-              <Text variant="labelLarge" style={{
-                color: theme.colors.onSurfaceVariant, fontWeight: "700", letterSpacing: 0.5,
-              }}>
-                RESPONDED ({resolvedBets.length})
-              </Text>
-            </View>
             {resolvedBets.map(renderBet)}
           </View>
         )}
@@ -468,7 +460,7 @@ export default function CircleProfile() {
               style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
               Members
             </Button>
-            <Button mode="contained" icon="pencil"
+            <Button mode="contained-tonal" icon="pencil"
               onPress={() => router.push(`/circle-profile/${circleId}/edit`)}
               style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
               Edit Circle
@@ -478,9 +470,8 @@ export default function CircleProfile() {
               style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
               Add Friend
             </Button>
-            <Button mode="outlined" icon="exit-to-app" onPress={handleLeave}
-              style={{ borderRadius: 10, borderColor: theme.colors.error }}
-              labelStyle={{ fontSize: 13, color: theme.colors.error }}>
+            <Button mode="contained-tonal" icon="exit-to-app" onPress={handleLeave}
+              labelStyle={{ fontSize: 13 }}>
               Leave
             </Button>
           </View>

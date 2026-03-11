@@ -63,26 +63,7 @@ circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// ─── Get Single Circle ────────────────────────────────────────────────────────
-circlesRouter.get("/:circleId", async (req, res) => {
-  const { circleId } = req.params;
-
-  try {
-    const result = await pool.query(
-      "SELECT * FROM circles WHERE circle_id = $1",
-      [circleId]
-    );
-
-    if (!result.rows.length) {
-      return res.status(404).send("Circle not found");
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("GET circle error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+// [GET /:circleId moved to end — see below]
 
 // ─── Update Circle ────────────────────────────────────────────────────────────
 circlesRouter.put("/:circleId", async (req, res) => {
@@ -399,6 +380,27 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
     });
   } catch (err) {
     console.error("CIRCLE HISTORY ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Get Single Circle ────────────────────────────────────────────────────────
+circlesRouter.get("/:circleId", async (req, res) => {
+  const { circleId } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM circles WHERE circle_id = $1",
+      [circleId]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).send("Circle not found");
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET circle error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
