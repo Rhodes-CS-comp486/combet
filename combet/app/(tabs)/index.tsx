@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, TouchableOpacity } from "react-native";
+import { View, FlatList, TouchableOpacity, DeviceEventEmitter} from "react-native";
 import {Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -192,28 +192,39 @@ export default function HomeScreen() {
           </View>
 
           <Chip
-            style={{ marginLeft: 10, backgroundColor: "rgba(255,196,0,0.1)", borderColor: "rgba(255,196,0,0.25)", borderWidth: 1 }}
-            textStyle={{ color: "#D4AF37", fontWeight: "800", fontSize: 14 }}
+            style={{
+              marginLeft: 10,
+              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(255,196,0,0.1)",
+              borderColor: item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(255,196,0,0.25)",
+              borderWidth: 1
+            }}
+            textStyle={{ color: item.custom_stake ? "#a5b4fc" : "#D4AF37", fontWeight: "800", fontSize: 14 }}
           >
-            {stake} coins
+            {item.custom_stake ?? `${stake} coins`}
           </Chip>
         </View>
 
         <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
 
         {/* ── STATS ROW ── */}
-        <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 16 }}>
-          <View style={{ flex: 1, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 16, alignItems: "center" }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>{totalJoined}</Text>
             <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>JOINED</Text>
           </View>
           <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text variant="titleLarge" style={{ color: "#D4AF37", fontWeight: "800" }}>{pot}</Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>COIN POT</Text>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            {item.custom_stake ? (
+              <Text variant="titleMedium" style={{ color: "#a5b4fc", fontWeight: "700", textAlign: "center" }}>Custom</Text>
+            ) : (
+              <Text variant="titleLarge" style={{ color: "#FFC400", fontWeight: "800" }}>{pot}</Text>
+            )}
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              {item.custom_stake ? "STAKES" : "COIN POT"}
+            </Text>
           </View>
           <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center" }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "800" }}>
               {item.closes_at ? fmtDate(item.closes_at) : "—"}
             </Text>
@@ -253,12 +264,14 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                <Chip
-                  style={{ backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", borderWidth: 1 }}
-                  textStyle={{ color: "#a5b4fc", fontSize: 11, fontWeight: "700" }}
-                >
-                  +{potentialWin}
-                </Chip>
+                {!item.custom_stake && (
+                  <Chip
+                    style={{ backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", borderWidth: 1 }}
+                    textStyle={{ color: "#a5b4fc", fontSize: 11, fontWeight: "700" }}
+                  >
+                    +{potentialWin}
+                  </Chip>
+                )}
 
                 <Button
                   mode="contained"
@@ -281,7 +294,7 @@ export default function HomeScreen() {
                         }
                         return;
                       }
-                      if (data.coins !== undefined) setCoins(data.coins);
+                      if (data.coins !== undefined) DeviceEventEmitter.emit("coinsUpdated");
                       setFeed((prev) => prev.filter((b) => b.id !== item.id));
                     } finally {
                       setAccepting(null);

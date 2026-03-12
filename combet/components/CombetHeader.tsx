@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Appbar, Text } from "react-native-paper";
-import { AppState } from "react-native";
+import {AppState, DeviceEventEmitter} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
@@ -27,10 +27,14 @@ export default function CombetHeader() {
 
   useEffect(() => {
     fetchCoins();
-    const sub = AppState.addEventListener("change", (state) => {
+    const appStateSub = AppState.addEventListener("change", (state) => {
       if (state === "active") fetchCoins();
     });
-    return () => sub.remove();
+    const eventSub = DeviceEventEmitter.addListener("coinsUpdated", fetchCoins);
+    return () => {
+      appStateSub.remove();
+      eventSub.remove();
+    };
   }, [fetchCoins]);
 
   return (
