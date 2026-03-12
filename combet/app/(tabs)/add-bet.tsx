@@ -20,7 +20,11 @@ export default function AddBet() {
   const [title, setTitle]                           = useState("");
   const [description, setDescription]               = useState("");
   const [options, setOptions]                       = useState<string[]>(["", ""]);
+
   const [stake, setStake]                           = useState("");
+  const [stakeType, setStakeType]                   = useState<"coins" | "custom">("coins");
+  const [customStake, setCustomStake]               = useState("");
+
   const [closeAt, setCloseAt]                       = useState("");
   const [targets, setTargets]                       = useState<any[]>([]);
   const [selectedTargetId, setSelectedTargetId]     = useState<string | null>(null);
@@ -65,7 +69,9 @@ export default function AddBet() {
 
   const canProceedStep1 = title.trim().length > 0 && description.trim().length > 0;
   const canProceedStep2 = options.filter((o) => o.trim()).length >= 2;
-  const canSubmit       = canProceedStep1 && canProceedStep2 && !!selectedTargetId && !!stake;
+
+  const canSubmit = canProceedStep1 && canProceedStep2 && !!selectedTargetId &&
+    (stakeType === "coins" ? !!stake : !!customStake.trim());
 
   const handleCreateBet = async () => {
     try {
@@ -80,7 +86,9 @@ export default function AddBet() {
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body: JSON.stringify({
           title, description,
-          stake:      Number(stake),
+
+            stake:      stakeType === "coins" ? Number(stake) : 0,
+          customStake: stakeType === "custom" ? customStake.trim() : null,
           closesAt:   closeAt || null,
           options:    cleanedOptions,
           targetType: postTo === "circles" ? "circle" : "user",
@@ -376,10 +384,31 @@ export default function AddBet() {
               }}>
                 STAKE & DEADLINE
               </Text>
-              <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
-                mode="outlined" keyboardType="numeric" outlineStyle={{ borderRadius: 12 }}
-                style={{ backgroundColor: subtleBg, marginBottom: 12 }}
-                left={<TextInput.Icon icon="cash" />} />
+
+              <SegmentedButtons
+                value={stakeType}
+                onValueChange={(v) => setStakeType(v as "coins" | "custom")}
+                buttons={[
+                  { value: "coins", label: "Coins", icon: "cash" as any },
+                  { value: "custom", label: "Custom", icon: "create-outline" as any },
+                ]}
+                style={{ marginBottom: 16 }}
+              />
+
+              {stakeType === "coins" ? (
+                <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
+                  mode="outlined" keyboardType="numeric" outlineStyle={{ borderRadius: 12 }}
+                  style={{ backgroundColor: subtleBg, marginBottom: 12 }}
+                  left={<TextInput.Icon icon="cash" />} />
+              ) : (
+                <TextInput label="What's at stake?" value={customStake} onChangeText={setCustomStake}
+                  mode="outlined" outlineStyle={{ borderRadius: 12 }}
+                  style={{ backgroundColor: subtleBg, marginBottom: 12 }}
+                  placeholder="e.g. loser buys coffee"
+                           left={<TextInput.Icon icon={"trophy-outline" as any} />} />
+
+              )}
+
               <TextInput label="Closes at (optional)" value={closeAt} onChangeText={setCloseAt}
                 mode="outlined" outlineStyle={{ borderRadius: 12 }} style={{ backgroundColor: subtleBg }}
                 left={<TextInput.Icon icon="calendar" />} placeholder="e.g. 2026-03-01" />
@@ -414,7 +443,7 @@ export default function AddBet() {
                   ))}
                 </View>
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  📍 {selectedTargetName} · 🪙 {stake} coins
+                  📍 {selectedTargetName} · {stakeType === "coins" ? `🪙 ${stake} coins` : `🏆 ${customStake}`}
                 </Text>
               </Surface>
             )}

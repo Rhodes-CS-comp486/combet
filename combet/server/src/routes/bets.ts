@@ -9,25 +9,28 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
 
   try {
-    const { title, description, stake, closesAt, options, targetType, targetId } = req.body;
+    const { title, description, stake, customStake, closesAt, options, targetType, targetId } = req.body;
     const creatorUserId = req.userId;
 
     if (!targetType || !targetId) {
       return res.status(400).json({ error: "Target required" });
     }
-    if (!title || !description || !stake || !options || options.length < 2) {
+    if (!title || !description || !options || options.length < 2) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!stake && !customStake) {
+      return res.status(400).json({ error: "Stake or custom stake required" });
     }
 
     await client.query("BEGIN");
 
     const betResult = await client.query(
       `
-      INSERT INTO bets (title, description, stake_amount, closes_at, creator_user_id, status, post_to, target_id)
-      VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7)
+      INSERT INTO bets (title, description, stake_amount, custom_stake, closes_at, creator_user_id, status, post_to, target_id)
+      VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8)
       RETURNING id
       `,
-      [title, description, stake, closesAt, creatorUserId, targetType, targetId]
+      [title, description, stake ?? 0, customStake ?? null, closesAt, creatorUserId, targetType, targetId]
     );
 
     const betId = betResult.rows[0].id;
@@ -84,16 +87,18 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
       `SELECT coins FROM users WHERE id = $1`,
       [req.userId]
     );
-    const coins = userResult.rows[0]?.coins ?? 0;
-    if (coins < stake) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Not enough coins", coins });
-    }
 
-    await client.query(
-      `UPDATE users SET coins = coins - $1 WHERE id = $2`,
-      [stake, req.userId]
-    );
+    const coins = userResult.rows[0]?.coins ?? 0;
+    if (stake > 0) {
+      if (coins < stake) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Not enough coins", coins });
+      }
+      await client.query(
+        `UPDATE users SET coins = coins - $1 WHERE id = $2`,
+        [stake, req.userId]
+      );
+    }
 
     await client.query(
       `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)

@@ -15,6 +15,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         b.description,
         b.created_at,
         b.stake_amount,
+        b.custom_stake,
         b.status,
         CASE
           WHEN bt.target_type = 'circle' THEN COALESCE(c.icon, 'ellipse-outline')
@@ -68,6 +69,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         SELECT bet_id FROM bet_responses WHERE user_id = $1)
        GROUP BY
         b.id,
+        b.custom_stake,
         creator.username,
         bt.target_type,
         c.name,
