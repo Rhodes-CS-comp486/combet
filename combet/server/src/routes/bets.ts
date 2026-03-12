@@ -32,7 +32,7 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
         LEFT JOIN bet_options bo ON bo.bet_id = b.id
         LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
         LEFT JOIN users u ON u.id = b.creator_user_id
-        LEFT JOIN circles c ON c.circle_id::text = b.target_id AND b.post_to = 'circle'
+        LEFT JOIN circles c ON c.circle_id = b.target_id::uuid AND b.post_to = 'circle'
         WHERE b.creator_user_id = $1
            OR EXISTS (
              SELECT 1 FROM bet_responses

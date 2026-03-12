@@ -18,6 +18,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
         u.last_name,
         u.created_at,
         u.coins,
+        u.bio,
 
         -- followers count
         (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
@@ -54,6 +55,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
                          ? `${user.first_name} ${user.last_name}`.trim()
                          : user.username,
       coins:           user.coins,
+      bio:             user.bio ?? "",
       created_at:      user.created_at,
       followers_count: Number(user.followers_count),
       following_count: Number(user.following_count),
@@ -71,7 +73,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
 // PATCH /users/me
 usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { display_name } = req.body;
+    const { display_name, bio } = req.body;
 
     // split display_name into first/last
     const parts = (display_name ?? "").trim().split(/\s+/);
@@ -81,11 +83,11 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `
       UPDATE users
-      SET first_name = $1, last_name = $2
-      WHERE id = $3
-      RETURNING id, username, email, first_name, last_name, coins, created_at
+      SET first_name = $1, last_name = $2, bio = $3
+        WHERE id = $4
+      RETURNING id, username, email, first_name, last_name, bio, coins, created_at
       `,
-      [first_name, last_name, req.userId]
+      [first_name, last_name, bio ?? "", req.userId]
     );
 
     const user = result.rows[0];
@@ -95,6 +97,7 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
       username:     user.username,
       email:        user.email,
       display_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
+      bio:          user.bio ?? "",
       coins:        user.coins,
       created_at:   user.created_at,
     });
