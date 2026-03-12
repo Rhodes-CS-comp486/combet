@@ -27,11 +27,19 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
           WHEN bt.target_type = 'circle' THEN c.name
           WHEN bt.target_type = 'user'   THEN target_user.username
         END AS target_name,
+        COUNT(DISTINCT br_all.user_id) AS total_joined,
+        b.stake_amount * COUNT(DISTINCT br_all.user_id) AS pot,
         json_agg(
           DISTINCT jsonb_build_object(
             'id',    bo.id,
             'label', bo.label,
-            'text',  bo.option_text
+            'text',  bo.option_text,
+            'count', (
+              SELECT COUNT(*) FROM bet_responses
+              WHERE bet_id = b.id
+              AND selected_option_id = bo.id
+              AND status = 'accepted'
+            )
           )
         ) FILTER (WHERE bo.id IS NOT NULL) AS options
       FROM bets b
@@ -44,6 +52,9 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         ON bt.target_type = 'circle'
         AND c.circle_id = bt.target_id
       LEFT JOIN bet_options bo  ON bo.bet_id = b.id
+          LEFT JOIN bet_responses br_all
+        ON br_all.bet_id = b.id
+        AND br_all.status = 'accepted'
       LEFT JOIN circle_members cm
         ON bt.target_type = 'circle'
         AND cm.circle_id = bt.target_id

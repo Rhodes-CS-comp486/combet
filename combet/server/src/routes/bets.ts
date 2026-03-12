@@ -65,24 +65,56 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => {
   const { betId } = req.params;
   const { selectedOptionId } = req.body;
+  const client = await pool.connect();
 
   try {
-    await pool.query(
-      `
-      INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
-      VALUES ($1, $2, 'accepted', $3)
-      ON CONFLICT (bet_id, user_id) DO UPDATE SET
-        status = 'accepted',
-        selected_option_id = EXCLUDED.selected_option_id,
-        responded_at = now()
-      `,
+    await client.query("BEGIN");
+
+    const betResult = await client.query(
+      `SELECT stake_amount FROM bets WHERE id = $1`,
+      [betId]
+    );
+    if (!betResult.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Bet not found" });
+    }
+    const stake = betResult.rows[0].stake_amount;
+
+    const userResult = await client.query(
+      `SELECT coins FROM users WHERE id = $1`,
+      [req.userId]
+    );
+    const coins = userResult.rows[0]?.coins ?? 0;
+    if (coins < stake) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Not enough coins", coins });
+    }
+
+    await client.query(
+      `UPDATE users SET coins = coins - $1 WHERE id = $2`,
+      [stake, req.userId]
+    );
+
+    await client.query(
+      `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
+       VALUES ($1, $2, 'accepted', $3)
+       ON CONFLICT (bet_id, user_id) DO UPDATE SET
+         status = 'accepted',
+         selected_option_id = EXCLUDED.selected_option_id,
+         responded_at = now()`,
       [betId, req.userId, selectedOptionId]
     );
 
-    res.json({ success: true });
+    await client.query("COMMIT");
+
+    const updated = await pool.query(`SELECT coins FROM users WHERE id = $1`, [req.userId]);
+    res.json({ success: true, coins: updated.rows[0].coins });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("ACCEPT BET ERROR:", err);
     res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
   }
 });
 

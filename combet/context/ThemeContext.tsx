@@ -16,8 +16,17 @@ export const CombetDarkTheme: MD3Theme = {
     onPrimary:        "#ffffff",
     primaryContainer: BLUE_DARK,
     background:       "#091C32",
-    surface:          "#0F223A",
+      surface:          "#0F223A",
     surfaceVariant:   "#0F223A",
+    elevation: {
+      level0: "transparent",
+      level1: "#0F223A",
+      level2: "#112640",
+      level3: "#132d4a",
+      level4: "#163354",
+      level5: "#1a3d63",
+    },
+
     onSurface:        "#ffffff",
     onSurfaceVariant: "#aab4c4",
     outline:          "#2a3f58",

@@ -17,6 +17,7 @@ import {
 import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
 
 const API_URL = "http://localhost:3001";
 
@@ -31,6 +32,7 @@ type UserProfile = {
   total_bets?: number;
   followers_count?: number;
   following_count?: number;
+  coins?: number;
 };
 
 type BetHistory = {
@@ -266,7 +268,8 @@ export default function ProfileScreen() {
               <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.error }]}>{profile?.losses ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Losses</Text>
             </View>
-          </View>
+                </View>
+
 
           <Button
             mode="outlined"
