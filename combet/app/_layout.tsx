@@ -55,6 +55,17 @@ function AppLayout(): JSX.Element {
                 headerTitleStyle: { fontWeight: "600" },
               }}
             />
+
+            <Stack.Screen
+            name="settings"
+            options={{
+            headerShown: true,
+            title: "Settings",
+            headerStyle: { backgroundColor: theme.colors.surface },
+            headerTintColor: theme.colors.onSurface,
+            headerTitleStyle: { fontWeight: "600" },
+            }}
+            />
           </Stack>
         </View>
       </View>

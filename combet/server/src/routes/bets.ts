@@ -11,25 +11,35 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `
       SELECT
-        b.id,
-        b.title,
-        b.description,
-        b.stake_amount,
-        b.custom_stake,
-        COALESCE(br.status, b.status) AS status,
-        b.created_at,
-        b.closes_at,
-        COALESCE(
-          json_agg(
-            json_build_object('id', bo.id, 'label', bo.label, 'option_text', bo.option_text)
-          ) FILTER (WHERE bo.id IS NOT NULL),
-          '[]'
-        ) AS options
-      FROM bets b
-      LEFT JOIN bet_options bo ON bo.bet_id = b.id
-      LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
-      WHERE b.creator_user_id = $1
-      GROUP BY b.id, br.status
+          b.id,
+          b.title,
+          b.description,
+          b.stake_amount,
+          b.custom_stake,
+          COALESCE(br.status, b.status) AS status,
+          b.created_at,
+          b.closes_at,
+          CASE WHEN b.creator_user_id = $1 THEN true ELSE false END AS is_creator,
+          COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS creator_name,
+          c.name AS circle_name,
+          COALESCE(
+            json_agg(
+              json_build_object('id', bo.id, 'label', bo.label, 'option_text', bo.option_text)
+            ) FILTER (WHERE bo.id IS NOT NULL),
+            '[]'
+          ) AS options
+        FROM bets b
+        LEFT JOIN bet_options bo ON bo.bet_id = b.id
+        LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
+        LEFT JOIN users u ON u.id = b.creator_user_id
+        LEFT JOIN circles c ON c.circle_id::text = b.target_id AND b.post_to = 'circle'
+        WHERE b.creator_user_id = $1
+           OR EXISTS (
+             SELECT 1 FROM bet_responses
+             WHERE bet_id = b.id AND user_id = $1
+           )
+        GROUP BY b.id, br.status, u.first_name, u.last_name, u.username, c.name
+        ORDER BY b.created_at DESC
       `,
       [req.userId]
     );
