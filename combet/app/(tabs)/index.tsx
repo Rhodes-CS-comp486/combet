@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, Searchbar, ActivityIndicator, Chip, Button } from "react-native-paper";
+import {Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -33,10 +33,26 @@ export default function HomeScreen() {
   const [results, setResults]     = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [feed, setFeed]           = useState<any[]>([]);
-  const [accepting, setAccepting] = useState<string | null>(null);
-  const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { fetchFeed(); }, []);
+  const [accepting, setAccepting] = useState<string | null>(null);
+    const [coins, setCoins]         = useState<number | null>(null);
+    const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => { fetchFeed(); fetchCoins(); }, []);
+
+    async function fetchCoins() {
+      try {
+        const sessionId = await getSessionId();
+        const res = await fetch(`${API_BASE}/users/me`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setCoins(data.coins ?? 120);
+      } catch (err) {
+        console.error("Coins fetch error:", err);
+      }
+    }
 
   async function fetchFeed() {
     try {
@@ -102,7 +118,7 @@ export default function HomeScreen() {
         flexDirection: "row", alignItems: "center",
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+        borderBottomColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
       }}>
         <View style={{
           width: 46, height: 46, borderRadius: 23,
@@ -136,136 +152,175 @@ export default function HomeScreen() {
 
   const renderFeedItem = ({ item }: { item: any }) => {
     const options = item.options ?? [];
-    const cardBg = isDark ? "#0D1E33" : "#ffffff";
-    const borderColor = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    const totalJoined = Number(item.total_joined ?? 0);
+    const stake = item.stake_amount ?? 0;
+    const pot = stake * totalJoined;
+    const barColors = ["#0ea5e9", "#10b981", "#8b5cf6", "#f43f5e"];
 
     return (
-      <View style={{
-        borderRadius: 18,
-        marginBottom: 14,
-        backgroundColor: cardBg,
-        borderWidth: 1,
-        borderColor,
-        flexDirection: "row",
-        overflow: "hidden",
-        minHeight: 160,
-      }}>
+      <Surface elevation={2} style={{ borderRadius: 20, marginBottom: 14, overflow: "hidden" }}>
 
-        {/* ── LEFT: icon centered + circle name below ── */}
-        <View style={{
-          width: 90,
-          borderRightWidth: 1,
-          borderRightColor: borderColor,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingVertical: 16,
-          gap: 8,
-        }}>
+        {/* ── HEADER ── */}
+        <View style={{ flexDirection: "row", alignItems: "flex-start", padding: 16 }}>
           <View style={{
-            width: 58, height: 58, borderRadius: 29,
-            backgroundColor: isDark ? "rgba(46,108,246,0.2)" : "rgba(46,108,246,0.12)",
-            borderWidth: 2, borderColor: "rgba(46,108,246,0.4)",
-            alignItems: "center", justifyContent: "center",
+            alignItems: "center", gap: 6, paddingRight: 14,
+            borderRightWidth: 1, borderRightColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
+            marginRight: 14,
           }}>
-            <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
+            <View style={{
+              width: 54, height: 54, borderRadius: 27,
+              backgroundColor: isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.1)",
+              borderWidth: 2, borderColor: "rgba(46,108,246,0.35)",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
+            </View>
+            <Text variant="labelSmall" style={{ color: theme.colors.primary, textAlign: "center" }}>
+              {item.target_name}
+            </Text>
           </View>
-          <Text style={{
-            color: theme.colors.primary, fontWeight: "700", fontSize: 11,
-            textAlign: "center", paddingHorizontal: 6,
-          }} numberOfLines={2}>
-            {item.target_name}
-          </Text>
-        </View>
 
-        {/* ── MIDDLE: bet info ── */}
-        <View style={{ flex: 1, padding: 16, justifyContent: "center", gap: 6 }}>
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "800", fontSize: 17, lineHeight: 22 }}>
-            {item.title}
-          </Text>
-          {item.description ? (
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, lineHeight: 19 }}>
-              {item.description}
+          <View style={{ flex: 1, gap: 4, paddingTop: 2 }}>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>
+              {item.title}
             </Text>
-          ) : null}
-          <View style={{ gap: 2, marginTop: 4 }}>
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-              Posted {fmtDate(item.created_at)}
-            </Text>
-            {item.closes_at ? (
-              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-                Closes {fmtDate(item.closes_at)}
+            {item.description ? (
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                {item.description}
               </Text>
             ) : null}
           </View>
-        </View>
 
-        {/* ── RIGHT: stacked option buttons + decline ── */}
-        <View style={{
-          width: 90,
-          borderLeftWidth: 1,
-          borderLeftColor: borderColor,
-        }}>
-          {options.map((opt: any, i: number) => (
-            <TouchableOpacity
-              key={opt.id}
-              onPress={async () => {
-                setAccepting(`${item.id}-${opt.id}`);
-                const sessionId = await getSessionId();
-                await fetch(`${API_BASE}/bets/${item.id}/accept`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                  body: JSON.stringify({ selectedOptionId: opt.id }),
-                });
-                setFeed((prev) => prev.filter((b) => b.id !== item.id));
-                setAccepting(null);
-              }}
-              style={{
-                flex: 1,
-                backgroundColor: i % 2 === 0 ? "#2563EB" : "#3B82F6",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottomWidth: 1,
-                borderBottomColor: "rgba(255,255,255,0.1)",
-                opacity: accepting === `${item.id}-${opt.id}` ? 0.5 : 1,
-                paddingHorizontal: 6,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>{opt.label}</Text>
-              {opt.option_text ? (
-                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2, textAlign: "center" }}>
-                  {opt.option_text}
-                </Text>
-              ) : null}
-            </TouchableOpacity>
-          ))}
-
-          {/* Decline */}
-          <TouchableOpacity
-            onPress={async () => {
-              const sessionId = await getSessionId();
-              await fetch(`${API_BASE}/bets/${item.id}/decline`, {
-                method: "POST",
-                headers: { "x-session-id": sessionId ?? "" },
-              });
-              setFeed((prev) => prev.filter((b) => b.id !== item.id));
-            }}
-            style={{
-              flex: 1,
-              backgroundColor: isDark ? "#091828" : "#dbeafe",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+          <Chip
+            style={{ marginLeft: 10, backgroundColor: "rgba(255,196,0,0.1)", borderColor: "rgba(255,196,0,0.25)", borderWidth: 1 }}
+            textStyle={{ color: "#D4AF37", fontWeight: "800", fontSize: 14 }}
           >
-            <Ionicons name="close" size={16} color={isDark ? "#60a5fa" : "#2563EB"} />
-            <Text style={{ color: isDark ? "#60a5fa" : "#2563EB", fontWeight: "700", fontSize: 11, marginTop: 2 }}>
-              Decline
-            </Text>
-          </TouchableOpacity>
+            {stake} coins
+          </Chip>
         </View>
 
-      </View>
+        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
+
+        {/* ── STATS ROW ── */}
+        <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 16 }}>
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>{totalJoined}</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>JOINED</Text>
+          </View>
+          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text variant="titleLarge" style={{ color: "#D4AF37", fontWeight: "800" }}>{pot}</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>COIN POT</Text>
+          </View>
+          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "800" }}>
+              {item.closes_at ? fmtDate(item.closes_at) : "—"}
+            </Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>CLOSES</Text>
+          </View>
+        </View>
+
+        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
+
+        {/* ── OPTIONS ── */}
+        <View style={{ padding: 12, gap: 8 }}>
+          {options.map((opt: any, i: number) => {
+            const count = opt.count ?? 0;
+            const pct = totalJoined > 0 ? Math.round((count / totalJoined) * 100) : 0;
+            const potentialWin = Math.round((pot + stake) / (count + 1)) - stake;
+            const barColor = barColors[i % barColors.length];
+
+            return (
+              <Surface key={opt.id} elevation={3} style={{
+                borderRadius: 12, padding: 10,
+                borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)",
+                flexDirection: "row", alignItems: "center", gap: 12,
+              }}>
+                <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700", minWidth: 52 }}>
+                  {opt.text}
+                </Text>
+
+                <View style={{ flex: 1, gap: 4 }}>
+                  <ProgressBar
+                    progress={pct / 100}
+                    color={barColor}
+                    style={{ height: 12, borderRadius: 99, maxWidth: "100%", backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}
+                  />
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>{count} people</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>{pct}%</Text>
+                  </View>
+                </View>
+
+                <Chip
+                  style={{ backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", borderWidth: 1 }}
+                  textStyle={{ color: "#a5b4fc", fontSize: 11, fontWeight: "700" }}
+                >
+                  +{potentialWin}
+                </Chip>
+
+                <Button
+                  mode="contained"
+                  compact
+                  loading={accepting === `${item.id}-${opt.id}`}
+                  disabled={accepting !== null}
+                  onPress={async () => {
+                    setAccepting(`${item.id}-${opt.id}`);
+                    try {
+                      const sessionId = await getSessionId();
+                      const res = await fetch(`${API_BASE}/bets/${item.id}/accept`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+                        body: JSON.stringify({ selectedOptionId: opt.id }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        if (res.status === 400 && data.error === "Not enough coins") {
+                          alert(`Not enough coins! You have ${data.coins} but this bet costs ${stake}.`);
+                        }
+                        return;
+                      }
+                      if (data.coins !== undefined) setCoins(data.coins);
+                      setFeed((prev) => prev.filter((b) => b.id !== item.id));
+                    } finally {
+                      setAccepting(null);
+                    }
+                  }}
+                  style={{ borderRadius: 8 }}
+                  labelStyle={{ fontWeight: "800", fontSize: 12 }}
+                >
+                  Join
+                </Button>
+              </Surface>
+            );
+          })}
+        </View>
+
+        {/* ── DECLINE ── */}
+        <TouchableOpacity
+          onPress={async () => {
+            const sessionId = await getSessionId();
+            await fetch(`${API_BASE}/bets/${item.id}/decline`, {
+              method: "POST",
+              headers: { "x-session-id": sessionId ?? "" },
+            });
+            setFeed((prev) => prev.filter((b) => b.id !== item.id));
+          }}
+          style={{
+            padding: 10, alignItems: "center", justifyContent: "center",
+            borderTopWidth: 1, borderTopColor: "rgba(239,68,68,0.15)",
+            backgroundColor: "rgba(239,68,68,0.05)",
+          }}
+        >
+          <Text variant="labelMedium" style={{ color: "rgba(239,68,68,0.6)" }}>✕  Decline</Text>
+        </TouchableOpacity>
+
+      </Surface>
     );
   };
+
+
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>

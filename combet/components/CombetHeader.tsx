@@ -1,11 +1,37 @@
-import * as React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Appbar, Text } from "react-native-paper";
+import { AppState } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getSessionId } from "@/components/sessionStore";
+
+const API_BASE = "http://localhost:3001";
 
 export default function CombetHeader() {
-  const coinBalance = 120;
+  const [coinBalance, setCoinBalance] = useState<number>(120);
   const insets = useSafeAreaInsets();
+
+  const fetchCoins = useCallback(async () => {
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/users/me`, {
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCoinBalance(data.coins ?? 120);
+    } catch (err) {
+      console.error("Header coins error:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCoins();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchCoins();
+    });
+    return () => sub.remove();
+  }, [fetchCoins]);
 
   return (
     <Appbar.Header
@@ -32,13 +58,13 @@ export default function CombetHeader() {
 
       {/* Right */}
       <Appbar.Action
-        icon="circle-outline"
-        color="#FFFFFF"
-        disabled
+        icon="circle"
+        iconColor="#D4AF37"
+
       />
       <Text
         variant="labelLarge"
-        style={{ color: "#FFFFFF", fontWeight: "600" }}
+        style={{ color: "#FFFFFF", fontWeight: "600", marginRight: 16 }}
       >
         {coinBalance}
       </Text>
