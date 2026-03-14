@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, View, StyleSheet, TouchableOpacity, FlatList } from "react-native";
+import { Alert, ScrollView, View, StyleSheet, TouchableOpacity } from "react-native";
 import {
   Surface,
   Text,
@@ -14,53 +14,9 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import UserAvatar, { AVATAR_ICONS, AVATAR_COLORS } from "@/components/UserAvatar";
 
 const API_URL = "http://localhost:3001";
-
-// ── Avatar config ─────────────────────────────────────────────────────────────
-const AVATAR_COLORS = [
-  "#2563eb", "#7c3aed", "#db2777", "#dc2626",
-  "#ea580c", "#ca8a04", "#16a34a", "#0891b2",
-  "#374151", "#1e3a5f", "#4a1942",
-];
-
-const AVATAR_ICONS: { key: string; label: string; icon: string }[] = [
-  // Default
-  { key: "initials",      label: "Initials",    icon: "person-outline" },
-  // Sports
-  { key: "football",      label: "Football",    icon: "american-football-outline" },
-  { key: "basketball",    label: "Basketball",  icon: "basketball-outline" },
-  { key: "baseball",      label: "Baseball",    icon: "baseball-outline" },
-  { key: "trophy",        label: "Trophy",      icon: "trophy-outline" },
-  { key: "medal",         label: "Medal",       icon: "medal-outline" },
-  { key: "barbell",       label: "Fitness",     icon: "barbell-outline" },
-  { key: "bicycle",       label: "Cycling",     icon: "bicycle-outline" },
-  // Animals
-  { key: "fish",          label: "Fish",        icon: "fish-outline" },
-  { key: "paw",           label: "Paw",         icon: "paw-outline" },
-  { key: "bug",           label: "Bug",         icon: "bug-outline" },
-  { key: "turtle",        label: "Turtle",      icon: "logo-octocat" },
-  // Fun / Other
-  { key: "flame",         label: "Fire",        icon: "flame-outline" },
-  { key: "planet",        label: "Planet",      icon: "planet-outline" },
-  { key: "rocket",        label: "Rocket",      icon: "rocket-outline" },
-  { key: "diamond",       label: "Diamond",     icon: "diamond-outline" },
-  { key: "skull",         label: "Skull",       icon: "skull-outline" },
-  { key: "beer",          label: "Beer",        icon: "beer-outline" },
-  { key: "pizza",         label: "Pizza",       icon: "pizza-outline" },
-  { key: "game",          label: "Gaming",      icon: "game-controller-outline" },
-  { key: "music",         label: "Music",       icon: "musical-notes-outline" },
-  { key: "headset",       label: "Headset",     icon: "headset-outline" },
-  { key: "car",           label: "Car",         icon: "car-outline" },
-  { key: "boat",          label: "Boat",        icon: "boat-outline" },
-  { key: "heart",        label: "Heart",      icon: "heart-outline" },
-  { key: "star",         label: "Star",       icon: "star-outline" },
-  { key: "sparkles",     label: "Sparkles",   icon: "sparkles-outline" },{ key: "ice cream",    label: "Ice Cream",  icon: "ice-cream-outline" },
-  { key: "happy",        label: "Happy",      icon: "happy-outline" },
-  { key: "sunny",        label: "Sunny",      icon: "sunny-outline" },
-  { key: "rose",         label: "Rose",       icon: "rose-outline" },
-  { key: "music",        label: "Music",      icon: "musical-notes-outline" },
-];
 
 type UserProfile = {
   id: number;
@@ -92,67 +48,6 @@ type Bet = {
   options: { id: number; label: string; option_text: string }[];
 };
 
-// ── Avatar component ──────────────────────────────────────────────────────────
-function UserAvatar({
-  profile,
-  size = 80,
-  onPress,
-}: {
-  profile: UserProfile | null;
-  size?: number;
-  onPress?: () => void;
-}) {
-  const displayName = profile?.display_name || profile?.username || "U";
-  const initials = displayName.slice(0, 2).toUpperCase();
-  const color = profile?.avatar_color ?? "#2563eb";
-  const iconKey = profile?.avatar_icon ?? "initials";
-  const iconConfig = AVATAR_ICONS.find(i => i.key === iconKey);
-  const iconName = iconConfig?.icon ?? "person-outline";
-  const iconSize = size * 0.45;
-
-  return (
-    <TouchableOpacity onPress={onPress} disabled={!onPress} style={{ position: "relative" }}>
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: color,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {iconKey === "initials" ? (
-          <Text style={{ color: "#fff", fontSize: size * 0.3, fontWeight: "700" }}>
-            {initials}
-          </Text>
-        ) : (
-          <Ionicons name={iconName as any} size={iconSize} color="#fff" />
-        )}
-      </View>
-      {onPress && (
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            right: 0,
-            width: size * 0.3,
-            height: size * 0.3,
-            borderRadius: size * 0.15,
-            backgroundColor: "#2563eb",
-            borderWidth: 2,
-            borderColor: "#091C32",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Ionicons name="pencil" size={size * 0.13} color="#fff" />
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
 export default function ProfileScreen() {
   const { theme } = useAppTheme();
 
@@ -172,6 +67,9 @@ export default function ProfileScreen() {
   const [selectedColor, setSelectedColor] = useState("#2563eb");
   const [selectedIcon, setSelectedIcon] = useState("initials");
   const [avatarSaving, setAvatarSaving] = useState(false);
+
+  // Section Label
+  const [betFilter, setBetFilter] = useState<"all" | "circle" | "current" | "past">("all");
 
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -317,8 +215,10 @@ export default function ProfileScreen() {
         {/* ── Profile header ── */}
         <View style={s.header}>
           <UserAvatar
-            profile={profile}
+            user={profile}
             size={80}
+            showEditBadge
+            borderColor={theme.colors.background}
             onPress={() => {
               setSelectedColor(profile?.avatar_color ?? "#2563eb");
               setSelectedIcon(profile?.avatar_icon ?? "initials");
@@ -377,16 +277,58 @@ export default function ProfileScreen() {
         <Divider style={s.divider} />
 
         {/* ── My Bets ── */}
-        <Text variant="titleMedium" style={s.sectionLabel}>My Bets</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <Text variant="titleMedium" style={s.sectionLabel}>My Bets</Text>
+        </View>
+
+        {/* Filter chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {(["all", "circle", "current", "past"] as const).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => setBetFilter(filter)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  backgroundColor: betFilter === filter ? theme.colors.primary : "#1a2035",
+                  borderWidth: 1,
+                  borderColor: betFilter === filter ? theme.colors.primary : "#2a3550",
+                }}
+              >
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: "500",
+                  color: betFilter === filter ? "#fff" : "#94a3b8",
+                }}>
+                  {filter === "all" ? "All" : filter === "circle" ? "Circle Bets" : filter === "current" ? "Current" : "Past"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
         {betsLoading ? (
           <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
-        ) : bets.length === 0 ? (
+        ) : bets.filter(bet => {
+            if (betFilter === "all") return true;
+            if (betFilter === "circle") return !!bet.circle_name;
+            if (betFilter === "current") return bet.status.toUpperCase() === "PENDING";
+            if (betFilter === "past") return bet.status.toUpperCase() !== "PENDING";
+            return true;
+          }).length === 0 ? (
           <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
-            No bets yet.
+            No bets found.
           </Text>
         ) : (
-          bets.map((bet) => (
+          bets.filter(bet => {
+            if (betFilter === "all") return true;
+            if (betFilter === "circle") return !!bet.circle_name;
+            if (betFilter === "current") return bet.status.toUpperCase() === "PENDING";
+            if (betFilter === "past") return bet.status.toUpperCase() !== "PENDING";
+            return true;
+          }).map((bet) => (
             <Surface key={bet.id} elevation={1} style={s.betCard}>
               <View style={s.betHeader}>
                 <Text variant="titleSmall" style={s.betTitle} numberOfLines={1}>{bet.title}</Text>
@@ -439,7 +381,7 @@ export default function ProfileScreen() {
           ))
         )}
 
-        <View style={{ height: 40 }} />
+    <View style={{ height: 40 }} />
       </ScrollView>
 
       <Portal>
@@ -492,28 +434,10 @@ export default function ProfileScreen() {
 
           {/* Preview */}
           <View style={{ alignItems: "center", marginBottom: 20 }}>
-            <View
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 36,
-                backgroundColor: selectedColor,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              {selectedIcon === "initials" ? (
-                <Text style={{ color: "#fff", fontSize: 24, fontWeight: "700" }}>
-                  {(profile?.display_name || profile?.username || "U").slice(0, 2).toUpperCase()}
-                </Text>
-              ) : (
-                <Ionicons
-                  name={(AVATAR_ICONS.find(i => i.key === selectedIcon)?.icon ?? "person-outline") as any}
-                  size={32}
-                  color="#fff"
-                />
-              )}
-            </View>
+            <UserAvatar
+              user={{ ...profile, avatar_color: selectedColor, avatar_icon: selectedIcon }}
+              size={72}
+            />
           </View>
 
           {/* Color picker */}
@@ -541,40 +465,42 @@ export default function ProfileScreen() {
           <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
             Icon
           </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-            {AVATAR_ICONS.map((item) => (
-              <TouchableOpacity
-                key={item.key}
-                onPress={() => setSelectedIcon(item.key)}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  backgroundColor: selectedIcon === item.key
-                    ? theme.colors.primary
-                    : theme.colors.surfaceVariant,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderWidth: selectedIcon === item.key ? 2 : 0,
-                  borderColor: theme.colors.primary,
-                }}
-              >
-                {item.key === "initials" ? (
-                  <Text style={{
-                    color: selectedIcon === item.key ? "#fff" : theme.colors.onSurfaceVariant,
-                    fontSize: 13,
-                    fontWeight: "700",
-                  }}>AB</Text>
-                ) : (
-                  <Ionicons
-                    name={item.icon as any}
-                    size={22}
-                    color={selectedIcon === item.key ? "#fff" : theme.colors.onSurfaceVariant}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+              {AVATAR_ICONS.map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  onPress={() => setSelectedIcon(item.key)}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    backgroundColor: selectedIcon === item.key
+                      ? theme.colors.primary
+                      : theme.colors.surfaceVariant,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderWidth: selectedIcon === item.key ? 2 : 0,
+                    borderColor: theme.colors.primary,
+                  }}
+                >
+                  {item.key === "initials" ? (
+                    <Text style={{
+                      color: selectedIcon === item.key ? "#fff" : theme.colors.onSurfaceVariant,
+                      fontSize: 13,
+                      fontWeight: "700",
+                    }}>AB</Text>
+                  ) : (
+                    <Ionicons
+                      name={item.icon as any}
+                      size={22}
+                      color={selectedIcon === item.key ? "#fff" : theme.colors.onSurfaceVariant}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
 
           <View style={s.modalActions}>
             <Button onPress={() => setAvatarVisible(false)} textColor={theme.colors.onSurfaceVariant}>
@@ -622,7 +548,7 @@ const styles = (theme: any) =>
     statDivider: { width: 1, backgroundColor: theme.colors.outline },
     editBtn: { marginTop: 16, borderColor: theme.colors.primary, borderRadius: 20, paddingHorizontal: 8 },
     divider: { backgroundColor: theme.colors.outline, marginVertical: 20 },
-    sectionLabel: { color: theme.colors.onSurfaceVariant, marginBottom: 12 },
+    sectionLabel: { color: theme.colors.onSurface, marginBottom: 0 },
     betCard: { borderRadius: 16, backgroundColor: theme.colors.surface, padding: 16, marginBottom: 12 },
     betHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
     betTitle: { color: theme.colors.onSurface, fontWeight: "600", flex: 1, marginRight: 8 },
