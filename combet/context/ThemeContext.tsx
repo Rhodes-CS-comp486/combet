@@ -4,8 +4,8 @@ import type { MD3Theme } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Brand colours ────────────────────────────────────────────────────────────
-const BLUE = "#2E6CF6";
-const BLUE_DARK = "#1a4fc4"; // slightly deeper for dark mode surfaces
+const BLUE = "#2563eb";
+const BLUE_DARK = "#1d4ed8"; // slightly deeper for dark mode surfaces
 
 // ─── Custom dark theme ────────────────────────────────────────────────────────
 export const CombetDarkTheme: MD3Theme = {
@@ -15,22 +15,21 @@ export const CombetDarkTheme: MD3Theme = {
     primary:          BLUE,
     onPrimary:        "#ffffff",
     primaryContainer: BLUE_DARK,
-    background:       "#091C32",
-      surface:          "#0F223A",
-    surfaceVariant:   "#0F223A",
-    elevation: {
-      level0: "transparent",
-      level1: "#0F223A",
-      level2: "#112640",
-      level3: "#132d4a",
-      level4: "#163354",
-      level5: "#1a3d63",
-    },
-
-    onSurface:        "#ffffff",
-    onSurfaceVariant: "#aab4c4",
-    outline:          "#2a3f58",
-    error:            "#E53935",
+    background:       "#0a0e17",
+        surface:          "#111827",
+        surfaceVariant:   "#1a2035",
+        elevation: {
+          level0: "transparent",
+          level1: "#111827",
+          level2: "#141d2e",
+          level3: "#172235",
+          level4: "#1a263c",
+          level5: "#1e2d45",
+        },
+        onSurface:        "#e8edf8",
+        onSurfaceVariant: "#6b7a99",
+        outline:          "#1e2535",
+        error:            "#ef4444",
   },
 };
 

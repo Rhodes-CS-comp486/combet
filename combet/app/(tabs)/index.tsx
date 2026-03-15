@@ -1,26 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, TouchableOpacity, DeviceEventEmitter} from "react-native";
-import {Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider} from "react-native-paper";
+import { View, FlatList, TouchableOpacity, DeviceEventEmitter } from "react-native";
+import { Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import UserAvatar from "@/components/UserAvatar";
 
-type SearchResult =
-  | { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean }
-  | { type: "circle"; id: string; label: string; subtitle: string; isFriend: null };
+type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
+type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null };
+type SearchResult = UserResult | CircleResult;
 
 const API_BASE = "http://localhost:3001";
-
-function timeAgo(dateStr: string) {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days  = Math.floor(diff / 86400000);
-  if (mins < 1)   return "just now";
-  if (mins < 60)  return `${mins}m`;
-  if (hours < 24) return `${hours}h`;
-  return `${days}d`;
-}
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -33,33 +23,29 @@ export default function HomeScreen() {
   const [results, setResults]     = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [feed, setFeed]           = useState<any[]>([]);
-
   const [accepting, setAccepting] = useState<string | null>(null);
-    const [coins, setCoins]         = useState<number | null>(null);
-    const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [coins, setCoins]         = useState<number | null>(null);
+  const [searchTab, setSearchTab] = useState<"people" | "circles">("people");
+  const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => { fetchFeed(); fetchCoins(); }, []);
+  useEffect(() => { fetchFeed(); fetchCoins(); }, []);
 
-    async function fetchCoins() {
-      try {
-        const sessionId = await getSessionId();
-        const res = await fetch(`${API_BASE}/users/me`, {
-          headers: { "x-session-id": sessionId ?? "" },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        setCoins(data.coins ?? 120);
-      } catch (err) {
-        console.error("Coins fetch error:", err);
-      }
+  async function fetchCoins() {
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/users/me`, { headers: { "x-session-id": sessionId ?? "" } });
+      if (!res.ok) return;
+      const data = await res.json();
+      setCoins(data.coins ?? 120);
+    } catch (err) {
+      console.error("Coins fetch error:", err);
     }
+  }
 
   async function fetchFeed() {
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`${API_BASE}/homefeed/home`, {
-        headers: { "x-session-id": sessionId ?? "" },
-      });
+      const res = await fetch(`${API_BASE}/homefeed/home`, { headers: { "x-session-id": sessionId ?? "" } });
       if (!res.ok) throw new Error("Feed failed");
       setFeed(await res.json());
     } catch (err) {
@@ -67,6 +53,7 @@ export default function HomeScreen() {
     }
   }
 
+  // ── Search with debounce ────────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = q.trim();
@@ -81,7 +68,11 @@ export default function HomeScreen() {
           { headers: { "x-session-id": sessionId ?? "" } }
         );
         if (!res.ok) throw new Error();
-        setResults(await res.json());
+        const data = await res.json();
+        setResults(data.map((r: any) => ({
+          ...r,
+          joinStatus: r.join_status ?? null,
+        })));
       } catch {
         setResults([]);
       } finally {
@@ -92,6 +83,7 @@ export default function HomeScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [q]);
 
+  // ── Follow user ─────────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
     setResults((prev) =>
       prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: true } : r)
@@ -111,45 +103,252 @@ export default function HomeScreen() {
     }
   };
 
-  const renderSearchResult = ({ item }: { item: SearchResult }) => {
-    const isUser = item.type === "user";
+  // ── Request to join circle ──────────────────────────────────────────────────
+  const requestJoinCircle = async (circleId: string) => {
+    setResults((prev) =>
+      prev.map((r) => r.type === "circle" && r.id === circleId
+        ? { ...r, joinStatus: "pending" } : r)
+    );
+    try {
+      const sessionId = await getSessionId();
+      await fetch(`${API_BASE}/circles/${circleId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+        body: JSON.stringify({ requestJoin: true }),
+      });
+    } catch {
+      setResults((prev) =>
+        prev.map((r) => r.type === "circle" && r.id === circleId
+          ? { ...r, joinStatus: null } : r)
+      );
+    }
+  };
+
+  const users   = results.filter((r): r is UserResult   => r.type === "user");
+  const circles = results.filter((r): r is CircleResult => r.type === "circle");
+
+  // ── Search UI ───────────────────────────────────────────────────────────────
+  const renderSearchUI = () => {
+    if (searching) {
+      return <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 24 }} />;
+    }
+
     return (
-      <View style={{
-        flexDirection: "row", alignItems: "center",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
-      }}>
+      <View style={{ flex: 1 }}>
+        {/* Tab bar */}
         <View style={{
-          width: 46, height: 46, borderRadius: 23,
-          backgroundColor: isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.1)",
-          alignItems: "center", justifyContent: "center", marginRight: 12,
+          flexDirection: "row",
+          backgroundColor: theme.colors.surface,
+          borderRadius: 10,
+          padding: 3,
+          marginBottom: 14,
+          borderWidth: 0.5,
+          borderColor: theme.colors.outline,
         }}>
-          <Ionicons name={isUser ? "person" : "people"} size={22} color={theme.colors.primary} />
+          {(["people", "circles"] as const).map((tab) => {
+            const count = tab === "people" ? users.length : circles.length;
+            const active = searchTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setSearchTab(tab)}
+                style={{
+                  flex: 1,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 7,
+                  borderRadius: 8,
+                  gap: 6,
+                  backgroundColor: active ? theme.colors.background : "transparent",
+                  borderWidth: active ? 0.5 : 0,
+                  borderColor: theme.colors.outline,
+                }}
+              >
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: "500",
+                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                }}>
+                  {tab === "people" ? "People" : "Circles"}
+                </Text>
+                <View style={{
+                  backgroundColor: active ? theme.colors.primary : theme.colors.surfaceVariant,
+                  borderRadius: 20,
+                  paddingHorizontal: 6,
+                  paddingVertical: 1,
+                }}>
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: "600",
+                    color: active ? "#fff" : theme.colors.onSurfaceVariant,
+                  }}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 15 }}>{item.label}</Text>
-          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginTop: 1 }}>
-            {isUser ? `@${item.subtitle}` : "Circle"}
-          </Text>
-        </View>
-        {isUser && !item.isFriend && (
-          <Button mode="contained" compact onPress={() => followUser(item.id)}
-            style={{ borderRadius: 999 }} labelStyle={{ fontSize: 13, fontWeight: "700" }}>
-            Follow
-          </Button>
+
+        {/* ── People list ── */}
+        {searchTab === "people" && (
+          users.length === 0 ? (
+            <View style={{ alignItems: "center", paddingTop: 40 }}>
+              <Ionicons name="people-outline" size={36} color={theme.colors.onSurfaceVariant} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
+                No users found
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={(item) => `user:${item.id}`}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={{
+                  flexDirection: "row", alignItems: "center",
+                  paddingVertical: 12, gap: 12,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: theme.colors.outline,
+                }}>
+                  <UserAvatar
+                    user={{
+                      display_name: item.label,
+                      username: item.subtitle,
+                      avatar_color: item.avatar_color,
+                      avatar_icon: item.avatar_icon,
+                    }}
+                    size={42}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                      {item.label}
+                    </Text>
+                    <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
+                      @{item.subtitle}
+                    </Text>
+                  </View>
+                  {!item.isFriend ? (
+                    <TouchableOpacity
+                      onPress={() => followUser(item.id)}
+                      style={{
+                        backgroundColor: theme.colors.primary,
+                        borderRadius: 20,
+                        paddingHorizontal: 14,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: 20,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderWidth: 0.5,
+                      borderColor: theme.colors.outline,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}>
+                      <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
+                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            />
+          )
         )}
-        {isUser && item.isFriend && (
-          <Chip icon="check"
-            style={{ backgroundColor: isDark ? "rgba(46,108,246,0.15)" : "#e8f0fe" }}
-            textStyle={{ color: theme.colors.primary, fontSize: 12 }}>
-            Following
-          </Chip>
+
+        {/* ── Circles list ── */}
+        {searchTab === "circles" && (
+          circles.length === 0 ? (
+            <View style={{ alignItems: "center", paddingTop: 40 }}>
+              <Ionicons name="ellipse-outline" size={36} color={theme.colors.onSurfaceVariant} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
+                No circles found
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={circles}
+              keyExtractor={(item) => `circle:${item.id}`}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={{
+                  flexDirection: "row", alignItems: "center",
+                  paddingVertical: 12, gap: 12,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: theme.colors.outline,
+                }}>
+                  <View style={{
+                    width: 42, height: 42,
+                    borderRadius: 12,
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderWidth: 0.5,
+                    borderColor: theme.colors.outline,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Ionicons name="people" size={20} color="#a78bfa" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                      {item.label}
+                    </Text>
+                    <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
+                      {item.subtitle || "Circle"}
+                    </Text>
+                  </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (item.joinStatus === "joined" || item.joinStatus === "pending") return;
+                    requestJoinCircle(item.id);
+                  }}
+                  style={{
+                    backgroundColor:
+                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
+                      item.joinStatus === "pending" ? theme.colors.surface :
+                      theme.colors.primary,
+                    borderRadius: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderWidth: 0.5,
+                    borderColor:
+                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
+                      item.joinStatus === "pending" ? theme.colors.outline :
+                      theme.colors.primary,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {item.joinStatus === "joined" && (
+                    <Ionicons name="checkmark" size={12} color="#4CAF50" />
+                  )}
+                  <Text style={{
+                    color:
+                      item.joinStatus === "joined"  ? "#4CAF50" :
+                      item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
+                      "#fff",
+                    fontSize: 12,
+                    fontWeight: "500",
+                  }}>
+                    {item.joinStatus === "joined"  ? "Joined" :
+                     item.joinStatus === "pending" ? "Pending" : "Join"}
+                  </Text>
+                </TouchableOpacity>
+                </View>
+              )}
+            />
+          )
         )}
       </View>
     );
   };
 
+  // ── Feed item ───────────────────────────────────────────────────────────────
   const renderFeedItem = ({ item }: { item: any }) => {
     const options = item.options ?? [];
     const totalJoined = Number(item.total_joined ?? 0);
@@ -167,20 +366,24 @@ export default function HomeScreen() {
             borderRightWidth: 1, borderRightColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
             marginRight: 14,
           }}>
-            <View style={{
-              width: 54, height: 54, borderRadius: 27,
-              backgroundColor: isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.1)",
-              borderWidth: 2, borderColor: "rgba(46,108,246,0.35)",
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
-            </View>
+            <UserAvatar
+              user={{
+                display_name: item.creator_name || item.creator_username,
+                username: item.creator_username,
+                avatar_color: item.creator_avatar_color,
+                avatar_icon: item.creator_avatar_icon,
+              }}
+              size={54}
+            />
             <Text variant="labelSmall" style={{ color: theme.colors.primary, textAlign: "center" }}>
               {item.target_name}
             </Text>
           </View>
 
           <View style={{ flex: 1, gap: 4, paddingTop: 2 }}>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 2 }}>
+              {item.creator_name || item.creator_username}
+            </Text>
             <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>
               {item.title}
             </Text>
@@ -196,7 +399,7 @@ export default function HomeScreen() {
               marginLeft: 10,
               backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(255,196,0,0.1)",
               borderColor: item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(255,196,0,0.25)",
-              borderWidth: 1
+              borderWidth: 1,
             }}
             textStyle={{ color: item.custom_stake ? "#a5b4fc" : "#D4AF37", fontWeight: "800", fontSize: 14 }}
           >
@@ -251,7 +454,6 @@ export default function HomeScreen() {
                 <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700", minWidth: 52 }}>
                   {opt.text}
                 </Text>
-
                 <View style={{ flex: 1, gap: 4 }}>
                   <ProgressBar
                     progress={pct / 100}
@@ -263,7 +465,6 @@ export default function HomeScreen() {
                     <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>{pct}%</Text>
                   </View>
                 </View>
-
                 {!item.custom_stake && (
                   <Chip
                     style={{ backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", borderWidth: 1 }}
@@ -272,7 +473,6 @@ export default function HomeScreen() {
                     +{potentialWin}
                   </Chip>
                 )}
-
                 <Button
                   mode="contained"
                   compact
@@ -333,8 +533,6 @@ export default function HomeScreen() {
     );
   };
 
-
-
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>
       <Searchbar
@@ -343,7 +541,7 @@ export default function HomeScreen() {
         onChangeText={setQ}
         style={{
           borderRadius: 12,
-          backgroundColor: isDark ? "#0F223A" : "#ffffff",
+          backgroundColor: isDark ? "#111827" : "#ffffff",
           marginBottom: 12,
         }}
         inputStyle={{ color: theme.colors.onSurface }}
@@ -352,20 +550,7 @@ export default function HomeScreen() {
       />
 
       {q.trim() ? (
-        searching ? (
-          <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 24 }} />
-        ) : results.length === 0 ? (
-          <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 24, textAlign: "center", fontSize: 14 }}>
-            No matches found
-          </Text>
-        ) : (
-          <FlatList
-            data={results}
-            keyExtractor={(item) => `${item.type}:${item.id}`}
-            renderItem={renderSearchResult}
-            showsVerticalScrollIndicator={false}
-          />
-        )
+        renderSearchUI()
       ) : (
         <FlatList
           data={feed}
