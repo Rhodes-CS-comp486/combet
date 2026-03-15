@@ -111,32 +111,46 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
 
     const result = await pool.query(
       `
-      SELECT
-        'user' AS type,
-        u.id::text AS id,
-        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
-        u.username AS subtitle,
-        CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend"
-      FROM users u
-      LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
-      WHERE u.id <> $1
-        AND (
-          u.username ILIKE '%' || $2 || '%'
-          OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
-          OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
-        )
+      -- USERS
+        SELECT
+          'user' AS type,
+          u.id::text AS id,
+          COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
+          u.username AS subtitle,
+          CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend",
+          u.avatar_color,
+          u.avatar_icon,
+          NULL::text AS join_status
+        FROM users u
+        LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
+        WHERE u.id <> $1
+          AND (
+            u.username ILIKE '%' || $2 || '%'
+            OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
+            OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
+  )
+
 
       UNION ALL
 
-      SELECT
-        'circle' AS type,
-        c.circle_id::text AS id,
-        c.name AS label,
-        COALESCE(c.description, '') AS subtitle,
-        NULL::boolean AS "isFriend"
-      FROM circles c
-      WHERE c.name ILIKE '%' || $2 || '%'
-
+      -- CIRCLES
+        SELECT
+          'circle' AS type,
+          c.circle_id::text AS id,
+          c.name AS label,
+          COALESCE(c.description, '') AS subtitle,
+          NULL::boolean AS "isFriend",
+          NULL::text AS avatar_color,
+          NULL::text AS avatar_icon,
+          CASE
+            WHEN cm.status = 'accepted' THEN 'joined'
+            WHEN ci.status = 'pending'  THEN 'pending'
+            ELSE NULL
+          END AS join_status
+        FROM circles c
+        LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $1
+        LEFT JOIN circle_invites ci ON ci.circle_id = c.circle_id AND ci.invitee_id = $1 AND ci.status = 'pending'
+        WHERE c.name ILIKE '%' || $2 || '%'
       ORDER BY label
       LIMIT 50
       `,

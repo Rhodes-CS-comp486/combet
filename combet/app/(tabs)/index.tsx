@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, TouchableOpacity, DeviceEventEmitter, ScrollView, Animated } from "react-native";
+import { View, FlatList, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -7,7 +7,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
-type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null };
+type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null };
 type SearchResult = UserResult | CircleResult;
 
 const API_BASE = "http://localhost:3001";
@@ -27,7 +27,6 @@ export default function HomeScreen() {
   const [coins, setCoins]         = useState<number | null>(null);
   const [searchTab, setSearchTab] = useState<"people" | "circles">("people");
   const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const slideAnim                 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { fetchFeed(); fetchCoins(); }, []);
 
@@ -54,6 +53,7 @@ export default function HomeScreen() {
     }
   }
 
+  // ── Search with debounce ────────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = q.trim();
@@ -68,7 +68,11 @@ export default function HomeScreen() {
           { headers: { "x-session-id": sessionId ?? "" } }
         );
         if (!res.ok) throw new Error();
-        setResults(await res.json());
+        const data = await res.json();
+        setResults(data.map((r: any) => ({
+          ...r,
+          joinStatus: r.join_status ?? null,
+        })));
       } catch {
         setResults([]);
       } finally {
@@ -79,16 +83,7 @@ export default function HomeScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [q]);
 
-  const switchTab = (tab: "people" | "circles") => {
-    setSearchTab(tab);
-    Animated.spring(slideAnim, {
-      toValue: tab === "people" ? 0 : 1,
-      useNativeDriver: true,
-      tension: 80,
-      friction: 12,
-    }).start();
-  };
-
+  // ── Follow user ─────────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
     setResults((prev) =>
       prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: true } : r)
@@ -104,6 +99,27 @@ export default function HomeScreen() {
     } catch {
       setResults((prev) =>
         prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: false } : r)
+      );
+    }
+  };
+
+  // ── Request to join circle ──────────────────────────────────────────────────
+  const requestJoinCircle = async (circleId: string) => {
+    setResults((prev) =>
+      prev.map((r) => r.type === "circle" && r.id === circleId
+        ? { ...r, joinStatus: "pending" } : r)
+    );
+    try {
+      const sessionId = await getSessionId();
+      await fetch(`${API_BASE}/circles/${circleId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+        body: JSON.stringify({ requestJoin: true }),
+      });
+    } catch {
+      setResults((prev) =>
+        prev.map((r) => r.type === "circle" && r.id === circleId
+          ? { ...r, joinStatus: null } : r)
       );
     }
   };
@@ -135,7 +151,7 @@ export default function HomeScreen() {
             return (
               <TouchableOpacity
                 key={tab}
-                onPress={() => switchTab(tab)}
+                onPress={() => setSearchTab(tab)}
                 style={{
                   flex: 1,
                   flexDirection: "row",
@@ -173,149 +189,161 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Sliding panes */}
-        <View style={{ flex: 1, overflow: "hidden" }}>
-          <Animated.View style={{
-            flexDirection: "row",
-            width: "200%",
-            flex: 1,
-            transform: [{
-              translateX: slideAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -180], // half of screen width approx
-              }),
-            }],
-          }}>
-            {/* People pane */}
-            <View style={{ width: "50%", flex: 1 }}>
-              {users.length === 0 ? (
-                <View style={{ alignItems: "center", paddingTop: 40 }}>
-                  <Ionicons name="people-outline" size={36} color={theme.colors.onSurfaceVariant} />
-                  <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
-                    No users found
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={users}
-                  keyExtractor={(item) => `user:${item.id}`}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <View style={{
-                      flexDirection: "row", alignItems: "center",
-                      paddingVertical: 12, gap: 12,
-                      borderBottomWidth: 0.5,
-                      borderBottomColor: theme.colors.outline,
-                    }}>
-                      <UserAvatar
-                        user={{
-                          display_name: item.label,
-                          username: item.subtitle,
-                          avatar_color: item.avatar_color,
-                          avatar_icon: item.avatar_icon,
-                        }}
-                        size={42}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                          {item.label}
-                        </Text>
-                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
-                          @{item.subtitle}
-                        </Text>
-                      </View>
-                      {!item.isFriend ? (
-                        <TouchableOpacity
-                          onPress={() => followUser(item.id)}
-                          style={{
-                            backgroundColor: theme.colors.primary,
-                            borderRadius: 20,
-                            paddingHorizontal: 14,
-                            paddingVertical: 6,
-                          }}
-                        >
-                          <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={{
-                          backgroundColor: theme.colors.surface,
-                          borderRadius: 20,
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderWidth: 0.5,
-                          borderColor: theme.colors.outline,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 4,
-                        }}>
-                          <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
-                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                />
-              )}
+        {/* ── People list ── */}
+        {searchTab === "people" && (
+          users.length === 0 ? (
+            <View style={{ alignItems: "center", paddingTop: 40 }}>
+              <Ionicons name="people-outline" size={36} color={theme.colors.onSurfaceVariant} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
+                No users found
+              </Text>
             </View>
-
-            {/* Circles pane */}
-            <View style={{ width: "50%", flex: 1 }}>
-              {circles.length === 0 ? (
-                <View style={{ alignItems: "center", paddingTop: 40 }}>
-                  <Ionicons name="ellipse-outline" size={36} color={theme.colors.onSurfaceVariant} />
-                  <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
-                    No circles found
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={circles}
-                  keyExtractor={(item) => `circle:${item.id}`}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => (
-                    <View style={{
-                      flexDirection: "row", alignItems: "center",
-                      paddingVertical: 12, gap: 12,
-                      borderBottomWidth: 0.5,
-                      borderBottomColor: theme.colors.outline,
-                    }}>
-                      {/* Circle icon — rounded square */}
-                      <View style={{
-                        width: 42, height: 42,
-                        borderRadius: 12,
-                        backgroundColor: theme.colors.surfaceVariant,
-                        borderWidth: 0.5,
-                        borderColor: theme.colors.outline,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}>
-                        <Ionicons name="people" size={20} color="#a78bfa" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                          {item.label}
-                        </Text>
-                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
-                          {item.subtitle || "Circle"}
-                        </Text>
-                      </View>
-                      <View style={{
-                        backgroundColor: "#1a1030",
+          ) : (
+            <FlatList
+              data={users}
+              keyExtractor={(item) => `user:${item.id}`}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={{
+                  flexDirection: "row", alignItems: "center",
+                  paddingVertical: 12, gap: 12,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: theme.colors.outline,
+                }}>
+                  <UserAvatar
+                    user={{
+                      display_name: item.label,
+                      username: item.subtitle,
+                      avatar_color: item.avatar_color,
+                      avatar_icon: item.avatar_icon,
+                    }}
+                    size={42}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                      {item.label}
+                    </Text>
+                    <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
+                      @{item.subtitle}
+                    </Text>
+                  </View>
+                  {!item.isFriend ? (
+                    <TouchableOpacity
+                      onPress={() => followUser(item.id)}
+                      style={{
+                        backgroundColor: theme.colors.primary,
                         borderRadius: 20,
-                        paddingHorizontal: 12,
+                        paddingHorizontal: 14,
                         paddingVertical: 6,
-                        borderWidth: 0.5,
-                        borderColor: "#2d1f5e",
-                      }}>
-                        <Text style={{ color: "#a78bfa", fontSize: 11, fontWeight: "500" }}>Circle</Text>
-                      </View>
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: 20,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderWidth: 0.5,
+                      borderColor: theme.colors.outline,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}>
+                      <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
+                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
                     </View>
                   )}
-                />
+                </View>
               )}
+            />
+          )
+        )}
+
+        {/* ── Circles list ── */}
+        {searchTab === "circles" && (
+          circles.length === 0 ? (
+            <View style={{ alignItems: "center", paddingTop: 40 }}>
+              <Ionicons name="ellipse-outline" size={36} color={theme.colors.onSurfaceVariant} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 13 }}>
+                No circles found
+              </Text>
             </View>
-          </Animated.View>
-        </View>
+          ) : (
+            <FlatList
+              data={circles}
+              keyExtractor={(item) => `circle:${item.id}`}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={{
+                  flexDirection: "row", alignItems: "center",
+                  paddingVertical: 12, gap: 12,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: theme.colors.outline,
+                }}>
+                  <View style={{
+                    width: 42, height: 42,
+                    borderRadius: 12,
+                    backgroundColor: theme.colors.surfaceVariant,
+                    borderWidth: 0.5,
+                    borderColor: theme.colors.outline,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Ionicons name="people" size={20} color="#a78bfa" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                      {item.label}
+                    </Text>
+                    <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
+                      {item.subtitle || "Circle"}
+                    </Text>
+                  </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (item.joinStatus === "joined" || item.joinStatus === "pending") return;
+                    requestJoinCircle(item.id);
+                  }}
+                  style={{
+                    backgroundColor:
+                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
+                      item.joinStatus === "pending" ? theme.colors.surface :
+                      theme.colors.primary,
+                    borderRadius: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderWidth: 0.5,
+                    borderColor:
+                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
+                      item.joinStatus === "pending" ? theme.colors.outline :
+                      theme.colors.primary,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {item.joinStatus === "joined" && (
+                    <Ionicons name="checkmark" size={12} color="#4CAF50" />
+                  )}
+                  <Text style={{
+                    color:
+                      item.joinStatus === "joined"  ? "#4CAF50" :
+                      item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
+                      "#fff",
+                    fontSize: 12,
+                    fontWeight: "500",
+                  }}>
+                    {item.joinStatus === "joined"  ? "Joined" :
+                     item.joinStatus === "pending" ? "Pending" : "Join"}
+                  </Text>
+                </TouchableOpacity>
+                </View>
+              )}
+            />
+          )
+        )}
       </View>
     );
   };
