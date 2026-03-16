@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, Alert, Pressable } from "react-native";
+
+import { View, ScrollView, Alert, Pressable, Platform } from "react-native";
+
+import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-ui-datepicker";
+import dayjs from "dayjs";
+
 import {
   Text,
   TextInput,
@@ -25,7 +31,9 @@ export default function AddBet() {
   const [stakeType, setStakeType]                   = useState<"coins" | "custom">("coins");
   const [customStake, setCustomStake]               = useState("");
 
-  const [closeAt, setCloseAt]                       = useState("");
+  const [closeAt, setCloseAt]                       = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker]          = useState(false);
+
   const [targets, setTargets]                       = useState<any[]>([]);
   const [selectedTargetId, setSelectedTargetId]     = useState<string | null>(null);
   const [selectedTargetName, setSelectedTargetName] = useState<string | null>(null);
@@ -89,7 +97,7 @@ export default function AddBet() {
 
             stake:      stakeType === "coins" ? Number(stake) : 0,
           customStake: stakeType === "custom" ? customStake.trim() : null,
-          closesAt:   closeAt || null,
+          closesAt: closeAt ? closeAt.toISOString() : null,
           options:    cleanedOptions,
           targetType: postTo === "circles" ? "circle" : "user",
           targetId:   selectedTargetId,
@@ -100,7 +108,7 @@ export default function AddBet() {
       if (!response.ok) { Alert.alert("Error", data.error || "Failed to create bet"); return; }
 
       setTitle(""); setDescription(""); setOptions(["", ""]); setStake("");
-      setCloseAt(""); setPostTo("circles"); setSelectedTargetId(null); setStep(1);
+      setCloseAt(null); setPostTo("circles"); setSelectedTargetId(null); setStep(1);
       router.back();
     } catch {
       Alert.alert("Network Error", "Could not connect to server");
@@ -369,7 +377,7 @@ export default function AddBet() {
                 <Text variant="bodySmall" style={{
                   color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 12,
                 }}>
-                  No {postTo} found matching "{searchQuery}"
+                  No {postTo} found matching &quot;{searchQuery}&quot;
                 </Text>
               )}
             </Surface>
@@ -409,9 +417,59 @@ export default function AddBet() {
 
               )}
 
-              <TextInput label="Closes at (optional)" value={closeAt} onChangeText={setCloseAt}
-                mode="outlined" outlineStyle={{ borderRadius: 12 }} style={{ backgroundColor: subtleBg }}
-                left={<TextInput.Icon icon="calendar" />} placeholder="e.g. 2026-03-01" />
+              {showDatePicker && (
+                <View style={{ backgroundColor: isDark ? "#0D1F35" : "#ffffff", borderRadius: 16, marginBottom: 12, overflow: "hidden" }}>
+                  <DateTimePickerModal
+                    mode="single"
+
+                    components={{
+                      IconPrev: <Ionicons name="chevron-back" size={20} color="#ffffff" />,
+                      IconNext: <Ionicons name="chevron-forward" size={20} color="#ffffff" />,
+                    }}
+
+
+
+                    date={closeAt ? dayjs(closeAt) : dayjs()}
+                    onChange={({ date }) => {
+                      setCloseAt(date ? dayjs(date).toDate() : null);
+                      setShowDatePicker(false);
+                    }}
+                    minDate={dayjs()}
+
+                    styles={{
+                      day_label: { color: "#ffffff" },
+                      day_cell: { backgroundColor: "transparent" },
+                      selected: { backgroundColor: theme.colors.primary },
+                      selected_label: { color: "#ffffff" },
+                      today: { borderColor: theme.colors.primary },
+                      today_label: { color: theme.colors.primary },
+                      month_label: { color: "#ffffff" },
+                      year_label: { color: "#ffffff" },
+                      weekday_label: { color: "#aab4c4" },
+                      caption_label: { color: "#ffffff" },
+                      header_label: { color: "#ffffff" },
+                      title: { color: "#ffffff" },
+                    } as any}
+                  />
+                </View>
+              )}
+
+              <Pressable onPress={() => setShowDatePicker(!showDatePicker)}>
+                <View pointerEvents="none">
+                  <TextInput
+                    label="Closes at (optional)"
+                    value={closeAt ? dayjs(closeAt).format("MMM D, YYYY") : ""}
+                    mode="outlined"
+                    outlineStyle={{ borderRadius: 12 }}
+                    style={{ backgroundColor: subtleBg }}
+                    left={<TextInput.Icon icon="calendar" />}
+                    placeholder="Select a date"
+                    editable={false}
+                  />
+                </View>
+              </Pressable>
+
+
             </Surface>
 
             {canSubmit && (
