@@ -22,7 +22,10 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
           WHEN bt.target_type = 'user'   THEN 'people-outline'
           ELSE 'ellipse-outline'
         END AS icon,
-        creator.username AS creator_username,
+        creator.username          AS creator_username,
+        creator.avatar_color      AS creator_avatar_color,
+        creator.avatar_icon       AS creator_avatar_icon,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', creator.first_name, creator.last_name)), ''), creator.username) AS creator_name,
         bt.target_type,
         CASE
           WHEN bt.target_type = 'circle' THEN c.name
@@ -44,16 +47,16 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
           )
         ) FILTER (WHERE bo.id IS NOT NULL) AS options
       FROM bets b
-      JOIN bet_targets bt       ON bt.bet_id = b.id
-      LEFT JOIN users creator   ON creator.id = b.creator_user_id
+      JOIN bet_targets bt        ON bt.bet_id = b.id
+      LEFT JOIN users creator    ON creator.id = b.creator_user_id
       LEFT JOIN users target_user
         ON bt.target_type = 'user'
         AND target_user.id = bt.target_id
       LEFT JOIN circles c
         ON bt.target_type = 'circle'
         AND c.circle_id = bt.target_id
-      LEFT JOIN bet_options bo  ON bo.bet_id = b.id
-          LEFT JOIN bet_responses br_all
+      LEFT JOIN bet_options bo   ON bo.bet_id = b.id
+      LEFT JOIN bet_responses br_all
         ON br_all.bet_id = b.id
         AND br_all.status = 'accepted'
       LEFT JOIN circle_members cm
@@ -66,11 +69,16 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         OR
         (bt.target_type = 'circle' AND cm.user_id IS NOT NULL))
         AND b.id NOT IN (
-        SELECT bet_id FROM bet_responses WHERE user_id = $1)
-       GROUP BY
+          SELECT bet_id FROM bet_responses WHERE user_id = $1
+        )
+      GROUP BY
         b.id,
         b.custom_stake,
         creator.username,
+        creator.first_name,
+        creator.last_name,
+        creator.avatar_color,
+        creator.avatar_icon,
         bt.target_type,
         c.name,
         c.icon,

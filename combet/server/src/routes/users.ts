@@ -19,20 +19,13 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
         u.created_at,
         u.coins,
         u.bio,
+        u.avatar_color,
+        u.avatar_icon,
 
-        -- followers count
         (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
-
-        -- following count
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
-
-        -- total bets created
         (SELECT COUNT(*) FROM bets WHERE creator_user_id = u.id) AS total_bets,
-
-        -- wins (accepted bet responses)
         (SELECT COUNT(*) FROM bet_responses WHERE user_id = u.id AND status = 'accepted') AS wins,
-
-        -- losses (declined bet responses)
         (SELECT COUNT(*) FROM bet_responses WHERE user_id = u.id AND status = 'declined') AS losses
 
       FROM users u
@@ -56,6 +49,8 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
                          : user.username,
       coins:           user.coins,
       bio:             user.bio ?? "",
+      avatar_color:    user.avatar_color ?? "#2563eb",
+      avatar_icon:     user.avatar_icon ?? "initials",
       created_at:      user.created_at,
       followers_count: Number(user.followers_count),
       following_count: Number(user.following_count),
@@ -73,9 +68,8 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
 // PATCH /users/me
 usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { display_name, bio } = req.body;
+    const { display_name, bio, avatar_color, avatar_icon } = req.body;
 
-    // split display_name into first/last
     const parts = (display_name ?? "").trim().split(/\s+/);
     const first_name = parts[0] ?? "";
     const last_name  = parts.slice(1).join(" ") ?? "";
@@ -83,11 +77,11 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `
       UPDATE users
-      SET first_name = $1, last_name = $2, bio = $3
-        WHERE id = $4
-      RETURNING id, username, email, first_name, last_name, bio, coins, created_at
+      SET first_name = $1, last_name = $2, bio = $3, avatar_color = $4, avatar_icon = $5
+      WHERE id = $6
+      RETURNING id, username, email, first_name, last_name, bio, avatar_color, avatar_icon, coins, created_at
       `,
-      [first_name, last_name, bio ?? "", req.userId]
+      [first_name, last_name, bio ?? "", avatar_color ?? "#2563eb", avatar_icon ?? "initials", req.userId]
     );
 
     const user = result.rows[0];
@@ -98,6 +92,8 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
       email:        user.email,
       display_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
       bio:          user.bio ?? "",
+      avatar_color: user.avatar_color ?? "#2563eb",
+      avatar_icon:  user.avatar_icon ?? "initials",
       coins:        user.coins,
       created_at:   user.created_at,
     });
@@ -108,7 +104,6 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Search Users & Circles ───────────────────────────────────────────────────
-// GET /users/search?q=...
 usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
   try {
     const q = String(req.query.q ?? "").trim();
@@ -117,35 +112,45 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `
       -- USERS
-      SELECT
-        'user'   AS type,
-        u.id::text AS id,
-        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
-        u.username AS subtitle,
-        CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend"
-      FROM users u
-      LEFT JOIN follows f
-        ON f.following_id = u.id
-        AND f.follower_id = $1
-      WHERE u.id <> $1
-        AND (
-          u.username   ILIKE '%' || $2 || '%'
-          OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
-          OR COALESCE(u.last_name,  '') ILIKE '%' || $2 || '%'
-        )
+        SELECT
+          'user' AS type,
+          u.id::text AS id,
+          COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
+          u.username AS subtitle,
+          CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend",
+          u.avatar_color,
+          u.avatar_icon,
+          NULL::text AS join_status
+        FROM users u
+        LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
+        WHERE u.id <> $1
+          AND (
+            u.username ILIKE '%' || $2 || '%'
+            OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
+            OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
+  )
+
 
       UNION ALL
 
       -- CIRCLES
-      SELECT
-        'circle' AS type,
-        c.circle_id::text AS id,
-        c.name AS label,
-        COALESCE(c.description, '') AS subtitle,
-        NULL::boolean AS "isFriend"
-      FROM circles c
-      WHERE c.name ILIKE '%' || $2 || '%'
-
+        SELECT
+          'circle' AS type,
+          c.circle_id::text AS id,
+          c.name AS label,
+          COALESCE(c.description, '') AS subtitle,
+          NULL::boolean AS "isFriend",
+          NULL::text AS avatar_color,
+          NULL::text AS avatar_icon,
+          CASE
+            WHEN cm.status = 'accepted' THEN 'joined'
+            WHEN ci.status = 'pending'  THEN 'pending'
+            ELSE NULL
+          END AS join_status
+        FROM circles c
+        LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $1
+        LEFT JOIN circle_invites ci ON ci.circle_id = c.circle_id AND ci.invitee_id = $1 AND ci.status = 'pending'
+        WHERE c.name ILIKE '%' || $2 || '%'
       ORDER BY label
       LIMIT 50
       `,
@@ -160,7 +165,6 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Follow a User ────────────────────────────────────────────────────────────
-// POST /users/follows
 usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { followingId } = req.body;
@@ -171,11 +175,7 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Cannot follow yourself" });
 
     await pool.query(
-      `
-      INSERT INTO follows (follower_id, following_id)
-      VALUES ($1, $2)
-      ON CONFLICT DO NOTHING
-      `,
+      `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [currentUserId, followingId]
     );
 
@@ -187,7 +187,6 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Get My Friends ───────────────────────────────────────────────────────────
-// GET /users/friends
 usersRouter.get("/friends", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(

@@ -9,34 +9,21 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   const { name, description, icon } = req.body;
   const userId = req.userId;
 
-  if (!name || name.length < 5 || name.length > 15) {
+  if (!name || name.length < 5 || name.length > 15)
     return res.status(400).json({ error: "Name must be 5-15 characters" });
-  }
-  if (description && description.length > 100) {
+  if (description && description.length > 100)
     return res.status(400).json({ error: "Description max 100 characters" });
-  }
 
   try {
     const circleResult = await pool.query(
-      `
-      INSERT INTO circles (name, description, icon)
-      VALUES ($1, $2, $3)
-      RETURNING circle_id
-      `,
+      `INSERT INTO circles (name, description, icon) VALUES ($1, $2, $3) RETURNING circle_id`,
       [name, description, icon]
     );
-
     const circleId = circleResult.rows[0].circle_id;
-
-    // Insert creator as accepted member
     await pool.query(
-      `
-      INSERT INTO circle_members (circle_id, user_id, status)
-      VALUES ($1, $2, 'accepted')
-      `,
+      `INSERT INTO circle_members (circle_id, user_id, status) VALUES ($1, $2, 'accepted')`,
       [circleId, userId]
     );
-
     res.status(201).json({ circle_id: circleId });
   } catch (err) {
     console.error("CREATE CIRCLE ERROR:", err);
@@ -48,12 +35,10 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
-      `
-      SELECT c.circle_id, c.name, c.icon
-      FROM circles c
-      JOIN circle_members m ON m.circle_id = c.circle_id
-      WHERE m.user_id = $1
-      `,
+      `SELECT c.circle_id, c.name, c.icon
+       FROM circles c
+       JOIN circle_members m ON m.circle_id = c.circle_id
+       WHERE m.user_id = $1`,
       [req.userId]
     );
     res.json(result.rows);
@@ -63,37 +48,23 @@ circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// [GET /:circleId moved to end — see below]
-
 // ─── Update Circle ────────────────────────────────────────────────────────────
 circlesRouter.put("/:circleId", async (req, res) => {
   const { circleId } = req.params;
   const { name, description, icon } = req.body;
 
-  if (!name || name.length < 5 || name.length > 15) {
+  if (!name || name.length < 5 || name.length > 15)
     return res.status(400).json({ error: "Name must be 5–15 characters" });
-  }
-  if (description && description.length > 100) {
+  if (description && description.length > 100)
     return res.status(400).json({ error: "Description max 100 characters" });
-  }
 
   try {
     const result = await pool.query(
-      `
-      UPDATE circles
-      SET name = $1,
-          description = $2,
-          icon = $3
-      WHERE circle_id = $4
-      RETURNING circle_id, name, description, icon
-      `,
+      `UPDATE circles SET name = $1, description = $2, icon = $3 WHERE circle_id = $4
+       RETURNING circle_id, name, description, icon`,
       [name, description, icon, circleId]
     );
-
-    if (!result.rows.length) {
-      return res.status(404).json({ error: "Circle not found" });
-    }
-
+    if (!result.rows.length) return res.status(404).json({ error: "Circle not found" });
     res.json(result.rows[0]);
   } catch (err) {
     console.error("PUT circle error:", err);
@@ -104,16 +75,12 @@ circlesRouter.put("/:circleId", async (req, res) => {
 // ─── Get Circle Members ───────────────────────────────────────────────────────
 circlesRouter.get("/:id/members", async (req, res) => {
   const circleId = req.params.id;
-
   try {
     const result = await pool.query(
-      `
-      SELECT u.id, u.username
-      FROM circle_members cm
-      JOIN users u ON cm.user_id = u.id
-      WHERE cm.circle_id = $1
-      AND cm.status = 'accepted'
-      `,
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon
+       FROM circle_members cm
+       JOIN users u ON cm.user_id = u.id
+       WHERE cm.circle_id = $1 AND cm.status = 'accepted'`,
       [circleId]
     );
     res.json(result.rows);
@@ -123,7 +90,7 @@ circlesRouter.get("/:id/members", async (req, res) => {
   }
 });
 
-// ─── Search Friends to Add ───────────────────────────────────────────────────
+// ─── Search Friends to Add ────────────────────────────────────────────────────
 circlesRouter.get("/:circleId/search-friends", requireAuth, async (req: AuthRequest, res) => {
   const { circleId } = req.params;
   const query = req.query.q;
@@ -131,40 +98,39 @@ circlesRouter.get("/:circleId/search-friends", requireAuth, async (req: AuthRequ
 
   try {
     const result = await pool.query(
-      `
-      SELECT
+      `SELECT
         u.id,
         u.username,
+        u.avatar_color,
+        u.avatar_icon,
         cm.status AS member_status,
         ci.status AS invite_status,
         ci.inviter_id
-      FROM follows f
-      JOIN users u ON u.id = f.following_id
-      LEFT JOIN circle_members cm
-        ON cm.user_id = u.id
-        AND cm.circle_id = $2
-      LEFT JOIN circle_invites ci
-        ON ci.invitee_id = u.id
-        AND ci.circle_id = $2
-        AND ci.status = 'pending'
-      WHERE f.follower_id = $1
-      AND u.username ILIKE $3
-      `,
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       LEFT JOIN circle_members cm ON cm.user_id = u.id AND cm.circle_id = $2
+       LEFT JOIN circle_invites ci ON ci.invitee_id = u.id AND ci.circle_id = $2 AND ci.status = 'pending'
+       WHERE f.follower_id = $1 AND u.username ILIKE $3`,
       [currentUserId, circleId, `%${query}%`]
     );
 
     const normalized = result.rows.map((row) => {
       let status: "accepted" | "pending" | null = null;
       let invitedByMe = false;
-
       if (row.member_status === "accepted") {
         status = "accepted";
       } else if (row.invite_status === "pending") {
         status = "pending";
         invitedByMe = row.inviter_id === currentUserId;
       }
-
-      return { id: row.id, username: row.username, status, invitedByMe };
+      return {
+        id: row.id,
+        username: row.username,
+        avatar_color: row.avatar_color,
+        avatar_icon: row.avatar_icon,
+        status,
+        invitedByMe,
+      };
     });
 
     res.json(normalized);
@@ -182,35 +148,19 @@ circlesRouter.post("/:circleId/invite", requireAuth, async (req: AuthRequest, re
 
   try {
     const existing = await pool.query(
-      `
-      SELECT 1 FROM circle_invites
-      WHERE circle_id = $1
-      AND invitee_id = $2
-      AND status = 'pending'
-      `,
+      `SELECT 1 FROM circle_invites WHERE circle_id = $1 AND invitee_id = $2 AND status = 'pending'`,
       [circleId, inviteeId]
     );
-
-    if (existing.rows.length) {
-      return res.status(400).json({ error: "Already invited" });
-    }
+    if (existing.rows.length) return res.status(400).json({ error: "Already invited" });
 
     const invite = await pool.query(
-      `
-      INSERT INTO circle_invites (circle_id, inviter_id, invitee_id, status)
-      VALUES ($1, $2, $3, 'pending')
-      RETURNING invite_id
-      `,
+      `INSERT INTO circle_invites (circle_id, inviter_id, invitee_id, status) VALUES ($1, $2, $3, 'pending') RETURNING invite_id`,
       [circleId, inviterId, inviteeId]
     );
-
     const inviteId = invite.rows[0].invite_id;
 
     await pool.query(
-      `
-      INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id)
-      VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)
-      `,
+      `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id) VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)`,
       [inviteeId, inviterId, inviteId]
     );
 
@@ -228,31 +178,15 @@ circlesRouter.delete("/:circleId/retract/:inviteeId", requireAuth, async (req: A
 
   try {
     const invite = await pool.query(
-      `
-      SELECT invite_id
-      FROM circle_invites
-      WHERE circle_id = $1
-      AND invitee_id = $2
-      AND inviter_id = $3
-      AND status = 'pending'
-      `,
+      `SELECT invite_id FROM circle_invites WHERE circle_id = $1 AND invitee_id = $2 AND inviter_id = $3 AND status = 'pending'`,
       [circleId, inviteeId, currentUserId]
     );
-
-    if (!invite.rows.length) {
-      return res.status(403).json({ error: "Cannot retract this invite" });
-    }
+    if (!invite.rows.length) return res.status(403).json({ error: "Cannot retract this invite" });
 
     const inviteId = invite.rows[0].invite_id;
-
     await pool.query(`DELETE FROM circle_invites WHERE invite_id = $1`, [inviteId]);
     await pool.query(
-      `
-      DELETE FROM notifications
-      WHERE recipient_id = $1
-      AND entity_id = $2
-      AND entity_type = 'circle_invite'
-      `,
+      `DELETE FROM notifications WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'circle_invite'`,
       [inviteeId, inviteId]
     );
 
@@ -266,23 +200,14 @@ circlesRouter.delete("/:circleId/retract/:inviteeId", requireAuth, async (req: A
 // ─── Leave Circle ─────────────────────────────────────────────────────────────
 circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
-
   try {
     const { circleId } = req.params;
     const userId = req.userId;
 
     await client.query("BEGIN");
+    await client.query(`DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`, [circleId, userId]);
 
-    await client.query(
-      `DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
-      [circleId, userId]
-    );
-
-    const remaining = await client.query(
-      `SELECT COUNT(*) FROM circle_members WHERE circle_id = $1`,
-      [circleId]
-    );
-
+    const remaining = await client.query(`SELECT COUNT(*) FROM circle_members WHERE circle_id = $1`, [circleId]);
     if (parseInt(remaining.rows[0].count, 10) === 0) {
       await client.query(`DELETE FROM circles WHERE circle_id = $1`, [circleId]);
     }
@@ -299,28 +224,20 @@ circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, r
 });
 
 // ─── Circle History ───────────────────────────────────────────────────────────
-// Add this route to circles.ts BEFORE the /:circleId catch-all GET route
-// Returns: circle info, members with join dates, and bets posted to this circle
-
 circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, res) => {
   const { circleId } = req.params;
   const userId = req.userId;
 
   try {
-    // Circle info (created_at)
     const circleResult = await pool.query(
-      `SELECT circle_id, name, description, icon, created_at
-       FROM circles WHERE circle_id = $1`,
+      `SELECT circle_id, name, description, icon, created_at FROM circles WHERE circle_id = $1`,
       [circleId]
     );
-    if (!circleResult.rows.length) {
-      return res.status(404).json({ error: "Circle not found" });
-    }
+    if (!circleResult.rows.length) return res.status(404).json({ error: "Circle not found" });
     const circle = circleResult.rows[0];
 
-    // Members with join dates
     const membersResult = await pool.query(
-      `SELECT u.id, u.username, cm.joined_at
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.joined_at
        FROM circle_members cm
        JOIN users u ON cm.user_id = u.id
        WHERE cm.circle_id = $1 AND cm.status = 'accepted'
@@ -328,18 +245,13 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
       [circleId]
     );
 
-    // Bets posted to this circle, with options and current user's response
     const betsResult = await pool.query(
       `SELECT
-         b.id,
-         b.title,
-         b.description,
-         b.stake_amount,
-         b.closes_at,
-         b.created_at,
-         b.status,
+         b.id, b.title, b.description, b.stake_amount, b.closes_at, b.created_at, b.status,
          b.creator_user_id,
          u.username AS creator_username,
+         u.avatar_color AS creator_avatar_color,
+         u.avatar_icon AS creator_avatar_icon,
          br.status AS my_response,
          br.selected_option_id AS my_selected_option_id
        FROM bets b
@@ -351,15 +263,12 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
       [circleId, userId]
     );
 
-    // Attach options to each bet
     const betIds = betsResult.rows.map((b: any) => b.id);
     let optionsByBet: Record<string, any[]> = {};
 
     if (betIds.length > 0) {
       const optionsResult = await pool.query(
-        `SELECT bet_id, id, label, option_text
-         FROM bet_options
-         WHERE bet_id = ANY($1)`,
+        `SELECT bet_id, id, label, option_text FROM bet_options WHERE bet_id = ANY($1)`,
         [betIds]
       );
       for (const opt of optionsResult.rows) {
@@ -368,16 +277,8 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
       }
     }
 
-    const bets = betsResult.rows.map((b: any) => ({
-      ...b,
-      options: optionsByBet[b.id] || [],
-    }));
-
-    res.json({
-      circle,
-      members: membersResult.rows,
-      bets,
-    });
+    const bets = betsResult.rows.map((b: any) => ({ ...b, options: optionsByBet[b.id] || [] }));
+    res.json({ circle, members: membersResult.rows, bets });
   } catch (err) {
     console.error("CIRCLE HISTORY ERROR:", err);
     res.status(500).json({ error: "Server error" });
@@ -387,17 +288,9 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
 // ─── Get Single Circle ────────────────────────────────────────────────────────
 circlesRouter.get("/:circleId", async (req, res) => {
   const { circleId } = req.params;
-
   try {
-    const result = await pool.query(
-      "SELECT * FROM circles WHERE circle_id = $1",
-      [circleId]
-    );
-
-    if (!result.rows.length) {
-      return res.status(404).send("Circle not found");
-    }
-
+    const result = await pool.query(`SELECT * FROM circles WHERE circle_id = $1`, [circleId]);
+    if (!result.rows.length) return res.status(404).send("Circle not found");
     res.json(result.rows[0]);
   } catch (err) {
     console.error("GET circle error:", err);
