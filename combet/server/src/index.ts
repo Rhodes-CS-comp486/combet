@@ -26,6 +26,9 @@ app.use("/users",    usersRouter);
 app.use("/inbox",    inboxRouter);
 app.use("/homefeed", homefeedRouter);
 
+import { startCronJobs } from "./cron";
+startCronJobs();
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
