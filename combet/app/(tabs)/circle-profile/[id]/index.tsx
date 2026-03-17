@@ -34,7 +34,7 @@ export default function CircleProfile() {
 
   const [circle, setCircle]         = useState<Circle | null>(null);
   const [history, setHistory]       = useState<HistoryData | null>(null);
-  const [activeTab, setActiveTab]   = useState<"history" | "live">("history");
+  const [activeTab, setActiveTab]   = useState<"history" | "live">("live");
   const [responding, setResponding] = useState<string | null>(null);
 
   useFocusEffect(
@@ -318,78 +318,10 @@ export default function CircleProfile() {
       </Text>
     );
 
-    const pendingBets  = history.bets.filter((b) => !b.my_response);
     const resolvedBets = history.bets.filter((b) => !!b.my_response);
 
     return (
       <View>
-        {/* ── Circle created ── */}
-        <View style={{
-          flexDirection: "row", alignItems: "center", marginBottom: 20, gap: 10,
-        }}>
-          <View style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: "rgba(46,108,246,0.15)",
-            borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
-            alignItems: "center", justifyContent: "center",
-          }}>
-            <Ionicons name="flag" size={16} color={theme.colors.primary} />
-          </View>
-          <View>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-              Circle created
-            </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {formatDate(history.circle.created_at)}
-            </Text>
-          </View>
-        </View>
-
-        {/* ── Members ── */}
-        <Surface elevation={0} style={{
-          borderRadius: 16, backgroundColor: cardBg, padding: 14, marginBottom: 20,
-          borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-        }}>
-          <Text variant="labelLarge" style={{
-            color: theme.colors.onSurfaceVariant, fontWeight: "700",
-            letterSpacing: 0.5, marginBottom: 12,
-          }}>
-            MEMBERS ({history.members.length})
-          </Text>
-          {history.members.map((m) => (
-            <View key={m.id} style={{
-              flexDirection: "row", alignItems: "center",
-              justifyContent: "space-between", marginBottom: 10,
-            }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{
-                  width: 34, height: 34, borderRadius: 17,
-                  backgroundColor: "rgba(46,108,246,0.15)",
-                  borderWidth: 1, borderColor: "rgba(46,108,246,0.3)",
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <Ionicons name="person" size={16} color={theme.colors.primary} />
-                </View>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, fontWeight: "600" }}>
-                  @{m.username}
-                </Text>
-              </View>
-              {m.joined_at && (
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Joined {formatDate(m.joined_at)}
-                </Text>
-              )}
-            </View>
-          ))}
-        </Surface>
-
-        {/* ── Pending bets ── */}
-        {pendingBets.length > 0 && (
-          <View style={{ marginBottom: 8 }}>
-            {pendingBets.map(renderBet)}
-          </View>
-        )}
-
         {resolvedBets.length > 0 && (
           <View>
             {resolvedBets.map(renderBet)}
@@ -451,7 +383,15 @@ export default function CircleProfile() {
             }}>
               {circle.description}
             </Text>
-          ) : <View style={{ marginBottom: 20 }} />}
+          ) : null}
+
+          {/* Circle created date */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, opacity: 0.6 }}>
+            <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              Created {circle.created_at ? formatDate(circle.created_at) : ""}
+            </Text>
+          </View>
 
           {/* Action buttons */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
@@ -483,7 +423,7 @@ export default function CircleProfile() {
           borderRadius: 12, overflow: "hidden",
           backgroundColor: isDark ? "#0F223A" : "#e8edf5",
         }}>
-          {(["history", "live"] as const).map((tab) => {
+          {(["live", "history"] as const).map((tab) => {
             const active = activeTab === tab;
             return (
               <View key={tab} style={{ flex: 1 }}>
@@ -500,16 +440,28 @@ export default function CircleProfile() {
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
           {activeTab === "history" ? renderHistory() : (
-            <Surface elevation={0} style={{
-              borderRadius: 16, backgroundColor: cardBg, padding: 28,
-              borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-              alignItems: "center",
-            }}>
-              <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
-                Live bets coming soon
-              </Text>
-            </Surface>
+            (() => {
+              const pendingBets = history?.bets.filter((b) => !b.my_response) ?? [];
+              if (pendingBets.length === 0) {
+                return (
+                  <Surface elevation={0} style={{
+                    borderRadius: 16, backgroundColor: cardBg, padding: 28,
+                    borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                    alignItems: "center",
+                  }}>
+                    <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
+                      No live bets right now
+                    </Text>
+                  </Surface>
+                );
+              }
+              return (
+                <View>
+                  {pendingBets.map(renderBet)}
+                </View>
+              );
+            })()
           )}
         </View>
       </ScrollView>
