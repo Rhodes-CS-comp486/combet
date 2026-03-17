@@ -18,11 +18,12 @@ export default function MembersScreen() {
   const loadMembers = async () => {
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`http://localhost:3001/circles/${circleId}/members`, {
+      const res = await fetch(`http://localhost:3001/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId || "" },
       });
       if (!res.ok) throw new Error("Failed to fetch members");
-      setMembers(await res.json());
+      const data = await res.json();
+      setMembers(data.members ?? []);
     } catch (err) {
       console.error("Error loading members:", err);
     }
@@ -44,7 +45,7 @@ export default function MembersScreen() {
 
         <FlatList
           data={members}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id ?? item.username}
           contentContainerStyle={{ paddingBottom: 120 }}
           ListEmptyComponent={
             <Text variant="bodyMedium" style={{
@@ -67,7 +68,7 @@ export default function MembersScreen() {
               }}>
                 <Ionicons name="person" size={20} color={theme.colors.primary} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
                   {item.username}
                 </Text>
@@ -75,6 +76,11 @@ export default function MembersScreen() {
                   @{item.username}
                 </Text>
               </View>
+              {item.joined_at && (
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, opacity: 0.8 }}>
+                  Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </Text>
+              )}
             </Surface>
           )}
         />
