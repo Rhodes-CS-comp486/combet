@@ -106,7 +106,7 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
   try {
     await client.query("BEGIN");
 
-    const betResult = await client.query(`SELECT stake_amount FROM bets WHERE id = $1`, [betId]);
+    const betResult = await client.query(`SELECT stake_amount, status FROM bets WHERE id = $1`, [betId]);
     if (!betResult.rows[0]) {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Bet not found" });
