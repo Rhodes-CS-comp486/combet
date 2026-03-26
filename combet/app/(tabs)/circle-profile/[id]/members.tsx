@@ -6,6 +6,8 @@ import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
+import GradientBackground from "@/components/GradientBackground";
+
 
 export default function MembersScreen() {
   const { theme, isDark } = useAppTheme();
@@ -32,13 +34,12 @@ export default function MembersScreen() {
   const cardBg = isDark ? "#0F2A44" : "#ffffff";
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
       <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text variant="headlineSmall" style={{
-          color: theme.colors.onSurface, fontWeight: "800",
-          textAlign: "center", marginBottom: 24,
+      <Text style={{
+          color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
+          letterSpacing: 2, marginBottom: 24,
         }}>
           Members
         </Text>
@@ -55,15 +56,16 @@ export default function MembersScreen() {
             </Text>
           }
           renderItem={({ item }) => (
-            <Surface elevation={1} style={{
+            <View style={{
               flexDirection: "row", alignItems: "center",
-              backgroundColor: cardBg, borderRadius: 14,
-              padding: 14, marginBottom: 10,
+              backgroundColor: "rgba(255,255,255,0.09)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              borderRadius: 14, padding: 14, marginBottom: 10,
             }}>
               <View style={{
                 width: 44, height: 44, borderRadius: 22,
-                backgroundColor: "rgba(46,108,246,0.15)",
-                borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
+                backgroundColor: "rgba(157,212,190,0.12)",
+                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
                 alignItems: "center", justifyContent: "center", marginRight: 14,
               }}>
                 <Ionicons name="person" size={20} color={theme.colors.primary} />
@@ -81,10 +83,9 @@ export default function MembersScreen() {
                   Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </Text>
               )}
-            </Surface>
+            </View>
           )}
         />
-      </View>
-    </View>
+      </GradientBackground>
   );
 }

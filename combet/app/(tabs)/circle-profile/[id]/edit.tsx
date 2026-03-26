@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
+import GradientBackground from "@/components/GradientBackground";
 
 export default function EditCircle() {
   const router            = useRouter();

@@ -246,29 +246,38 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
     );
 
     const betsResult = await pool.query(
-      `SELECT
-         b.id, b.title, b.description, b.stake_amount, b.closes_at, b.created_at, b.status,
-         b.creator_user_id,
-         u.username AS creator_username,
-         u.avatar_color AS creator_avatar_color,
-         u.avatar_icon AS creator_avatar_icon,
-         br.status AS my_response,
-         br.selected_option_id AS my_selected_option_id
-       FROM bets b
-       JOIN bet_targets bt ON bt.bet_id = b.id
-       JOIN users u ON u.id = b.creator_user_id
-       LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $2
-       WHERE bt.target_type = 'circle' AND bt.target_id = $1
-       ORDER BY b.created_at DESC`,
-      [circleId, userId]
-    );
+  `SELECT
+     b.id, b.title, b.description, b.stake_amount, b.closes_at, b.created_at, b.status,
+     b.creator_user_id,
+     u.username AS creator_username,
+     u.avatar_color AS creator_avatar_color,
+     u.avatar_icon AS creator_avatar_icon,
+     b.winning_option_id,
+        b.proposed_winner_option_id,
+        (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted')::int AS total_joined,
+        br.selected_option_id AS my_option_id,
+     br.status AS my_response,
+     br.selected_option_id AS my_selected_option_id
+   FROM bets b
+   JOIN bet_targets bt ON bt.bet_id = b.id
+   JOIN users u ON u.id = b.creator_user_id
+   LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $2
+   WHERE bt.target_type = 'circle' AND bt.target_id = $1
+   ORDER BY b.created_at DESC`,
+  [circleId, userId]
+);
 
     const betIds = betsResult.rows.map((b: any) => b.id);
     let optionsByBet: Record<string, any[]> = {};
 
     if (betIds.length > 0) {
       const optionsResult = await pool.query(
-        `SELECT bet_id, id, label, option_text FROM bet_options WHERE bet_id = ANY($1)`,
+          `SELECT bo.bet_id, bo.id, bo.label, bo.option_text AS text,
+          COUNT(br.id)::int AS count
+        FROM bet_options bo
+        LEFT JOIN bet_responses br ON br.selected_option_id = bo.id AND br.status = 'accepted'
+        WHERE bo.bet_id = ANY($1)
+        GROUP BY bo.bet_id, bo.id, bo.label, bo.option_text`,
         [betIds]
       );
       for (const opt of optionsResult.rows) {

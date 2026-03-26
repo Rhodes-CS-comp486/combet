@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { JSX } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 
 import CombetHeader from "@/components/CombetHeader";
 import { ThemeContextProvider, useAppTheme } from "@/context/ThemeContext";
@@ -23,17 +24,29 @@ function AppLayout(): JSX.Element {
 
   return (
     <PaperProvider theme={theme}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <LinearGradient
+        colors={["#2c5364", "#1a3040", "#141f2d"]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        locations={[0, 0.45, 1]}
+        style={{ flex: 1 }}
+      >
         {!isAuthScreen && <CombetHeader />}
 
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: "transparent"}}>
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background },
+              contentStyle: { backgroundColor: "transparent" },
+                animation: "none"
             }}
           >
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+                name="(tabs)"
+                options={{
+                    contentStyle: {backgroundColor: "transparent"}
+                }}
+            />
 
             <Stack.Screen
               name="create-circle"
@@ -68,7 +81,7 @@ function AppLayout(): JSX.Element {
             />
           </Stack>
         </View>
-      </View>
+        </LinearGradient>
 
       <StatusBar style={isDark ? "light" : "dark"} />
     </PaperProvider>

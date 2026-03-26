@@ -7,6 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import { TouchableOpacity } from "react-native";
+import GradientBackground from "@/components/GradientBackground";
 
 type Circle = {
   circle_id: string;
@@ -65,9 +66,9 @@ export default function CirclesScreen() {
       <Surface
         elevation={2}
         style={{
-          width:            80,
-          height:           80,
-          borderRadius:     40,
+          width:            150,
+          height:           150,
+          borderRadius:     75,
           backgroundColor:  theme.colors.surface,
           justifyContent:   "center",
           alignItems:       "center",
@@ -76,36 +77,46 @@ export default function CirclesScreen() {
       >
         <Ionicons
           name={(item.icon as any) || "people"}
-          size={28}
+          size={70}
           color={theme.colors.primary}
         />
       </Surface>
-      <Text
-        variant="bodySmall"
-        style={{ color: theme.colors.onSurface, textAlign: "center" }}
-      >
-        {item.name}
-      </Text>
+      <Text style={{ color: theme.colors.onSurface, textAlign: "center", fontSize: 15, fontWeight: "300", letterSpacing: 1.5}}>
+      {item.name}
+    </Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>
+      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
 
       {/* ── Search Bar ── */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
       <Searchbar
         placeholder="Search circles..."
         value={q}
         onChangeText={setQ}
         style={{
-          marginBottom:    16,
-          borderRadius:    12,
-          backgroundColor: theme.colors.surface,
+          flex: 1,
+          borderRadius: 12,
+          backgroundColor: "rgba(255,255,255,0.09)",
         }}
         inputStyle={{ color: theme.colors.onSurface }}
         iconColor={theme.colors.onSurfaceVariant}
         placeholderTextColor={theme.colors.onSurfaceVariant}
       />
+      <TouchableOpacity
+        onPress={() => router.push("/create-circle")}
+        style={{
+          width: 55, height: 55, borderRadius: 27,
+          backgroundColor: "rgba(255,255,255,0.09)",
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+          alignItems: "center", justifyContent: "center",
+        }}
+      >
+        <Ionicons name="add" size={24} color={theme.colors.primary} />
+      </TouchableOpacity>
+    </View>
 
       {/* ── Circles Grid ── */}
       <FlatList
@@ -114,7 +125,7 @@ export default function CirclesScreen() {
         renderItem={renderItem}
         numColumns={3}
         columnWrapperStyle={{ justifyContent: "space-between" }}
-        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100, paddingTop: 25}}
         ListEmptyComponent={
           <Text
             variant="bodyMedium"
@@ -125,18 +136,6 @@ export default function CirclesScreen() {
         }
       />
 
-      {/* ── FAB (floating add button) ── */}
-      <FAB
-        icon="plus"
-        onPress={() => router.push("/create-circle")}
-        style={{
-          position:         "absolute",
-          bottom:           24,
-          right:            20,
-          backgroundColor:  theme.colors.primary,
-        }}
-        color="white"
-      />
-    </View>
+      </GradientBackground>
   );
 }

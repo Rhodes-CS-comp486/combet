@@ -7,6 +7,9 @@ import { HapticTab } from "@/components/haptic-tab";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 
+import { LinearGradient } from "expo-linear-gradient";
+
+
 export default function TabLayout() {
   const { theme, isDark } = useAppTheme();
 
@@ -24,11 +27,16 @@ export default function TabLayout() {
   if (loading) return null;
   if (!hasSession) return <Redirect href="/login" />;
 
-  // Tab bar background — slightly lighter than page background
-  const tabBarBg = isDark ? "#0F223A" : "#ffffff";
+  const tabBarBg = "transparent";
 
   return (
-    <View style={{ flex: 1 }}>
+      <LinearGradient
+          colors={["#2c5364", "#1a3040", "#141f2d"]}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+          locations={[0, 0.45, 1]}
+          style={{ flex: 1 }}
+        >
       <Tabs
         screenOptions={{
           headerShown:             false,
@@ -36,6 +44,8 @@ export default function TabLayout() {
           tabBarActiveTintColor:   theme.colors.primary,
           tabBarInactiveTintColor: isDark ? "#6b7f99" : "#9e9e9e",
           tabBarItemStyle:         { flex: 1 },
+            //@ts-ignore
+            sceneContainerStyle: { backgroundColor: "transparent"},
           tabBarStyle: {
             height:          70,
             paddingBottom:   8,
@@ -102,6 +112,16 @@ export default function TabLayout() {
 
       </Tabs>
 
+         {/* ── Tab bar divider line ── */}
+        <View style={{
+          position: "absolute",
+          bottom: 70,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: "rgba(255,255,255,0.1)",
+        }} />
+
       {/* ── Floating Bet Button ─────────────────────────────────────── */}
       <TouchableOpacity
         onPress={() => router.push("/add-bet")}
@@ -112,18 +132,20 @@ export default function TabLayout() {
           width:           65,
           height:          65,
           borderRadius:    32.5,
-          backgroundColor: theme.colors.primary,
+          backgroundColor: "#2c4a5e",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.15)",
           justifyContent:  "center",
           alignItems:      "center",
-          shadowColor:     theme.colors.primary,
-          shadowOpacity:   0.5,
-          shadowRadius:    12,
-          shadowOffset:    { width: 0, height: 4 },
+          //shadowColor:     "#9dd4be",
+          //shadowOpacity:   0.3,
+          //shadowRadius:    12,
+          //shadowOffset:    { width: 0, height: 4 },
           elevation:       8,
         }}
       >
         <Ionicons name="add" size={32} color="white" />
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 }

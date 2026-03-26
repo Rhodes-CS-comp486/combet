@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import UserAvatar, { AVATAR_ICONS, AVATAR_COLORS } from "@/components/UserAvatar";
+import GradientBackground from "@/components/GradientBackground";
 
 const API_URL = "http://localhost:3001";
 
@@ -172,9 +173,9 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <Surface style={[s.root, s.center]}>
+        <GradientBackground style={s.center}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-      </Surface>
+        </GradientBackground>
     );
   }
 
@@ -201,7 +202,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <Surface style={s.root}>
+      <GradientBackground>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* ── Top bar ── */}
@@ -512,13 +513,13 @@ export default function ProfileScreen() {
           </View>
         </Modal>
       </Portal>
-    </Surface>
+      </GradientBackground>
   );
 }
 
 const styles = (theme: any) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.colors.background },
+    root: { flex: 1},
     center: { justifyContent: "center", alignItems: "center" },
     scroll: { padding: 20 },
     topBar: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
