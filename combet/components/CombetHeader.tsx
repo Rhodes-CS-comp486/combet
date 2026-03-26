@@ -39,9 +39,14 @@ export default function CombetHeader() {
 
   return (
     <Appbar.Header
-      style={{ backgroundColor: "#0f223a" }}
+      style={{
+          backgroundColor: "transparent",
+          borderBottomWidth: 1,
+          borderBottomColor: "rgba(255,255,255,0.1)",
+          elevation: 0,
+
+      }}
       statusBarHeight={insets.top}
-      elevated
     >
       {/* Left */}
       <Appbar.Action
@@ -55,8 +60,9 @@ export default function CombetHeader() {
         title="COMBET"
         titleStyle={{
           color: "#FFFFFF",
-          fontWeight: "700",
-          letterSpacing: 1,
+          fontWeight: "300",
+          letterSpacing: 3.2,
+            textAlign: "center",
         }}
       />
 

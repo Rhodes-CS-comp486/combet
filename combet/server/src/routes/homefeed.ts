@@ -71,6 +71,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         AND b.id NOT IN (
           SELECT bet_id FROM bet_responses WHERE user_id = $1
         )
+        AND b.status = 'PENDING'
       GROUP BY
         b.id,
         b.custom_stake,

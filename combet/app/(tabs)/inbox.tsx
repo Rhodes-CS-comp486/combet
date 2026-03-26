@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { View, FlatList } from "react-native";
+import { View, FlatList, TouchableOpacity } from "react-native";
 import { Text, Surface, Button, Chip, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import {router} from "expo-router";
+import GradientBackground from "@/components/GradientBackground";
 
 const BASE_URL = "http://localhost:3001";
 
@@ -18,6 +19,7 @@ type Notification = {
   status: string | null;
   is_read: boolean;
   created_at: string;
+  icon?: string;
 };
 
 // ── Filter config ────────────────────────────────────────────────────────────
@@ -103,7 +105,7 @@ export default function InboxScreen() {
     return 0;
   };
 
-  const cardBg = isDark ? "#0D1F35" : "#ffffff";
+  const cardBg = "rgba(255,255,255,0.09)";
 
   // ── Notification card ─────────────────────────────────────────────────────
   const renderItem = ({ item }: { item: Notification }) => {
@@ -132,34 +134,24 @@ export default function InboxScreen() {
             overflow:        "hidden",
           }}
         >
-          {/* Accent bar — blue for pending, green for accepted */}
-          <View style={{
-            height:          3,
-            backgroundColor: isAccepted ? "#22c55e" : theme.colors.primary,
-          }} />
+
 
           <View style={{ padding: 16 }}>
             {/* ── Top row: icon + text + time ── */}
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               <View style={{
-                width:           40,
-                height:          40,
-                borderRadius:    20,
-                backgroundColor: isAccepted
-                  ? "rgba(34,197,94,0.15)"
-                  : "rgba(46,108,246,0.15)",
-                borderWidth:     1.5,
-                borderColor:     isAccepted ? "rgba(34,197,94,0.4)" : "rgba(46,108,246,0.4)",
-                alignItems:      "center",
-                justifyContent:  "center",
-                marginRight:     12,
-              }}>
-                <Ionicons
-                  name="people"
-                  size={18}
-                  color={isAccepted ? "#22c55e" : theme.colors.primary}
-                />
-              </View>
+                  width: 40, height: 40, borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                  alignItems: "center", justifyContent: "center",
+                  marginRight: 12,
+                }}>
+                  <Ionicons
+                    name={((item as any).icon as any) || "people"}
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                </View>
 
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -176,13 +168,15 @@ export default function InboxScreen() {
 
               {/* Status chip */}
               {isAccepted && (
-                <Chip
-                  icon="check-circle"
-                  style={{ backgroundColor: "rgba(34,197,94,0.15)", height: 28 }}
-                  textStyle={{ color: "#22c55e", fontSize: 11 }}
-                >
-                  Joined
-                </Chip>
+                <View style={{
+                  backgroundColor: "rgba(157,212,190,0.12)",
+                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                  borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                }}>
+                  <Ionicons name="checkmark" size={11} color="#9dd4be" />
+                  <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Joined</Text>
+                </View>
               )}
             </View>
 
@@ -244,7 +238,7 @@ export default function InboxScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <GradientBackground>
 
       {/* ── Header ── */}
       <View style={{
@@ -256,9 +250,9 @@ export default function InboxScreen() {
       }}>
 
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-      <Text variant="headlineSmall" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>
-        Inbox
-      </Text>
+      <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
+  Inbox
+</Text>
       {pendingCount > 0 && (
         <View style={{
           backgroundColor: theme.colors.primary,
@@ -274,32 +268,32 @@ export default function InboxScreen() {
         </View>
 
         {/* ── Filter chips ── */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {FILTERS.map(({ key, label, icon }) => {
+        <View style={{ flexDirection: "row" }}>
+          {FILTERS.map(({ key, label }) => {
             const active = activeFilter === key;
-            const badge  = getBadge(key);
             return (
-              <Chip
+              <TouchableOpacity
                 key={key}
-                selected={active}
                 onPress={() => setActiveFilter(key)}
-                icon={icon as any}
                 style={{
-                  backgroundColor: active
-                    ? theme.colors.primary
-                    : (isDark ? "#0F223A" : "#e8edf5"),
-                }}
-                textStyle={{
-                  color:      active ? "white" : theme.colors.onSurfaceVariant,
-                  fontWeight: active ? "700" : "400",
-                  fontSize:   13,
+                  flex: 1,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  borderBottomWidth: 2,
+                  borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
                 }}
               >
-                {label}{badge > 0 ? ` (${badge})` : ""}
-              </Chip>
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: active ? "600" : "400",
+                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
             );
           })}
-        </View>
+      </View>
       </View>
 
       {/* ── Content ── */}
@@ -326,6 +320,6 @@ export default function InboxScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+      </GradientBackground>
   );
 }

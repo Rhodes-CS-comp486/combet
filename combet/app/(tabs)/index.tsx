@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, FlatList, TouchableOpacity, DeviceEventEmitter, ScrollView} from "react-native";
-import {Text, Searchbar, ActivityIndicator, Chip, Button, Surface, ProgressBar, Divider, Portal, Modal as PaperModal} from "react-native-paper";
+import {Text, Searchbar, ActivityIndicator, Chip, Button, ProgressBar, Divider, Portal, Modal as PaperModal} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
-import { useAppTheme } from "@/context/ThemeContext";
+import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
+import GradientBackground from "@/components/GradientBackground";
+import BetCard from "@/components/BetCard";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null };
@@ -174,17 +176,9 @@ export default function HomeScreen() {
     }
 
     return (
-      <View style={{ flex: 1 }}>
+      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
         {/* Tab bar */}
-        <View style={{
-          flexDirection: "row",
-          backgroundColor: theme.colors.surface,
-          borderRadius: 10,
-          padding: 3,
-          marginBottom: 14,
-          borderWidth: 0.5,
-          borderColor: theme.colors.outline,
-        }}>
+        <View style={{ flexDirection: "row", marginBottom: 16 }}>
           {(["people", "circles"] as const).map((tab) => {
             const count = tab === "people" ? users.length : circles.length;
             const active = searchTab === tab;
@@ -194,36 +188,19 @@ export default function HomeScreen() {
                 onPress={() => setSearchTab(tab)}
                 style={{
                   flex: 1,
-                  flexDirection: "row",
+                  paddingVertical: 12,
                   alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: 7,
-                  borderRadius: 8,
-                  gap: 6,
-                  backgroundColor: active ? theme.colors.background : "transparent",
-                  borderWidth: active ? 0.5 : 0,
-                  borderColor: theme.colors.outline,
+                  borderBottomWidth: 2,
+                  borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
                 }}
               >
                 <Text style={{
-                  fontSize: 12,
-                  fontWeight: "500",
+                  fontSize: 13,
+                  fontWeight: active ? "600" : "400",
                   color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                 }}>
-                  {tab === "people" ? "People" : "Circles"}
+                    {tab === "people" ? "People" : "Circles"}
                 </Text>
-                <View style={{
-                  backgroundColor: active ? theme.colors.primary : theme.colors.surfaceVariant,
-                  borderRadius: 20,
-                  paddingHorizontal: 6,
-                  paddingVertical: 1,
-                }}>
-                  <Text style={{
-                    fontSize: 10,
-                    fontWeight: "600",
-                    color: active ? "#fff" : theme.colors.onSurfaceVariant,
-                  }}>{count}</Text>
-                </View>
               </TouchableOpacity>
             );
           })}
@@ -243,6 +220,7 @@ export default function HomeScreen() {
               data={users}
               keyExtractor={(item) => `user:${item.id}`}
               showsVerticalScrollIndicator={false}
+              style={{ backgroundColor: "transparent" }}
               renderItem={({ item }) => (
                 <View style={{
                   flexDirection: "row", alignItems: "center",
@@ -384,538 +362,90 @@ export default function HomeScreen() {
             />
           )
         )}
-      </View>
+      </GradientBackground>
     );
   };
 
-  // ── Feed item ───────────────────────────────────────────────────────────────
   const renderFeedItem = ({ item }: { item: any }) => {
-    const options = item.options ?? [];
-    const totalJoined = Number(item.total_joined ?? 0);
-    const stake = item.stake_amount ?? 0;
-    const pot = stake * totalJoined;
-    const barColors = ["#0ea5e9", "#10b981", "#8b5cf6", "#f43f5e"];
+  console.log("FEED ITEM:", JSON.stringify(item, null, 2));
+  return (
+    <BetCard
+      item={item}
+      mode="feed"
+      accepting={accepting}
+      setAccepting={setAccepting}
+      onRemove={(id) => setFeed((prev) => prev.filter((b) => b.id !== id))}
+    />
+  );
+};
 
-    return (
-      <Surface elevation={2} style={{ borderRadius: 20, marginBottom: 14, overflow: "hidden" }}>
+const renderActiveBetItem = ({ item }: { item: any }) => (
+  <BetCard
+    item={item}
+    mode="active"
+    onRefresh={() => { fetchActiveBets(); fetchRecentResults(); fetchCoins(); }}
+    onSettle={setSettlingBet}
+  />
+);
 
-        {/* ── HEADER ── */}
-        <View style={{ flexDirection: "row", alignItems: "flex-start", padding: 16 }}>
-          <View style={{
-            alignItems: "center", gap: 6, paddingRight: 14,
-            borderRightWidth: 1, borderRightColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
-            marginRight: 14,
-          }}>
-            <UserAvatar
-              user={{
-                display_name: item.creator_name || item.creator_username,
-                username: item.creator_username,
-                avatar_color: item.creator_avatar_color,
-                avatar_icon: item.creator_avatar_icon,
-              }}
-              size={54}
-            />
-            <Text variant="labelSmall" style={{ color: theme.colors.primary, textAlign: "center" }}>
-              {item.target_name}
-            </Text>
-          </View>
-
-          <View style={{ flex: 1, gap: 4, paddingTop: 2 }}>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 2 }}>
-              {item.creator_name || item.creator_username}
-            </Text>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>
-              {item.title}
-            </Text>
-            {item.description ? (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {item.description}
-              </Text>
-            ) : null}
-          </View>
-
-          <Chip
-            style={{
-              marginLeft: 10,
-              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(255,196,0,0.1)",
-              borderColor: item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(255,196,0,0.25)",
-              borderWidth: 1,
-            }}
-            textStyle={{ color: item.custom_stake ? "#a5b4fc" : "#D4AF37", fontWeight: "800", fontSize: 14 }}
-          >
-            {item.custom_stake ?? `${stake} coins`}
-          </Chip>
-        </View>
-
-        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
-        {/* ── STATS ROW ── */}
-        <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 16, alignItems: "center" }}>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>{totalJoined}</Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>JOINED</Text>
-          </View>
-          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            {item.custom_stake ? (
-              <Text variant="titleMedium" style={{ color: "#a5b4fc", fontWeight: "700", textAlign: "center" }}>Custom</Text>
-            ) : (
-              <Text variant="titleLarge" style={{ color: "#FFC400", fontWeight: "800" }}>{pot}</Text>
-            )}
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {item.custom_stake ? "STAKES" : "COIN POT"}
-            </Text>
-          </View>
-          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "800" }}>
-              {item.closes_at ? fmtDate(item.closes_at) : "—"}
-            </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>CLOSES</Text>
-          </View>
-        </View>
-
-        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
-        {/* ── OPTIONS ── */}
-        <View style={{ padding: 12, gap: 8 }}>
-          {options.map((opt: any, i: number) => {
-            const count = opt.count ?? 0;
-            const pct = totalJoined > 0 ? Math.round((count / totalJoined) * 100) : 0;
-            const potentialWin = Math.round((pot + stake) / (count + 1)) - stake;
-            const barColor = barColors[i % barColors.length];
-
-            return (
-              <Surface key={opt.id} elevation={3} style={{
-                borderRadius: 12, padding: 10,
-                borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)",
-                flexDirection: "row", alignItems: "center", gap: 12,
-              }}>
-                <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700", minWidth: 52 }}>
-                  {opt.text}
-                </Text>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <ProgressBar
-                    progress={pct / 100}
-                    color={barColor}
-                    style={{ height: 12, borderRadius: 99, maxWidth: "100%", backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}
-                  />
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>{count} people</Text>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>{pct}%</Text>
-                  </View>
-                </View>
-                {!item.custom_stake && (
-                  <Chip
-                    style={{ backgroundColor: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", borderWidth: 1 }}
-                    textStyle={{ color: "#a5b4fc", fontSize: 11, fontWeight: "700" }}
-                  >
-                    +{potentialWin}
-                  </Chip>
-                )}
-                <Button
-                  mode="contained"
-                  compact
-                  loading={accepting === `${item.id}-${opt.id}`}
-                  disabled={accepting !== null}
-                  onPress={async () => {
-                    setAccepting(`${item.id}-${opt.id}`);
-                    try {
-                      const sessionId = await getSessionId();
-                      const res = await fetch(`${API_BASE}/bets/${item.id}/accept`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                        body: JSON.stringify({ selectedOptionId: opt.id }),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) {
-                        if (res.status === 400 && data.error === "Not enough coins") {
-                          alert(`Not enough coins! You have ${data.coins} but this bet costs ${stake}.`);
-                        }
-                        return;
-                      }
-                      if (data.coins !== undefined) DeviceEventEmitter.emit("coinsUpdated");
-                      setFeed((prev) => prev.filter((b) => b.id !== item.id));
-                    } finally {
-                      setAccepting(null);
-                    }
-                  }}
-                  style={{ borderRadius: 8 }}
-                  labelStyle={{ fontWeight: "800", fontSize: 12 }}
-                >
-                  Join
-                </Button>
-              </Surface>
-            );
-          })}
-        </View>
-
-        {/* ── DECLINE ── */}
-        <TouchableOpacity
-          onPress={async () => {
-            const sessionId = await getSessionId();
-            await fetch(`${API_BASE}/bets/${item.id}/decline`, {
-              method: "POST",
-              headers: { "x-session-id": sessionId ?? "" },
-            });
-            setFeed((prev) => prev.filter((b) => b.id !== item.id));
-          }}
-          style={{
-            padding: 10, alignItems: "center", justifyContent: "center",
-            borderTopWidth: 1, borderTopColor: "rgba(239,68,68,0.15)",
-            backgroundColor: "rgba(239,68,68,0.05)",
-          }}
-        >
-          <Text variant="labelMedium" style={{ color: "rgba(239,68,68,0.6)" }}>✕  Decline</Text>
-        </TouchableOpacity>
-
-      </Surface>
-    );
-  };
-
-  const renderActiveBetItem = ({ item }: { item: any }) => {
-    const options = item.options ?? [];
-    const totalJoined = Number(item.total_joined ?? 0);
-    const stake = item.stake_amount ?? 0;
-    const pot = stake * totalJoined;
-    const isCreator = item.is_creator;
-    const isClosed = item.status === "CLOSED";
-    const barColors = ["#0ea5e9", "#10b981", "#8b5cf6", "#f43f5e"];
-
-    return (
-      <Surface elevation={2} style={{ borderRadius: 20, marginBottom: 14, overflow: "hidden" }}>
-
-        {/* ── HEADER ── */}
-        <View style={{ flexDirection: "row", alignItems: "flex-start", padding: 16 }}>
-          <View style={{
-            alignItems: "center", gap: 6, paddingRight: 14,
-            borderRightWidth: 1, borderRightColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
-            marginRight: 14,
-          }}>
-            <View style={{
-              width: 54, height: 54, borderRadius: 27,
-              backgroundColor: isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.1)",
-              borderWidth: 2, borderColor: "rgba(46,108,246,0.35)",
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
-            </View>
-            <Text variant="labelSmall" style={{ color: theme.colors.primary, textAlign: "center" }}>
-              {item.target_name}
-            </Text>
-          </View>
-
-          <View style={{ flex: 1, gap: 4, paddingTop: 2 }}>
-            <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>
-              {item.title}
-            </Text>
-            {item.description ? (
-              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {item.description}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={{ alignItems: "flex-end", gap: 6 }}>
-            <Chip
-              style={{
-                backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(255,196,0,0.1)",
-                borderColor: item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(255,196,0,0.25)",
-                borderWidth: 1,
-              }}
-              textStyle={{ color: item.custom_stake ? "#a5b4fc" : "#D4AF37", fontWeight: "800", fontSize: 14 }}
-            >
-              {item.custom_stake ?? `${stake} coins`}
-            </Chip>
-            <Chip
-              style={{
-                backgroundColor: isCreator ? "rgba(46,108,246,0.1)" : "rgba(16,185,129,0.1)",
-                borderColor: isCreator ? "rgba(46,108,246,0.25)" : "rgba(16,185,129,0.25)",
-                borderWidth: 1,
-              }}
-              textStyle={{ color: isCreator ? theme.colors.primary : "#10b981", fontWeight: "700", fontSize: 11 }}
-            >
-              {isCreator ? "Created" : "Joined"}
-            </Chip>
-          </View>
-        </View>
-
-        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
-        {/* ── STATS ROW ── */}
-        <View style={{ flexDirection: "row", paddingVertical: 12, paddingHorizontal: 16, alignItems: "center" }}>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "800" }}>{totalJoined}</Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>JOINED</Text>
-          </View>
-          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            {item.custom_stake ? (
-              <Text variant="titleMedium" style={{ color: "#a5b4fc", fontWeight: "700", textAlign: "center" }}>Custom</Text>
-            ) : (
-              <Text variant="titleLarge" style={{ color: "#D4AF37", fontWeight: "800" }}>{pot}</Text>
-            )}
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {item.custom_stake ? "STAKES" : "COIN POT"}
-            </Text>
-          </View>
-          <Divider style={{ width: 1, height: "100%", backgroundColor: "rgba(255,255,255,0.15)" }} />
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Chip
-              style={{
-                backgroundColor: isClosed ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
-                borderColor: isClosed ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.25)",
-                borderWidth: 1,
-              }}
-              textStyle={{ color: isClosed ? "#ef4444" : "#10b981", fontWeight: "700", fontSize: 11 }}
-            >
-              {isClosed ? "Closed" : "Open"}
-            </Chip>
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>STATUS</Text>
-          </View>
-        </View>
-
-        <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
-        {/* ── OPTIONS ── */}
-        <View style={{ padding: 12, gap: 8 }}>
-          {options.map((opt: any, i: number) => {
-            const count = opt.count ?? 0;
-            const pct = totalJoined > 0 ? Math.round((count / totalJoined) * 100) : 0;
-            const barColor = barColors[i % barColors.length];
-            const isMyOption = item.my_option_id === opt.id;
-
-            return (
-              <Surface key={opt.id} elevation={3} style={{
-                borderRadius: 12, padding: 10,
-                borderWidth: 1,
-                borderColor: isMyOption ? theme.colors.primary : (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)"),
-                flexDirection: "row", alignItems: "center", gap: 12,
-              }}>
-                <View style={{ alignItems: "center", minWidth: 52 }}>
-                  <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-                    {opt.text}
-                  </Text>
-                  {isMyOption && (
-                    <Ionicons name="checkmark-circle" size={14} color={theme.colors.primary} />
-                  )}
-                </View>
-
-                <View style={{ flex: 1, gap: 4 }}>
-                  <ProgressBar
-                    progress={pct / 100}
-                    color={barColor}
-                    style={{ height: 12, borderRadius: 99, backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}
-                  />
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>{count} people</Text>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>{pct}%</Text>
-                  </View>
-                </View>
-              </Surface>
-            );
-          })}
-        </View>
-
-        {/* ── SETTLED ── */}
-        {item.status === 'SETTLED' && (() => {
-          const winningOption = (item.options ?? []).find((o: any) => o.id === item.winning_option_id);
-          const iWon = item.my_option_id === item.winning_option_id;
-          const stake = item.stake_amount ?? 0;
-          const totalJoinedNum = Number(item.total_joined ?? 0);
-          const winnerCount = (item.options ?? []).find((o: any) => o.id === item.winning_option_id)?.count ?? 1;
-          const payout = stake > 0 ? Math.floor((totalJoinedNum * stake) / winnerCount) : 0;
-          return (
-            <View style={{ padding: 12, paddingTop: 0 }}>
-              <Surface elevation={1} style={{
-                borderRadius: 12, padding: 12,
-                backgroundColor: iWon ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
-                borderWidth: 1,
-                borderColor: iWon ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)",
-              }}>
-                <Text style={{ color: iWon ? "#10b981" : "#ef4444", fontWeight: "800", textAlign: "center", fontSize: 16 }}>
-                  {iWon ? "You Won!" : "You Lost"}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
-                  Winner: {winningOption?.text ?? "?"}
-                  {iWon && stake > 0 ? `  •  +${payout} coins` : ""}
-                  {!iWon && item.custom_stake ? `  •  ${item.custom_stake}` : ""}
-                </Text>
-              </Surface>
-            </View>
-          );
-        })()}
-
-        {/* ── ACTIONS ── */}
-        {(() => {
-          const isPendingApproval = item.status === "PENDING_APPROVAL";
-          const isDisputed = item.status === "DISPUTED";
-          const myVote = item.my_vote;
-          const approvalCount = Number(item.approval_count ?? 0);
-          const totalVotes = Number(item.total_votes ?? 0);
-          const totalJoinedNum = Number(item.total_joined ?? 0);
-          const threshold = totalJoinedNum <= 2 ? 1 : Math.ceil(totalJoinedNum * 0.5);
-          const proposedOption = (item.options ?? []).find((o: any) => o.id === item.proposed_winner_option_id);
-
-          if (isDisputed) {
-            return (
-              <View style={{ padding: 12, paddingTop: 0 }}>
-                <Surface elevation={1} style={{ borderRadius: 12, padding: 12, backgroundColor: "rgba(239,68,68,0.08)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)" }}>
-                  <Text style={{ color: "#ef4444", fontWeight: "700", textAlign: "center" }}>⚠️ Outcome Disputed</Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
-                    Majority disputed this result. No payout has been made.
-                  </Text>
-                </Surface>
-              </View>
-            );
-          }
-
-          if (isPendingApproval) {
-            return (
-              <View style={{ padding: 12, paddingTop: 0, gap: 10 }}>
-                <Surface elevation={1} style={{ borderRadius: 12, padding: 12, backgroundColor: "rgba(46,108,246,0.08)", borderWidth: 1, borderColor: "rgba(46,108,246,0.2)" }}>
-                  <Text style={{ color: theme.colors.primary, fontWeight: "700", textAlign: "center" }}>
-                    🏆 Proposed Winner: {proposedOption?.text ?? "?"}
-                  </Text>
-                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4 }}>
-                    {approvalCount}/{threshold} approvals needed
-                  </Text>
-                </Surface>
-
-                {!isCreator && myVote === null || (!isCreator && myVote === undefined) ? (
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    <Button
-                      mode="contained"
-                      onPress={async () => {
-                        const sessionId = await getSessionId();
-                        const res = await fetch(`${API_BASE}/bets/${item.id}/vote-winner`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                          body: JSON.stringify({ approve: true }),
-                        });
-
-                        if (res.ok) { fetchActiveBets(); fetchRecentResults(); fetchCoins(); DeviceEventEmitter.emit("coinsUpdated"); }
-                      }}
-                      style={{ flex: 1, borderRadius: 10, backgroundColor: "#10b981" }}
-                      labelStyle={{ fontWeight: "700" }}
-                    >
-                      ✓ Approve
-                    </Button>
-                    <Button
-                      mode="outlined"
-                      onPress={async () => {
-                        const sessionId = await getSessionId();
-                        const res = await fetch(`${API_BASE}/bets/${item.id}/vote-winner`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                          body: JSON.stringify({ approve: false }),
-                        });
-                        if (res.ok) { fetchActiveBets(); fetchRecentResults(); }
-                      }}
-                      style={{ flex: 1, borderRadius: 10, borderColor: "rgba(239,68,68,0.4)" }}
-                      labelStyle={{ color: "#ef4444", fontWeight: "700" }}
-                    >
-                      ✕ Dispute
-                    </Button>
-                  </View>
-                ) : !isCreator && myVote !== null && myVote !== undefined ? (
-                  <Surface elevation={1} style={{ borderRadius: 12, padding: 10, alignItems: "center" }}>
-                    <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600" }}>
-                      You voted: {myVote ? "✓ Approved" : "✕ Disputed"}
-                    </Text>
-                  </Surface>
-                ) : null}
-              </View>
-            );
-          }
-
-          if (isCreator) {
-            return (
-              <View style={{ flexDirection: "row", gap: 8, padding: 12, paddingTop: 0 }}>
-                {!isClosed && (
-                  <Button
-                    mode="outlined"
-                    onPress={async () => {
-                      const sessionId = await getSessionId();
-                      const res = await fetch(`${API_BASE}/bets/${item.id}/close`, {
-                        method: "POST",
-                        headers: { "x-session-id": sessionId ?? "" },
-                      });
-                      if (res.ok) { fetchActiveBets(); fetchRecentResults(); }
-                    }}
-                    style={{ flex: 1, borderRadius: 10, borderColor: "rgba(239,68,68,0.4)" }}
-                    labelStyle={{ color: "#ef4444", fontWeight: "700" }}
-                  >
-                    Close Bet
-                  </Button>
-                )}
-                {isClosed && (
-                  <Button
-                    mode="contained"
-                    onPress={() => setSettlingBet(item)}
-                    style={{ flex: 1, borderRadius: 10, backgroundColor: theme.colors.primary }}
-                    labelStyle={{ fontWeight: "700" }}
-                  >
-                    Declare Winner
-                  </Button>
-                )}
-              </View>
-            );
-          }
-
-          return null;
-        })()}
-
-      </Surface>
-    );
-  };
 
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingTop: 12 }}>
-
-      {/* ── TABS ── */}
-      {!q.trim() && (
-        <View style={{ flexDirection: "row", marginBottom: 12, gap: 8 }}>
-          <TouchableOpacity
-            onPress={() => setActiveTab("feed")}
-            style={{
-              flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-              backgroundColor: activeTab === "feed" ? theme.colors.primary : (isDark ? "#0F223A" : "#ffffff"),
-            }}
-          >
-            <Text style={{ color: activeTab === "feed" ? "#ffffff" : theme.colors.onSurfaceVariant, fontWeight: "700" }}>
-              Feed
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab("active")}
-            style={{
-              flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center",
-              backgroundColor: activeTab === "active" ? theme.colors.primary : (isDark ? "#0F223A" : "#ffffff"),
-            }}
-          >
-            <Text style={{ color: activeTab === "active" ? "#ffffff" : theme.colors.onSurfaceVariant, fontWeight: "700" }}>
-              Active Bets
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
+      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
 
       <Searchbar
-        placeholder="Search users, circles..."
-        value={q}
-        onChangeText={setQ}
-        style={{
-          borderRadius: 12,
-          backgroundColor: isDark ? "#111827" : "#ffffff",
-          marginBottom: 12,
-        }}
-        inputStyle={{ color: theme.colors.onSurface }}
-        iconColor={theme.colors.onSurfaceVariant}
-        placeholderTextColor={theme.colors.onSurfaceVariant}
-      />
+          placeholder="Search users, circles..."
+          value={q}
+          onChangeText={setQ}
+          style={{
+            borderRadius: 12,
+            backgroundColor: "rgba(255,255,255,0.09)",
+            marginBottom: 0,
+          }}
+          inputStyle={{ color: theme.colors.onSurface }}
+          iconColor={theme.colors.onSurfaceVariant}
+          placeholderTextColor={theme.colors.onSurfaceVariant}
+        />
+
+        {!q.trim() && (
+          <View style={{
+            flexDirection: "row",
+            marginBottom: 16,
+          }}>
+            <TouchableOpacity
+              onPress={() => setActiveTab("feed")}
+              style={{
+                paddingVertical: 12,
+                marginRight: 24,
+                  marginBottom: -1,
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === "feed" ? theme.colors.primary : "transparent",
+              }}
+            >
+              <Text style={{
+                fontSize: 13, fontWeight: activeTab === "feed" ? "600" : "400",
+                color: activeTab === "feed" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+              }}>
+                Feed
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab("active")}
+              style={{
+                paddingVertical: 12,
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === "active" ? theme.colors.primary : "transparent",
+              }}
+            >
+              <Text style={{
+                fontSize: 13, fontWeight: activeTab === "active" ? "600" : "400",
+                color: activeTab === "active" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+              }}>
+                Active Bets
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {q.trim() ? (
         renderSearchUI()
@@ -926,6 +456,7 @@ export default function HomeScreen() {
           renderItem={renderFeedItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+          style={{ backgroundColor: "transparent" }}
           ListEmptyComponent={
             <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
               No bets yet — create one or join a circle!
@@ -937,10 +468,8 @@ export default function HomeScreen() {
         <FlatList
 
         data={activeBets.filter(b => b.status !== 'SETTLED')}
-
-
-
-          keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id}
+        style={{ backgroundColor: "transparent" }}
 
           ListHeaderComponent={recentResults.length > 0 ? (
             <View style={{ marginBottom: 8 }}>
@@ -959,44 +488,42 @@ export default function HomeScreen() {
                   const timeLabel = days < 1 ? "today" : days < 7 ? `${days}d ago` : `${Math.floor(days/7)}w ago`;
 
                   return (
-                    <Surface key={item.id} elevation={2} style={{
-                      minWidth: 160, borderRadius: 16, padding: 14, flexShrink: 0,
-                      borderWidth: 1,
-                      borderColor: iWon ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)",
-                    }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <Chip
-                          style={{
-                            backgroundColor: iWon ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
-                            height: 26,
-                          }}
-                          textStyle={{ color: iWon ? "#10b981" : "#ef4444", fontSize: 12, fontWeight: "700" }}
-                        >
-                          {iWon ? "Won" : "Lost"}
-                        </Chip>
-                          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>{item.target_name ?? item.creator_username}</Text>
+                      <View key={item.id} style={{
+                        minWidth: 140, borderRadius: 16, padding: 12, flexShrink: 0,
+                        backgroundColor: "rgba(255,255,255,0.07)",
+                        borderWidth: 1,
+                        borderColor: iWon ? "rgba(157,212,190,0.2)" : "rgba(239,68,68,0.2)",
+                      }}>
+                        <View style={{
+                          alignSelf: "flex-start",
+                          backgroundColor: iWon ? "rgba(157,212,190,0.15)" : "rgba(239,68,68,0.15)",
+                          borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+                          marginBottom: 6,
+                        }}>
+                          <Text style={{ fontSize: 10, fontWeight: "600", color: iWon ? "#9dd4be" : "#e87060" }}>
+                            {iWon ? "Won" : "Lost"}
+                          </Text>
+                        </View>
+                        <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 6 }} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        {iWon && stake > 0 ? (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
+                            <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 16 }}>+{payout}</Text>
+                          </View>
+                        ) : !iWon && stake > 0 ? (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
+                            <Text style={{ color: "#e87060", fontWeight: "600", fontSize: 16 }}>-{stake}</Text>
+                          </View>
+                        ) : item.custom_stake ? (
+                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
+                        ) : (
+                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
+                        )}
                       </View>
-                      <Text variant="titleSmall" style={{ color: theme.colors.onSurface, fontWeight: "700", marginBottom: 6 }} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      {iWon && stake > 0 ? (
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "#D4AF37" }} />
-                          <Text style={{ color: "#D4AF37", fontWeight: "800", fontSize: 18 }}>+{payout}</Text>
-                        </View>
-                      ) : !iWon && stake > 0 ? (
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "#ef4444" }} />
-                          <Text style={{ color: "#ef4444", fontWeight: "800", fontSize: 18 }}>-{stake}</Text>
-                        </View>
-                      ) : item.custom_stake ? (
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }} numberOfLines={1}>{item.custom_stake}</Text>
-                      ) : (
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>—</Text>
-                      )}
-
-                    </Surface>
-                  );
+                    );
                 })}
               </ScrollView>
 
@@ -1075,6 +602,6 @@ export default function HomeScreen() {
           </Button>
         </PaperModal>
       </Portal>
-    </View>
+    </GradientBackground>
   );
 }

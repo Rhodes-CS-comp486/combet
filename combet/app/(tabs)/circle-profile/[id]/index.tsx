@@ -6,6 +6,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import GradientBackground from "@/components/GradientBackground";
+import BetCard from "@/components/BetCard";
 
 const API = "http://localhost:3001";
 type Member = { id: string; username: string; joined_at: string };
@@ -44,66 +46,27 @@ export default function CircleProfile() {
   );
 
   const fetchAll = async () => {
-    try {
-      const sessionId = await getSessionId();
-      // Fetch circle info
-      const circleRes = await fetch(`${API}/circles/${circleId}`);
-      const circleData = await circleRes.json();
-      setCircle(circleData);
+      try {
+        const sessionId = await getSessionId();
+        const circleRes = await fetch(`${API}/circles/${circleId}`);
+        const circleData = await circleRes.json();
+        setCircle(circleData);
 
-      // Fetch history (members + bets)
-      const histRes = await fetch(`${API}/circles/${circleId}/history`, {
-        headers: { "x-session-id": sessionId ?? "" },
-      });
-      if (histRes.ok) setHistory(await histRes.json());
-    } catch (err) {
-      console.error("fetchAll error:", err);
-    }
-  };
+        const histRes = await fetch(`${API}/circles/${circleId}/history`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        if (histRes.ok) {
+          const data = await histRes.json();
+          console.log("CIRCLE HISTORY BETS:", JSON.stringify(data.bets, null, 2));  // ← add this
+          setHistory(data);
 
-  const handleAccept = async (betId: string, optionId: string) => {
-    setResponding(`${betId}-${optionId}`);
-    try {
-      const sessionId = await getSessionId();
-      await fetch(`${API}/bets/${betId}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-        body: JSON.stringify({ selectedOptionId: optionId }),
-      });
-      // Update local state
-      setHistory((prev) => prev ? {
-        ...prev,
-        bets: prev.bets.map((b) =>
-          b.id === betId ? { ...b, my_response: "accepted", my_selected_option_id: optionId } : b
-        ),
-      } : prev);
-    } catch (err) {
-      console.error("Accept error:", err);
-    } finally {
-      setResponding(null);
-    }
-  };
+          console.log("FIRST BET:", JSON.stringify(data.bets[0], null, 2));
 
-  const handleDecline = async (betId: string) => {
-    setResponding(betId);
-    try {
-      const sessionId = await getSessionId();
-      await fetch(`${API}/bets/${betId}/decline`, {
-        method: "POST",
-        headers: { "x-session-id": sessionId ?? "" },
-      });
-      setHistory((prev) => prev ? {
-        ...prev,
-        bets: prev.bets.map((b) =>
-          b.id === betId ? { ...b, my_response: "declined" } : b
-        ),
-      } : prev);
-    } catch (err) {
-      console.error("Decline error:", err);
-    } finally {
-      setResponding(null);
-    }
-  };
+        }
+      } catch (err) {
+        console.error("fetchAll error:", err);
+      }
+    };
 
   const handleLeave = async () => {
     const confirmed =
@@ -157,158 +120,7 @@ export default function CircleProfile() {
   const subtleBg = isDark ? "#091828" : "#f2f6ff";
 
   // ── Bet card ──────────────────────────────────────────────────────────────
-  const renderBet = (bet: Bet) => {
-    const pending  = !bet.my_response;
-    const accepted = bet.my_response === "accepted";
-    const declined = bet.my_response === "declined";
-    const borderColor = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
 
-    return (
-      <View key={bet.id} style={{
-        borderRadius: 16, marginBottom: 12,
-        backgroundColor: cardBg,
-        borderWidth: 1, borderColor,
-        flexDirection: "row",
-        overflow: "hidden",
-        minHeight: 140,
-      }}>
-
-        {/* ── LEFT: creator icon + name ── */}
-        <View style={{
-          width: 82,
-          borderRightWidth: 1, borderRightColor: borderColor,
-          alignItems: "center", justifyContent: "center",
-          paddingVertical: 14, gap: 6,
-        }}>
-          <View style={{
-            width: 50, height: 50, borderRadius: 25,
-            backgroundColor: isDark ? "rgba(46,108,246,0.2)" : "rgba(46,108,246,0.12)",
-            borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
-            alignItems: "center", justifyContent: "center",
-          }}>
-            <Ionicons name="person" size={22} color={theme.colors.primary} />
-          </View>
-          <Text style={{
-            color: theme.colors.primary, fontWeight: "700", fontSize: 10,
-            textAlign: "center", paddingHorizontal: 4,
-          }} numberOfLines={2}>
-            @{bet.creator_username}
-          </Text>
-        </View>
-
-        {/* ── MIDDLE: bet info ── */}
-        <View style={{ flex: 1, padding: 14, justifyContent: "center", gap: 5 }}>
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "800", fontSize: 15, lineHeight: 20 }}>
-            {bet.title}
-          </Text>
-          {bet.description ? (
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, lineHeight: 18 }}>
-              {bet.description}
-            </Text>
-          ) : null}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
-              {timeAgo(bet.created_at)}
-            </Text>
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
-              🪙 {bet.stake_amount}
-            </Text>
-            {bet.closes_at ? (
-              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
-                Closes {new Date(bet.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Accepted state — show chosen option */}
-          {accepted && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
-              {bet.options.map((opt, i) => {
-                const chosen = opt.id === bet.my_selected_option_id;
-                return (
-                  <View key={opt.id} style={{
-                    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-                    backgroundColor: chosen ? "#2563EB" : (isDark ? "rgba(255,255,255,0.06)" : "#f0f4ff"),
-                    borderWidth: chosen ? 0 : 1,
-                    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
-                  }}>
-                    <Text style={{
-                      color: chosen ? "#fff" : theme.colors.onSurfaceVariant,
-                      fontWeight: chosen ? "800" : "400", fontSize: 12,
-                    }}>
-                      {opt.label}{opt.option_text ? `: ${opt.option_text}` : ""}
-                    </Text>
-                  </View>
-                );
-              })}
-              <View style={{
-                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-                backgroundColor: "rgba(34,197,94,0.12)",
-              }}>
-                <Text style={{ color: "#22c55e", fontSize: 11, fontWeight: "700" }}>✓ Accepted</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Declined state */}
-          {declined && (
-            <View style={{
-              marginTop: 6, paddingHorizontal: 8, paddingVertical: 4,
-              borderRadius: 8, backgroundColor: "rgba(239,68,68,0.1)",
-              alignSelf: "flex-start",
-            }}>
-              <Text style={{ color: theme.colors.error, fontSize: 11, fontWeight: "700" }}>✕ Declined</Text>
-            </View>
-          )}
-        </View>
-
-        {/* ── RIGHT: stacked option buttons + decline (only when pending) ── */}
-        {pending && (
-          <View style={{
-            width: 82,
-            borderLeftWidth: 1, borderLeftColor: borderColor,
-          }}>
-            {bet.options.map((opt, i) => (
-              <TouchableOpacity
-                key={opt.id}
-                onPress={() => handleAccept(bet.id, opt.id)}
-                disabled={!!responding}
-                style={{
-                  flex: 1,
-                  backgroundColor: i % 2 === 0 ? "#2563EB" : "#3B82F6",
-                  alignItems: "center", justifyContent: "center",
-                  borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)",
-                  opacity: responding === `${bet.id}-${opt.id}` ? 0.5 : 1,
-                  paddingHorizontal: 4,
-                }}
-              >
-                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>{opt.label}</Text>
-                {opt.option_text ? (
-                  <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, marginTop: 1, textAlign: "center" }}>
-                    {opt.option_text}
-                  </Text>
-                ) : null}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={() => handleDecline(bet.id)}
-              disabled={!!responding}
-              style={{
-                flex: 1,
-                backgroundColor: isDark ? "#091828" : "#dbeafe",
-                alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <Ionicons name="close" size={15} color={isDark ? "#60a5fa" : "#2563EB"} />
-              <Text style={{ color: isDark ? "#60a5fa" : "#2563EB", fontWeight: "700", fontSize: 10, marginTop: 2 }}>
-                Decline
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    );
-  };
 
   // ── History tab content ───────────────────────────────────────────────────
   const renderHistory = () => {
@@ -324,7 +136,15 @@ export default function CircleProfile() {
       <View>
         {resolvedBets.length > 0 && (
           <View>
-            {resolvedBets.map(renderBet)}
+            {resolvedBets.map((bet) => (
+              <BetCard
+                key={bet.id}
+                item={bet}
+                mode="active"
+                onRefresh={fetchAll}
+                onSettle={() => {}}
+              />
+            ))}
           </View>
         )}
 
@@ -346,7 +166,7 @@ export default function CircleProfile() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <GradientBackground>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
         {/* ── Back ── */}
@@ -360,18 +180,15 @@ export default function CircleProfile() {
 
         {/* ── Hero ── */}
         <View style={{ alignItems: "center", paddingTop: 8, paddingBottom: 24, paddingHorizontal: 20 }}>
-          <View style={{
-            width: 120, height: 120, borderRadius: 60,
-            backgroundColor: theme.colors.primary,
-            justifyContent: "center", alignItems: "center", marginBottom: 16,
-            shadowColor: theme.colors.primary, shadowOpacity: 0.45,
-            shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10,
-          }}>
-            <Ionicons name={(circle.icon as any) || "people"} size={48} color="white" />
-          </View>
-
+          <Surface elevation={2} style={{
+          width: 150, height: 150, borderRadius: 75,
+          backgroundColor: theme.colors.surface,
+          justifyContent: "center", alignItems: "center", marginBottom: 16,
+        }}>
+          <Ionicons name={(circle.icon as any) || "people"} size={70} color={theme.colors.primary} />
+        </Surface>
           <Text variant="headlineSmall" style={{
-            color: theme.colors.onSurface, fontWeight: "800", marginBottom: 6, textAlign: "center",
+            color: theme.colors.onSurface, fontWeight: "300", marginBottom: 6, textAlign: "center",
           }}>
             {circle.name}
           </Text>
@@ -395,76 +212,101 @@ export default function CircleProfile() {
 
           {/* Action buttons */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-            <Button mode="contained-tonal" icon="account-group"
-              onPress={() => router.push(`/circle-profile/${circleId}/members`)}
-              style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
-              Members
-            </Button>
-            <Button mode="contained-tonal" icon="pencil"
-              onPress={() => router.push(`/circle-profile/${circleId}/edit`)}
-              style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
-              Edit Circle
-            </Button>
-            <Button mode="contained-tonal" icon="account-plus"
-              onPress={() => router.push(`/circle-profile/${circleId}/add-friend`)}
-              style={{ borderRadius: 10 }} labelStyle={{ fontSize: 13 }}>
-              Add Friend
-            </Button>
-            <Button mode="contained-tonal" icon="exit-to-app" onPress={handleLeave}
-              labelStyle={{ fontSize: 13 }}>
-              Leave
-            </Button>
-          </View>
+              {[
+                { label: "Members", icon: "people", onPress: () => router.push(`/circle-profile/${circleId}/members`) },
+                { label: "Edit Circle", icon: "pencil", onPress: () => router.push(`/circle-profile/${circleId}/edit`) },
+                { label: "Add Friend", icon: "person-add", onPress: () => router.push(`/circle-profile/${circleId}/add-friend`) },
+                { label: "Leave", icon: "exit-outline", onPress: handleLeave },
+              ].map(({ label, icon, onPress }) => (
+                <TouchableOpacity
+                  key={label}
+                  onPress={onPress}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  }}
+                >
+                  <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
         </View>
 
         {/* ── Tabs ── */}
-        <View style={{
-          flexDirection: "row", marginHorizontal: 20, marginBottom: 20,
-          borderRadius: 12, overflow: "hidden",
-          backgroundColor: isDark ? "#0F223A" : "#e8edf5",
-        }}>
+          <View style={{ flexDirection: "row", marginHorizontal: 20, marginBottom: 20 }}>
           {(["live", "history"] as const).map((tab) => {
             const active = activeTab === tab;
             return (
-              <View key={tab} style={{ flex: 1 }}>
-                <Button mode={active ? "contained" : "text"} onPress={() => setActiveTab(tab)}
-                  style={{ borderRadius: 0, margin: 0 }}
-                  labelStyle={{ color: active ? "white" : theme.colors.onSurfaceVariant, fontWeight: active ? "700" : "400", fontSize: 14 }}>
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={{
+                  flex: 1, paddingVertical: 12, alignItems: "center",
+                  borderBottomWidth: 2,
+                  borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
+                }}
+              >
+                <Text style={{
+                  fontSize: 13, fontWeight: active ? "600" : "400",
+                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                }}>
                   {tab === "history" ? "Circle History" : "Live Bets"}
-                </Button>
-              </View>
+                </Text>
+              </TouchableOpacity>
             );
           })}
         </View>
+
 
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
           {activeTab === "history" ? renderHistory() : (
             (() => {
-              const pendingBets = history?.bets.filter((b) => !b.my_response) ?? [];
+                console.log("ALL BETS:", history?.bets.map(b => ({ title: b.title, my_response: b.my_response, status: b.status })));
+
+                const pendingBets = history?.bets.filter((b) => !b.my_response && b.status === "PENDING") ?? [];
+
               if (pendingBets.length === 0) {
                 return (
-                  <Surface elevation={0} style={{
-                    borderRadius: 16, backgroundColor: cardBg, padding: 28,
-                    borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-                    alignItems: "center",
-                  }}>
-                    <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
-                      No live bets right now
-                    </Text>
-                  </Surface>
+                  <View style={{
+                      borderRadius: 16, padding: 28,
+                      backgroundColor: "rgba(255,255,255,0.07)",
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                      alignItems: "center",
+                    }}>
+                      <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+                      <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
+                        No live bets right now
+                      </Text>
+                    </View>
                 );
               }
               return (
                 <View>
-                  {pendingBets.map(renderBet)}
+                    {pendingBets.map((bet) => (
+                      <BetCard
+                        key={bet.id}
+                        item={bet}
+                        mode="feed"
+                        accepting={responding}
+                        setAccepting={setResponding}
+                        onRemove={(id) => setHistory((prev) => prev ? {
+                          ...prev,
+                          bets: prev.bets.filter((b) => b.id !== id),
+                        } : prev)}
+                        onRefresh={fetchAll}
+                      />
+                    ))}
+
                 </View>
               );
             })()
           )}
         </View>
       </ScrollView>
-    </View>
+      </GradientBackground>
   );
 }
