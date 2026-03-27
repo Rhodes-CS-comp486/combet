@@ -8,24 +8,19 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
+import { API_BASE } from "@/constants/api";
 
-const API = "http://localhost:3001";
-type Member = { id: string; username: string; joined_at: string };
+
+
+type Member    = { id: string; username: string; joined_at: string };
 type BetOption = { id: string; label: string; option_text: string };
 type Bet = {
-  id: string;
-  title: string;
-  description: string;
-  stake_amount: number;
-  closes_at: string | null;
-  created_at: string;
-  status: string;
-  creator_username: string;
-  my_response: "accepted" | "declined" | null;
-  my_selected_option_id: string | null;
-  options: BetOption[];
+  id: string; title: string; description: string; stake_amount: number;
+  closes_at: string | null; created_at: string; status: string;
+  creator_username: string; my_response: "accepted" | "declined" | null;
+  my_selected_option_id: string | null; options: BetOption[];
 };
-type Circle = { circle_id: string; name: string; description?: string; icon?: string; created_at: string };
+type Circle      = { circle_id: string; name: string; description?: string; icon?: string; created_at: string; is_private?: boolean };
 type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 
 export default function CircleProfile() {
@@ -38,77 +33,57 @@ export default function CircleProfile() {
   const [history, setHistory]       = useState<HistoryData | null>(null);
   const [activeTab, setActiveTab]   = useState<"history" | "live">("live");
   const [responding, setResponding] = useState<string | null>(null);
+  const [requestCount, setRequestCount] = useState(0);
 
   useFocusEffect(
-    useCallback(() => {
-      fetchAll();
-    }, [circleId])
+    useCallback(() => { fetchAll(); }, [circleId])
   );
 
   const fetchAll = async () => {
-      try {
-        const sessionId = await getSessionId();
-        const circleRes = await fetch(`${API}/circles/${circleId}`);
-        const circleData = await circleRes.json();
-        setCircle(circleData);
+    try {
+      const sessionId  = await getSessionId();
+      const circleRes  = await fetch(`${API_BASE}/circles/${circleId}`);
+      const circleData = await circleRes.json();
+      setCircle(circleData);
 
-        const histRes = await fetch(`${API}/circles/${circleId}/history`, {
-          headers: { "x-session-id": sessionId ?? "" },
-        });
-        if (histRes.ok) {
-          const data = await histRes.json();
-          console.log("CIRCLE HISTORY BETS:", JSON.stringify(data.bets, null, 2));  // ← add this
-          setHistory(data);
+      const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (histRes.ok) setHistory(await histRes.json());
 
-          console.log("FIRST BET:", JSON.stringify(data.bets[0], null, 2));
-
-        }
-      } catch (err) {
-        console.error("fetchAll error:", err);
+      // Fetch request count for badge on Members button
+      const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (reqRes.ok) {
+        const reqs = await reqRes.json();
+        setRequestCount(reqs.length);
       }
-    };
+    } catch (err) {
+      console.error("fetchAll error:", err);
+    }
+  };
 
   const handleLeave = async () => {
-    const confirmed =
-      typeof window !== "undefined"
-        ? window.confirm("Are you sure you want to leave this circle?")
-        : await new Promise<boolean>((resolve) =>
-            Alert.alert("Leave Circle", "Are you sure you want to leave this circle?", [
-              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-              { text: "Leave", style: "destructive", onPress: () => resolve(true) },
-            ])
-          );
-
+    const confirmed = await new Promise<boolean>((resolve) =>
+      Alert.alert("Leave Circle", "Are you sure you want to leave this circle?", [
+        { text: "Cancel", style: "cancel",      onPress: () => resolve(false) },
+        { text: "Leave",  style: "destructive", onPress: () => resolve(true)  },
+      ])
+    );
     if (!confirmed) return;
 
     try {
       const sessionId = await getSessionId();
       if (!sessionId) { alert("Not authenticated"); return; }
-      const res = await fetch(`${API}/circles/${circleId}/leave`, {
-        method: "DELETE",
-        headers: { "x-session-id": sessionId },
+      const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
+        method: "DELETE", headers: { "x-session-id": sessionId },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || "Could not leave circle");
-        return;
-      }
-      router.replace("/circles");
+      if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || "Could not leave circle"); return; }
+      router.replace("/(tabs)/circles");
     } catch (err) {
-      console.error("Leave error:", err);
       alert("Could not connect to server");
     }
-  };
-
-  const timeAgo = (dateStr: string) => {
-    const diff  = Date.now() - new Date(dateStr).getTime();
-    const mins  = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days  = Math.floor(diff / 86400000);
-    if (mins < 1)   return "just now";
-    if (mins < 60)  return `${mins}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
   };
 
   const formatDate = (dateStr: string) =>
@@ -116,39 +91,25 @@ export default function CircleProfile() {
 
   if (!circle) return null;
 
-  const cardBg   = isDark ? "#0F223A" : "#ffffff";
-  const subtleBg = isDark ? "#091828" : "#f2f6ff";
+  const cardBg = isDark ? "#0F223A" : "#ffffff";
 
-  // ── Bet card ──────────────────────────────────────────────────────────────
+  const actionButtons = [
+    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`),    showBadge: circle.is_private && requestCount > 0 },
+    { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),       showBadge: false },
+    { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`), showBadge: false },
+    { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                  showBadge: false },
+  ];
 
-
-  // ── History tab content ───────────────────────────────────────────────────
   const renderHistory = () => {
     if (!history) return (
-      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>
-        Loading...
-      </Text>
+      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>Loading...</Text>
     );
-
     const resolvedBets = history.bets.filter((b) => !!b.my_response);
-
     return (
       <View>
-        {resolvedBets.length > 0 && (
-          <View>
-            {resolvedBets.map((bet) => (
-              <BetCard
-                key={bet.id}
-                item={bet}
-                mode="active"
-                onRefresh={fetchAll}
-                onSettle={() => {}}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Empty */}
+        {resolvedBets.map((bet) => (
+          <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={() => {}} />
+        ))}
         {history.bets.length === 0 && (
           <Surface elevation={0} style={{
             borderRadius: 16, backgroundColor: cardBg, padding: 28,
@@ -166,12 +127,13 @@ export default function CircleProfile() {
   };
 
   return (
-      <GradientBackground>
+    <GradientBackground>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
         {/* ── Back ── */}
         <View style={{ paddingHorizontal: 8, paddingTop: 12 }}>
-          <Button icon="arrow-left" mode="text" compact onPress={() => router.back()}
+          <Button icon="arrow-left" mode="text" compact
+            onPress={() => router.replace("/(tabs)/circles")}
             style={{ alignSelf: "flex-start" }}
             labelStyle={{ color: theme.colors.onSurfaceVariant }}>
             Back
@@ -181,28 +143,45 @@ export default function CircleProfile() {
         {/* ── Hero ── */}
         <View style={{ alignItems: "center", paddingTop: 8, paddingBottom: 24, paddingHorizontal: 20 }}>
           <Surface elevation={2} style={{
-          width: 150, height: 150, borderRadius: 75,
-          backgroundColor: theme.colors.surface,
-          justifyContent: "center", alignItems: "center", marginBottom: 16,
-        }}>
-          <Ionicons name={(circle.icon as any) || "people"} size={70} color={theme.colors.primary} />
-        </Surface>
+            width: 150, height: 150, borderRadius: 75,
+            backgroundColor: theme.colors.surface,
+            justifyContent: "center", alignItems: "center", marginBottom: 16,
+          }}>
+            <Ionicons name={(circle.icon as any) || "people"} size={70} color={theme.colors.primary} />
+          </Surface>
+
           <Text variant="headlineSmall" style={{
             color: theme.colors.onSurface, fontWeight: "300", marginBottom: 6, textAlign: "center",
           }}>
             {circle.name}
           </Text>
 
+          {/* Private / Public pill */}
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 4,
+            backgroundColor: "rgba(255,255,255,0.07)",
+            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+            marginBottom: 10,
+          }}>
+            <Ionicons
+              name={circle.is_private ? "lock-closed" : "globe-outline"}
+              size={11} color={theme.colors.onSurfaceVariant}
+            />
+            <Text style={{ fontSize: 11, fontWeight: "400", color: theme.colors.onSurfaceVariant }}>
+              {circle.is_private ? "Private" : "Public"}
+            </Text>
+          </View>
+
           {circle.description ? (
             <Text variant="bodyMedium" style={{
               color: theme.colors.onSurfaceVariant, textAlign: "center",
-              paddingHorizontal: 30, marginBottom: 20,
+              paddingHorizontal: 30, marginBottom: 16,
             }}>
               {circle.description}
             </Text>
           ) : null}
 
-          {/* Circle created date */}
+          {/* Created date */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, opacity: 0.6 }}>
             <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
             <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
@@ -210,33 +189,35 @@ export default function CircleProfile() {
             </Text>
           </View>
 
-          {/* Action buttons */}
+          {/* ── Action buttons ── */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-              {[
-                { label: "Members", icon: "people", onPress: () => router.push(`/circle-profile/${circleId}/members`) },
-                { label: "Edit Circle", icon: "pencil", onPress: () => router.push(`/circle-profile/${circleId}/edit`) },
-                { label: "Add Friend", icon: "person-add", onPress: () => router.push(`/circle-profile/${circleId}/add-friend`) },
-                { label: "Leave", icon: "exit-outline", onPress: handleLeave },
-              ].map(({ label, icon, onPress }) => (
-                <TouchableOpacity
-                  key={label}
-                  onPress={onPress}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 6,
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-                  }}
-                >
-                  <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
-                  <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {actionButtons.map(({ label, icon, onPress, showBadge }) => (
+              <TouchableOpacity
+                key={label}
+                onPress={onPress}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                  borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                }}
+              >
+                <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
+                {showBadge && (
+                  <View style={{
+                    width: 7, height: 7, borderRadius: 4,
+                    backgroundColor: "rgba(255,255,255,0.5)",
+                    marginLeft: 2,
+                  }} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* ── Tabs ── */}
-          <View style={{ flexDirection: "row", marginHorizontal: 20, marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", marginHorizontal: 20, marginBottom: 20 }}>
           {(["live", "history"] as const).map((tab) => {
             const active = activeTab === tab;
             return (
@@ -260,53 +241,42 @@ export default function CircleProfile() {
           })}
         </View>
 
-
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
-          {activeTab === "history" ? renderHistory() : (
-            (() => {
-                console.log("ALL BETS:", history?.bets.map(b => ({ title: b.title, my_response: b.my_response, status: b.status })));
-
-                const pendingBets = history?.bets.filter((b) => !b.my_response && b.status === "PENDING") ?? [];
-
-              if (pendingBets.length === 0) {
-                return (
-                  <View style={{
-                      borderRadius: 16, padding: 28,
-                      backgroundColor: "rgba(255,255,255,0.07)",
-                      borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-                      alignItems: "center",
-                    }}>
-                      <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                      <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-                        No live bets right now
-                      </Text>
-                    </View>
-                );
-              }
+          {activeTab === "history" ? renderHistory() : (() => {
+            const pendingBets = history?.bets.filter((b) => !b.my_response && b.status === "PENDING") ?? [];
+            if (pendingBets.length === 0) {
               return (
-                <View>
-                    {pendingBets.map((bet) => (
-                      <BetCard
-                        key={bet.id}
-                        item={bet}
-                        mode="feed"
-                        accepting={responding}
-                        setAccepting={setResponding}
-                        onRemove={(id) => setHistory((prev) => prev ? {
-                          ...prev,
-                          bets: prev.bets.filter((b) => b.id !== id),
-                        } : prev)}
-                        onRefresh={fetchAll}
-                      />
-                    ))}
-
+                <View style={{
+                  borderRadius: 16, padding: 28,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                  alignItems: "center",
+                }}>
+                  <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+                  <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
+                    No live bets right now
+                  </Text>
                 </View>
               );
-            })()
-          )}
+            }
+            return (
+              <View>
+                {pendingBets.map((bet) => (
+                  <BetCard
+                    key={bet.id} item={bet} mode="feed"
+                    accepting={responding} setAccepting={setResponding}
+                    onRemove={(id) => setHistory((prev) => prev ? {
+                      ...prev, bets: prev.bets.filter((b) => b.id !== id),
+                    } : prev)}
+                    onRefresh={fetchAll}
+                  />
+                ))}
+              </View>
+            );
+          })()}
         </View>
       </ScrollView>
-      </GradientBackground>
+    </GradientBackground>
   );
 }

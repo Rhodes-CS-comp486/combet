@@ -5,7 +5,6 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 export const inboxRouter = Router();
 
 // ─── Get Inbox (circle invites) ───────────────────────────────────────────────
-// GET /inbox
 inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
@@ -40,83 +39,77 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Accept Invite ────────────────────────────────────────────────────────────
-// POST /inbox/invites/:inviteId/accept
 inboxRouter.post("/invites/:inviteId/accept", requireAuth, async (req: AuthRequest, res) => {
   const { inviteId } = req.params;
-  const userId = req.userId;
+  const userId       = req.userId;
+  const client       = await pool.connect();
 
   try {
-    const invite = await pool.query(
-      `
-      SELECT * FROM circle_invites
-      WHERE invite_id = $1
-        AND invitee_id = $2
-        AND status = 'pending'
-      `,
+    const invite = await client.query(
+      `SELECT * FROM circle_invites
+       WHERE invite_id = $1 AND invitee_id = $2 AND status = 'pending'`,
       [inviteId, userId]
     );
 
-    if (!invite.rows.length) {
+    if (!invite.rows.length)
       return res.status(400).json({ error: "Invite not found" });
-    }
 
     const circleId = invite.rows[0].circle_id;
 
+    await client.query("BEGIN");
+
     // Mark invite accepted
-    await pool.query(
+    await client.query(
       `UPDATE circle_invites SET status = 'accepted' WHERE invite_id = $1`,
       [inviteId]
     );
 
     // Add to members
-    await pool.query(
-      `
-      INSERT INTO circle_members (circle_id, user_id, status, joined_at)
-      VALUES ($1, $2, 'accepted', NOW())
-      `,
+    await client.query(
+      `INSERT INTO circle_members (circle_id, user_id, status, joined_at)
+       VALUES ($1, $2, 'accepted', NOW())
+       ON CONFLICT ON CONSTRAINT unique_member DO UPDATE SET status = 'accepted', joined_at = NOW()`,
+      [circleId, userId]
+    );
+
+    // Clean up any pending join request for this user in this circle
+    await client.query(
+      `DELETE FROM circle_join_requests WHERE circle_id = $1 AND user_id = $2`,
       [circleId, userId]
     );
 
     // Mark notification read
-    await pool.query(
-      `
-      UPDATE notifications
-      SET is_read = true
-      WHERE recipient_id = $1
-        AND entity_id = $2
-        AND entity_type = 'circle_invite'
-      `,
+    await client.query(
+      `UPDATE notifications SET is_read = true
+       WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'circle_invite'`,
       [userId, inviteId]
     );
 
+    await client.query("COMMIT");
     res.json({ success: true });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("ACCEPT INVITE ERROR:", err);
     res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
   }
 });
 
 // ─── Decline Invite ───────────────────────────────────────────────────────────
-// POST /inbox/invites/:inviteId/decline
 inboxRouter.post("/invites/:inviteId/decline", requireAuth, async (req: AuthRequest, res) => {
-  const { inviteId } = req.params;
-  const currentUserId = req.userId;
+  const { inviteId }    = req.params;
+  const currentUserId   = req.userId;
 
   try {
-    // Delete the invite
     await pool.query(
       `DELETE FROM circle_invites WHERE invite_id = $1 AND invitee_id = $2`,
       [inviteId, currentUserId]
     );
 
-    // Delete the notification
     await pool.query(
-      `
-      DELETE FROM notifications
-      WHERE recipient_id = $1
-        AND entity_id = $2
-        AND entity_type = 'circle_invite'
-      `,
+      `DELETE FROM notifications
+       WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'circle_invite'`,
       [currentUserId, inviteId]
     );
 

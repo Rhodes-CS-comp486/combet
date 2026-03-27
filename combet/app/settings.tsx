@@ -15,8 +15,9 @@ import {
 import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { API_BASE } from "@/constants/api";
 
-const API_URL = "http://localhost:3001";
+
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme, theme } = useAppTheme();
@@ -37,7 +38,7 @@ export default function SettingsScreen() {
     setPwSaving(true);
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`${API_URL}/auth/change-password`, {
+      const res = await fetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
         headers: {
           "x-session-id": sessionId ?? "",
@@ -64,7 +65,7 @@ export default function SettingsScreen() {
     try {
       const sessionId = await getSessionId();
       if (sessionId) {
-        await fetch(`${API_URL}/auth/logout`, {
+        await fetch(`${API_BASE}/auth/logout`, {
           method: "POST",
           headers: { "x-session-id": sessionId },
         });

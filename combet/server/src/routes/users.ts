@@ -5,41 +5,27 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 export const usersRouter = Router();
 
 // ─── Get My Profile ───────────────────────────────────────────────────────────
-// GET /users/me
 usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
       `
       SELECT
-        u.id,
-        u.username,
-        u.email,
-        u.first_name,
-        u.last_name,
-        u.created_at,
-        u.coins,
-        u.bio,
-        u.avatar_color,
-        u.avatar_icon,
-
+        u.id, u.username, u.email, u.first_name, u.last_name, u.created_at,
+        u.coins, u.bio, u.avatar_color, u.avatar_icon,
         (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
         (SELECT COUNT(*) FROM bets WHERE creator_user_id = u.id) AS total_bets,
         (SELECT COUNT(*) FROM bet_responses WHERE user_id = u.id AND status = 'accepted') AS wins,
         (SELECT COUNT(*) FROM bet_responses WHERE user_id = u.id AND status = 'declined') AS losses
-
       FROM users u
       WHERE u.id = $1
       `,
       [req.userId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: "User not found" });
 
     const user = result.rows[0];
-
     res.json({
       id:              user.id,
       username:        user.username,
@@ -65,27 +51,22 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Update My Profile ────────────────────────────────────────────────────────
-// PATCH /users/me
 usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { display_name, bio, avatar_color, avatar_icon } = req.body;
-
     const parts = (display_name ?? "").trim().split(/\s+/);
     const first_name = parts[0] ?? "";
     const last_name  = parts.slice(1).join(" ") ?? "";
 
     const result = await pool.query(
-      `
-      UPDATE users
-      SET first_name = $1, last_name = $2, bio = $3, avatar_color = $4, avatar_icon = $5
-      WHERE id = $6
-      RETURNING id, username, email, first_name, last_name, bio, avatar_color, avatar_icon, coins, created_at
-      `,
+      `UPDATE users
+       SET first_name = $1, last_name = $2, bio = $3, avatar_color = $4, avatar_icon = $5
+       WHERE id = $6
+       RETURNING id, username, email, first_name, last_name, bio, avatar_color, avatar_icon, coins, created_at`,
       [first_name, last_name, bio ?? "", avatar_color ?? "#2563eb", avatar_icon ?? "initials", req.userId]
     );
 
     const user = result.rows[0];
-
     res.json({
       id:           user.id,
       username:     user.username,
@@ -112,45 +93,47 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `
       -- USERS
-        SELECT
-          'user' AS type,
-          u.id::text AS id,
-          COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
-          u.username AS subtitle,
-          CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend",
-          u.avatar_color,
-          u.avatar_icon,
-          NULL::text AS join_status
-        FROM users u
-        LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
-        WHERE u.id <> $1
-          AND (
-            u.username ILIKE '%' || $2 || '%'
-            OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
-            OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
-  )
-
+      SELECT
+        'user' AS type,
+        u.id::text AS id,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS label,
+        u.username AS subtitle,
+        CASE WHEN f.follower_id IS NULL THEN false ELSE true END AS "isFriend",
+        u.avatar_color,
+        u.avatar_icon,
+        NULL::text AS join_status,
+        NULL::boolean AS is_private
+      FROM users u
+      LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
+      WHERE u.id <> $1
+        AND (
+          u.username ILIKE '%' || $2 || '%'
+          OR COALESCE(u.first_name, '') ILIKE '%' || $2 || '%'
+          OR COALESCE(u.last_name, '') ILIKE '%' || $2 || '%'
+        )
 
       UNION ALL
 
       -- CIRCLES
-        SELECT
-          'circle' AS type,
-          c.circle_id::text AS id,
-          c.name AS label,
-          COALESCE(c.description, '') AS subtitle,
-          NULL::boolean AS "isFriend",
-          NULL::text AS avatar_color,
-          NULL::text AS avatar_icon,
-          CASE
-            WHEN cm.status = 'accepted' THEN 'joined'
-            WHEN ci.status = 'pending'  THEN 'pending'
-            ELSE NULL
-          END AS join_status
-        FROM circles c
-        LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $1
-        LEFT JOIN circle_invites ci ON ci.circle_id = c.circle_id AND ci.invitee_id = $1 AND ci.status = 'pending'
-        WHERE c.name ILIKE '%' || $2 || '%'
+      SELECT
+        'circle' AS type,
+        c.circle_id::text AS id,
+        c.name AS label,
+        COALESCE(c.description, '') AS subtitle,
+        NULL::boolean AS "isFriend",
+        NULL::text AS avatar_color,
+        NULL::text AS avatar_icon,
+        CASE
+          WHEN cm.status = 'accepted' THEN 'joined'
+          WHEN cjr.status = 'pending' THEN 'pending'
+          ELSE NULL
+        END AS join_status,
+        c.is_private
+      FROM circles c
+      LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $1
+      LEFT JOIN circle_join_requests cjr ON cjr.circle_id = c.circle_id AND cjr.user_id = $1 AND cjr.status = 'pending'
+      WHERE c.name ILIKE '%' || $2 || '%'
+
       ORDER BY label
       LIMIT 50
       `,
@@ -190,15 +173,12 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
 usersRouter.get("/friends", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
-      `
-      SELECT u.id, u.username AS name
-      FROM follows f
-      JOIN users u ON u.id = f.following_id
-      WHERE f.follower_id = $1
-      `,
+      `SELECT u.id, u.username AS name
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       WHERE f.follower_id = $1`,
       [req.userId]
     );
-
     res.json(result.rows);
   } catch (err) {
     console.error("GET /users/friends error:", err);

@@ -16,8 +16,9 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import UserAvatar, { AVATAR_ICONS, AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
+import { API_BASE } from "@/constants/api";
 
-const API_URL = "http://localhost:3001";
+
 
 type UserProfile = {
   id: number;
@@ -78,7 +79,7 @@ export default function ProfileScreen() {
       try {
         const sessionId = await getSessionId();
         if (!sessionId) { router.replace("/login"); return; }
-        const res = await fetch(`${API_URL}/users/me`, {
+        const res = await fetch(`${API_BASE}/users/me`, {
           headers: { "x-session-id": sessionId },
         });
         if (!res.ok) throw new Error("Failed to fetch profile");
@@ -103,7 +104,7 @@ export default function ProfileScreen() {
       try {
         const sessionId = await getSessionId();
         if (!sessionId) return;
-        const res = await fetch(`${API_URL}/bets/my-bets`, {
+        const res = await fetch(`${API_BASE}/bets/my-bets`, {
           headers: { "x-session-id": sessionId },
         });
         if (!res.ok) return;
@@ -123,7 +124,7 @@ export default function ProfileScreen() {
     setEditSaving(true);
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`${API_URL}/users/me`, {
+      const res = await fetch(`${API_BASE}/users/me`, {
         method: "PATCH",
         headers: { "x-session-id": sessionId ?? "", "Content-Type": "application/json" },
         body: JSON.stringify({ display_name: editName, bio: editBio }),
@@ -146,7 +147,7 @@ export default function ProfileScreen() {
     setAvatarSaving(true);
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`${API_URL}/users/me`, {
+      const res = await fetch(`${API_BASE}/users/me`, {
         method: "PATCH",
         headers: { "x-session-id": sessionId ?? "", "Content-Type": "application/json" },
         body: JSON.stringify({

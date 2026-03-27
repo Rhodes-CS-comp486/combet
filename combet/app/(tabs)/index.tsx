@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, TouchableOpacity, DeviceEventEmitter, ScrollView} from "react-native";
-import {Text, Searchbar, ActivityIndicator, Chip, Button, ProgressBar, Divider, Portal, Modal as PaperModal} from "react-native-paper";
+import { View, FlatList, TouchableOpacity, ScrollView, Pressable } from "react-native";
+import { Text, Searchbar, ActivityIndicator, Button, Divider, Portal, Modal as PaperModal } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
@@ -9,10 +9,11 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
-type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null };
+type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; };
 type SearchResult = UserResult | CircleResult;
+import { API_BASE } from "@/constants/api";
 
-const API_BASE = "http://localhost:3001";
+
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -30,23 +31,22 @@ export default function HomeScreen() {
   const [coins, setCoins]           = useState<number | null>(null);
   const [activeTab, setActiveTab]   = useState<"feed" | "active">("feed");
   const [activeBets, setActiveBets] = useState<any[]>([]);
-  const [searchTab, setSearchTab] = useState<"people" | "circles">("people");
+  const [searchTab, setSearchTab]   = useState<"people" | "circles">("people");
   const [settlingBet, setSettlingBet] = useState<any | null>(null);
-    const [recentResults, setRecentResults] = useState<any[]>([]);
-  const debounceRef                 = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [recentResults, setRecentResults] = useState<any[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => { fetchFeed(); fetchCoins(); fetchActiveBets(); fetchRecentResults(); }, []);
+  useEffect(() => { fetchFeed(); fetchCoins(); fetchActiveBets(); fetchRecentResults(); }, []);
 
-      useEffect(() => {
-        if (activeTab === "active") {
-          fetchCoins();
-          fetchActiveBets();
-          fetchRecentResults();
-        }
-      }, [activeTab]);
+  useEffect(() => {
+    if (activeTab === "active") {
+      fetchCoins();
+      fetchActiveBets();
+      fetchRecentResults();
+    }
+  }, [activeTab]);
 
-
-    async function fetchActiveBets() {
+  async function fetchActiveBets() {
     try {
       const sessionId = await getSessionId();
       const res = await fetch(`${API_BASE}/homefeed/active`, {
@@ -95,7 +95,7 @@ export default function HomeScreen() {
     }
   }
 
-  // ── Search with debounce ────────────────────────────────────────────────────
+  // ── Search with debounce ──────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const query = q.trim();
@@ -125,7 +125,7 @@ export default function HomeScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [q]);
 
-  // ── Follow user ─────────────────────────────────────────────────────────────
+  // ── Follow user ───────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
     setResults((prev) =>
       prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: true } : r)
@@ -145,7 +145,28 @@ export default function HomeScreen() {
     }
   };
 
-  // ── Request to join circle ──────────────────────────────────────────────────
+  // ── Join public circle ────────────────────────────────────────────────────
+  const joinCircle = async (circleId: string) => {
+    setResults((prev) =>
+      prev.map((r) => r.type === "circle" && r.id === circleId
+        ? { ...r, joinStatus: "joined" } : r)
+    );
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/circles/${circleId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setResults((prev) =>
+        prev.map((r) => r.type === "circle" && r.id === circleId
+          ? { ...r, joinStatus: null } : r)
+      );
+    }
+  };
+
+  // ── Request to join private circle ────────────────────────────────────────
   const requestJoinCircle = async (circleId: string) => {
     setResults((prev) =>
       prev.map((r) => r.type === "circle" && r.id === circleId
@@ -153,11 +174,11 @@ export default function HomeScreen() {
     );
     try {
       const sessionId = await getSessionId();
-      await fetch(`${API_BASE}/circles/${circleId}/invite`, {
+      const res = await fetch(`${API_BASE}/circles/${circleId}/request-join`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-        body: JSON.stringify({ requestJoin: true }),
       });
+      if (!res.ok) throw new Error();
     } catch {
       setResults((prev) =>
         prev.map((r) => r.type === "circle" && r.id === circleId
@@ -169,18 +190,18 @@ export default function HomeScreen() {
   const users   = results.filter((r): r is UserResult   => r.type === "user");
   const circles = results.filter((r): r is CircleResult => r.type === "circle");
 
-  // ── Search UI ───────────────────────────────────────────────────────────────
+  // ── Search UI ─────────────────────────────────────────────────────────────
   const renderSearchUI = () => {
     if (searching) {
       return <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 24 }} />;
     }
 
     return (
-      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <View style={{ flex: 1, paddingTop: 8, paddingHorizontal: 16 }}>
         {/* Tab bar */}
         <View style={{ flexDirection: "row", marginBottom: 16 }}>
           {(["people", "circles"] as const).map((tab) => {
-            const count = tab === "people" ? users.length : circles.length;
+            const count  = tab === "people" ? users.length : circles.length;
             const active = searchTab === tab;
             return (
               <TouchableOpacity
@@ -195,11 +216,11 @@ export default function HomeScreen() {
                 }}
               >
                 <Text style={{
-                  fontSize: 13,
+                  fontSize:   13,
                   fontWeight: active ? "600" : "400",
-                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                  color:      active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                 }}>
-                    {tab === "people" ? "People" : "Circles"}
+                  {tab === "people" ? "People" : "Circles"}
                 </Text>
               </TouchableOpacity>
             );
@@ -220,7 +241,7 @@ export default function HomeScreen() {
               data={users}
               keyExtractor={(item) => `user:${item.id}`}
               showsVerticalScrollIndicator={false}
-              style={{ backgroundColor: "transparent" }}
+              style={{ flex: 1 }}
               renderItem={({ item }) => (
                 <View style={{
                   flexDirection: "row", alignItems: "center",
@@ -231,9 +252,9 @@ export default function HomeScreen() {
                   <UserAvatar
                     user={{
                       display_name: item.label,
-                      username: item.subtitle,
+                      username:     item.subtitle,
                       avatar_color: item.avatar_color,
-                      avatar_icon: item.avatar_icon,
+                      avatar_icon:  item.avatar_icon,
                     }}
                     size={42}
                   />
@@ -249,25 +270,25 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       onPress={() => followUser(item.id)}
                       style={{
-                        backgroundColor: theme.colors.primary,
-                        borderRadius: 20,
+                        backgroundColor:  theme.colors.primary,
+                        borderRadius:     20,
                         paddingHorizontal: 14,
-                        paddingVertical: 6,
+                        paddingVertical:  6,
                       }}
                     >
                       <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
                     </TouchableOpacity>
                   ) : (
                     <View style={{
-                      backgroundColor: theme.colors.surface,
-                      borderRadius: 20,
+                      backgroundColor:  theme.colors.surface,
+                      borderRadius:     20,
                       paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderWidth: 0.5,
-                      borderColor: theme.colors.outline,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
+                      paddingVertical:  6,
+                      borderWidth:      0.5,
+                      borderColor:      theme.colors.outline,
+                      flexDirection:    "row",
+                      alignItems:       "center",
+                      gap:              4,
                     }}>
                       <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
                       <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
@@ -293,6 +314,7 @@ export default function HomeScreen() {
               data={circles}
               keyExtractor={(item) => `circle:${item.id}`}
               showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
               renderItem={({ item }) => (
                 <View style={{
                   flexDirection: "row", alignItems: "center",
@@ -301,74 +323,109 @@ export default function HomeScreen() {
                   borderBottomColor: theme.colors.outline,
                 }}>
                   <View style={{
-                    width: 42, height: 42,
-                    borderRadius: 12,
+                    width:           42,
+                    height:          42,
+                    borderRadius:    12,
                     backgroundColor: theme.colors.surfaceVariant,
-                    borderWidth: 0.5,
-                    borderColor: theme.colors.outline,
-                    alignItems: "center",
-                    justifyContent: "center",
+                    borderWidth:     0.5,
+                    borderColor:     theme.colors.outline,
+                    alignItems:      "center",
+                    justifyContent:  "center",
                   }}>
                     <Ionicons name="people" size={20} color="#a78bfa" />
                   </View>
+
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                      {item.label}
-                    </Text>
+                    {/* Circle name + privacy badge on same line */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                        {item.label}
+                      </Text>
+                      <View style={{
+                        flexDirection:    "row",
+                        alignItems:       "center",
+                        gap:              3,
+                        backgroundColor:  item.is_private
+                          ? "rgba(239,68,68,0.1)"
+                          : "rgba(34,197,94,0.1)",
+                        borderRadius:     20,
+                        paddingHorizontal: 6,
+                        paddingVertical:  2,
+                      }}>
+                        <Ionicons
+                          name={item.is_private ? "lock-closed" : "globe-outline"}
+                          size={10}
+                          color={item.is_private ? "#ef4444" : "#22c55e"}
+                        />
+                        <Text style={{
+                          fontSize:   10,
+                          fontWeight: "500",
+                          color:      item.is_private ? "#ef4444" : "#22c55e",
+                        }}>
+                          {item.is_private ? "Private" : "Public"}
+                        </Text>
+                      </View>
+                    </View>
+
                     <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
                       {item.subtitle || "Circle"}
                     </Text>
                   </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (item.joinStatus === "joined" || item.joinStatus === "pending") return;
-                    requestJoinCircle(item.id);
-                  }}
-                  style={{
-                    backgroundColor:
-                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
-                      item.joinStatus === "pending" ? theme.colors.surface :
-                      theme.colors.primary,
-                    borderRadius: 20,
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderWidth: 0.5,
-                    borderColor:
-                      item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
-                      item.joinStatus === "pending" ? theme.colors.outline :
-                      theme.colors.primary,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {item.joinStatus === "joined" && (
-                    <Ionicons name="checkmark" size={12} color="#4CAF50" />
-                  )}
-                  <Text style={{
-                    color:
-                      item.joinStatus === "joined"  ? "#4CAF50" :
-                      item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
-                      "#fff",
-                    fontSize: 12,
-                    fontWeight: "500",
-                  }}>
-                    {item.joinStatus === "joined"  ? "Joined" :
-                     item.joinStatus === "pending" ? "Pending" : "Join"}
-                  </Text>
-                </TouchableOpacity>
+
+                  {/* Join button — public: join directly, private: request */}
+                  <Pressable
+                    onPress={() => {
+                      if (item.joinStatus === "joined" || item.joinStatus === "pending") return;
+                      if (item.is_private) {
+                        requestJoinCircle(item.id);
+                      } else {
+                        joinCircle(item.id);
+                      }
+                    }}
+                    style={{
+                      backgroundColor:
+                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
+                        item.joinStatus === "pending" ? theme.colors.surface :
+                        theme.colors.primary,
+                      borderRadius:     20,
+                      paddingHorizontal: 14,
+                      paddingVertical:  6,
+                      borderWidth:      0.5,
+                      borderColor:
+                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
+                        item.joinStatus === "pending" ? theme.colors.outline :
+                        theme.colors.primary,
+                      flexDirection: "row",
+                      alignItems:    "center",
+                      gap:           4,
+                    }}
+                  >
+                    {item.joinStatus === "joined" && (
+                      <Ionicons name="checkmark" size={12} color="#4CAF50" />
+                    )}
+                    <Text style={{
+                      color:
+                        item.joinStatus === "joined"  ? "#4CAF50" :
+                        item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
+                        "#fff",
+                      fontSize:   12,
+                      fontWeight: "500",
+                    }}>
+                      {item.joinStatus === "joined"  ? "Joined" :
+                       item.joinStatus === "pending" ? "Requested" :
+                       item.is_private               ? "Request" : "Join"}
+                    </Text>
+                  </Pressable>
                 </View>
               )}
             />
           )
         )}
-      </GradientBackground>
+      </View>
     );
   };
 
-  const renderFeedItem = ({ item }: { item: any }) => {
-  console.log("FEED ITEM:", JSON.stringify(item, null, 2));
-  return (
+  const renderFeedItem = ({ item }: { item: any }) => (
     <BetCard
       item={item}
       mode="feed"
@@ -377,77 +434,76 @@ export default function HomeScreen() {
       onRemove={(id) => setFeed((prev) => prev.filter((b) => b.id !== id))}
     />
   );
-};
 
-const renderActiveBetItem = ({ item }: { item: any }) => (
-  <BetCard
-    item={item}
-    mode="active"
-    onRefresh={() => { fetchActiveBets(); fetchRecentResults(); fetchCoins(); }}
-    onSettle={setSettlingBet}
-  />
-);
-
-
+  const renderActiveBetItem = ({ item }: { item: any }) => (
+    <BetCard
+      item={item}
+      mode="active"
+      onRefresh={() => { fetchActiveBets(); fetchRecentResults(); fetchCoins(); }}
+      onSettle={setSettlingBet}
+    />
+  );
 
   return (
-      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+    <GradientBackground>
 
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
       <Searchbar
-          placeholder="Search users, circles..."
-          value={q}
-          onChangeText={setQ}
-          style={{
-            borderRadius: 12,
-            backgroundColor: "rgba(255,255,255,0.09)",
-            marginBottom: 0,
-          }}
-          inputStyle={{ color: theme.colors.onSurface }}
-          iconColor={theme.colors.onSurfaceVariant}
-          placeholderTextColor={theme.colors.onSurfaceVariant}
-        />
+        placeholder="Search users, circles..."
+        value={q}
+        onChangeText={setQ}
+        style={{
+          borderRadius:    12,
+          backgroundColor: "rgba(255,255,255,0.09)",
+          marginBottom:    0,
+        }}
+        inputStyle={{ color: theme.colors.onSurface }}
+        iconColor={theme.colors.onSurfaceVariant}
+        placeholderTextColor={theme.colors.onSurfaceVariant}
+      />
 
-        {!q.trim() && (
-          <View style={{
-            flexDirection: "row",
-            marginBottom: 16,
-          }}>
-            <TouchableOpacity
-              onPress={() => setActiveTab("feed")}
-              style={{
-                paddingVertical: 12,
-                marginRight: 24,
-                  marginBottom: -1,
-                borderBottomWidth: 2,
-                borderBottomColor: activeTab === "feed" ? theme.colors.primary : "transparent",
-              }}
-            >
-              <Text style={{
-                fontSize: 13, fontWeight: activeTab === "feed" ? "600" : "400",
-                color: activeTab === "feed" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
-              }}>
-                Feed
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab("active")}
-              style={{
-                paddingVertical: 12,
-                borderBottomWidth: 2,
-                borderBottomColor: activeTab === "active" ? theme.colors.primary : "transparent",
-              }}
-            >
-              <Text style={{
-                fontSize: 13, fontWeight: activeTab === "active" ? "600" : "400",
-                color: activeTab === "active" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
-              }}>
-                Active Bets
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      </View>
+      {!q.trim() && (
+        <View style={{ flexDirection: "row", marginBottom: 16, paddingHorizontal: 16 }}>
+          <TouchableOpacity
+            onPress={() => setActiveTab("feed")}
+            style={{
+              paddingVertical:   12,
+              marginRight:       24,
+              marginBottom:      -1,
+              borderBottomWidth: 2,
+              borderBottomColor: activeTab === "feed" ? theme.colors.primary : "transparent",
+            }}
+          >
+            <Text style={{
+              fontSize:   13,
+              fontWeight: activeTab === "feed" ? "600" : "400",
+              color:      activeTab === "feed" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+            }}>
+              Feed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab("active")}
+            style={{
+              paddingVertical:   12,
+              borderBottomWidth: 2,
+              borderBottomColor: activeTab === "active" ? theme.colors.primary : "transparent",
+            }}
+          >
+            <Text style={{
+              fontSize:   13,
+              fontWeight: activeTab === "active" ? "600" : "400",
+              color:      activeTab === "active" ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+            }}>
+              Active Bets
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-        {q.trim() ? (
+      <View style={{ flex: 1 }}>
+      {q.trim() ? (
         renderSearchUI()
       ) : activeTab === "feed" ? (
         <FlatList
@@ -455,7 +511,7 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
           keyExtractor={(item) => item.id}
           renderItem={renderFeedItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
           style={{ backgroundColor: "transparent" }}
           ListEmptyComponent={
             <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
@@ -464,13 +520,10 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
           }
         />
       ) : (
-
         <FlatList
-
-        data={activeBets.filter(b => b.status !== 'SETTLED')}
-        keyExtractor={(item) => item.id}
-        style={{ backgroundColor: "transparent" }}
-
+          data={activeBets.filter(b => b.status !== "SETTLED")}
+          keyExtractor={(item) => item.id}
+          style={{ backgroundColor: "transparent" }}
           ListHeaderComponent={recentResults.length > 0 ? (
             <View style={{ marginBottom: 8 }}>
               <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 10, letterSpacing: 1 }}>
@@ -478,62 +531,65 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
                 {recentResults.map((item) => {
-                  const iWon = item.my_option_id === item.winning_option_id;
-                  const stake = item.stake_amount ?? 0;
+                  const iWon       = item.my_option_id === item.winning_option_id;
+                  const stake      = item.stake_amount ?? 0;
                   const totalJoined = Number(item.total_joined ?? 0);
                   const winnerCount = Number(item.winner_count ?? 1);
-                  const payout = stake > 0 ? Math.floor((totalJoined * stake) / winnerCount) : 0;
-                  const diff = Date.now() - new Date(item.created_at).getTime();
-                  const days = Math.floor(diff / 86400000);
-                  const timeLabel = days < 1 ? "today" : days < 7 ? `${days}d ago` : `${Math.floor(days/7)}w ago`;
+                  const payout     = stake > 0 ? Math.floor((totalJoined * stake) / winnerCount) : 0;
+                  const diff       = Date.now() - new Date(item.created_at).getTime();
+                  const days       = Math.floor(diff / 86400000);
+                  const timeLabel  = days < 1 ? "today" : days < 7 ? `${days}d ago` : `${Math.floor(days / 7)}w ago`;
 
                   return (
-                      <View key={item.id} style={{
-                        minWidth: 140, borderRadius: 16, padding: 12, flexShrink: 0,
-                        backgroundColor: "rgba(255,255,255,0.07)",
-                        borderWidth: 1,
-                        borderColor: iWon ? "rgba(157,212,190,0.2)" : "rgba(239,68,68,0.2)",
+                    <View key={item.id} style={{
+                      minWidth:        140,
+                      borderRadius:    16,
+                      padding:         12,
+                      flexShrink:      0,
+                      backgroundColor: "rgba(255,255,255,0.07)",
+                      borderWidth:     1,
+                      borderColor:     iWon ? "rgba(157,212,190,0.2)" : "rgba(239,68,68,0.2)",
+                    }}>
+                      <View style={{
+                        alignSelf:       "flex-start",
+                        backgroundColor: iWon ? "rgba(157,212,190,0.15)" : "rgba(239,68,68,0.15)",
+                        borderRadius:    20,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        marginBottom:    6,
                       }}>
-                        <View style={{
-                          alignSelf: "flex-start",
-                          backgroundColor: iWon ? "rgba(157,212,190,0.15)" : "rgba(239,68,68,0.15)",
-                          borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-                          marginBottom: 6,
-                        }}>
-                          <Text style={{ fontSize: 10, fontWeight: "600", color: iWon ? "#9dd4be" : "#e87060" }}>
-                            {iWon ? "Won" : "Lost"}
-                          </Text>
-                        </View>
-                        <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 6 }} numberOfLines={2}>
-                          {item.title}
+                        <Text style={{ fontSize: 10, fontWeight: "600", color: iWon ? "#9dd4be" : "#e87060" }}>
+                          {iWon ? "Won" : "Lost"}
                         </Text>
-                        {iWon && stake > 0 ? (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
-                            <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 16 }}>+{payout}</Text>
-                          </View>
-                        ) : !iWon && stake > 0 ? (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
-                            <Text style={{ color: "#e87060", fontWeight: "600", fontSize: 16 }}>-{stake}</Text>
-                          </View>
-                        ) : item.custom_stake ? (
-                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
-                        ) : (
-                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
-                        )}
                       </View>
-                    );
+                      <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 6 }} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      {iWon && stake > 0 ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
+                          <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 16 }}>+{payout}</Text>
+                        </View>
+                      ) : !iWon && stake > 0 ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
+                          <Text style={{ color: "#e87060", fontWeight: "600", fontSize: 16 }}>-{stake}</Text>
+                        </View>
+                      ) : item.custom_stake ? (
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
+                      ) : (
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
+                      )}
+                    </View>
+                  );
                 })}
               </ScrollView>
-
               <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)", marginTop: 16, marginBottom: 12 }} />
               <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 10, letterSpacing: 1 }}>
                 ACTIVE BETS
               </Text>
             </View>
           ) : null}
-
           renderItem={({ item }) => {
             if (item.isHeader) return (
               <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 10, marginTop: 4 }}>
@@ -552,12 +608,16 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
         />
       )}
 
-        <Portal>
+      </View>
+
+      <Portal>
         <PaperModal
           visible={!!settlingBet}
           onDismiss={() => setSettlingBet(null)}
           contentContainerStyle={{
-            margin: 24, borderRadius: 20, padding: 24,
+            margin:          24,
+            borderRadius:    20,
+            padding:         24,
             backgroundColor: isDark ? "#0D1F35" : "#ffffff",
           }}
         >
@@ -577,9 +637,8 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
                   const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                    body: JSON.stringify({ winningOptionId: opt.id }),
+                    body:    JSON.stringify({ winningOptionId: opt.id }),
                   });
-
                   if (res.ok) {
                     setSettlingBet(null);
                     fetchActiveBets();
@@ -588,6 +647,8 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
                     setSettlingBet(null);
 
                 }}}
+                  }
+                }}
                 style={{ borderRadius: 12, borderColor: theme.colors.primary }}
                 labelStyle={{ color: theme.colors.primary, fontWeight: "700" }}
               >
