@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from "react";
-
 import { View, ScrollView, Alert, Pressable, Platform } from "react-native";
-
 import DateTimePicker from "@react-native-community/datetimepicker";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
 import GradientBackground from "@/components/GradientBackground";
-
-
 import {
   Text,
   TextInput,
@@ -19,12 +15,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
-<<<<<<< feature/UIupdate2
 import {DesignTokens, useAppTheme} from "@/context/ThemeContext";
-=======
-import { useAppTheme } from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
->>>>>>> main
+
 
 export default function AddBet() {
   const { theme, isDark } = useAppTheme();
