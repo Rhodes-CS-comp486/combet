@@ -634,8 +634,8 @@ export default function HomeScreen() {
                 mode="outlined"
                 onPress={async () => {
                   const sessionId = await getSessionId();
-                  const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/propose-winner`, {
-                    method:  "POST",
+                  const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
+                    method: "POST",
                     headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
                     body:    JSON.stringify({ winningOptionId: opt.id }),
                   });
@@ -643,6 +643,10 @@ export default function HomeScreen() {
                     setSettlingBet(null);
                     fetchActiveBets();
                     fetchRecentResults();
+                    fetchCoins();
+                    setSettlingBet(null);
+
+                }}}
                   }
                 }}
                 style={{ borderRadius: 12, borderColor: theme.colors.primary }}
