@@ -647,8 +647,7 @@ export default function HomeScreen() {
                     setSettlingBet(null);
 
                 }}}
-                  }
-                }}
+
                 style={{ borderRadius: 12, borderColor: theme.colors.primary }}
                 labelStyle={{ color: theme.colors.primary, fontWeight: "700" }}
               >
