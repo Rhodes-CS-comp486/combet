@@ -11,8 +11,9 @@ import BetCard from "@/components/BetCard";
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; };
 type SearchResult = UserResult | CircleResult;
+import { API_BASE } from "@/constants/api";
 
-const API_BASE = "http://localhost:3001";
+
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });

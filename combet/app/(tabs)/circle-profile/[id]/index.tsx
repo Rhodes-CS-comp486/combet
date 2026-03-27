@@ -8,8 +8,9 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
+import { API_BASE } from "@/constants/api";
 
-const API = "http://localhost:3001";
+
 
 type Member    = { id: string; username: string; joined_at: string };
 type BetOption = { id: string; label: string; option_text: string };
@@ -41,17 +42,17 @@ export default function CircleProfile() {
   const fetchAll = async () => {
     try {
       const sessionId  = await getSessionId();
-      const circleRes  = await fetch(`${API}/circles/${circleId}`);
+      const circleRes  = await fetch(`${API_BASE}/circles/${circleId}`);
       const circleData = await circleRes.json();
       setCircle(circleData);
 
-      const histRes = await fetch(`${API}/circles/${circleId}/history`, {
+      const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
       if (histRes.ok) setHistory(await histRes.json());
 
       // Fetch request count for badge on Members button
-      const reqRes = await fetch(`${API}/circles/${circleId}/requests`, {
+      const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
       if (reqRes.ok) {
@@ -75,7 +76,7 @@ export default function CircleProfile() {
     try {
       const sessionId = await getSessionId();
       if (!sessionId) { alert("Not authenticated"); return; }
-      const res = await fetch(`${API}/circles/${circleId}/leave`, {
+      const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
         method: "DELETE", headers: { "x-session-id": sessionId },
       });
       if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || "Could not leave circle"); return; }

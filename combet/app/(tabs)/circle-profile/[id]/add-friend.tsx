@@ -6,6 +6,7 @@ import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
+import { API_BASE } from "@/constants/api";
 
 type FriendResult = {
   id: string;
@@ -31,7 +32,7 @@ export default function AddFriendToCircle() {
     try {
       const sessionId = await getSessionId();
       const res = await fetch(
-        `http://localhost:3001/circles/${circleId}/search-friends?q=${query}`,
+        `${API_BASE}/circles/${circleId}/search-friends?q=${query}`,
         { headers: { "x-session-id": sessionId || "" } }
       );
       setResults(await res.json());
@@ -43,7 +44,7 @@ export default function AddFriendToCircle() {
   const requestFriend = async (userId: string) => {
     try {
       const sessionId = await getSessionId();
-      await fetch(`http://localhost:3001/circles/${circleId}/invite`, {
+      await fetch(`${API_BASE}/circles/${circleId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId || "" },
         body: JSON.stringify({ inviteeId: userId }),
@@ -57,7 +58,7 @@ export default function AddFriendToCircle() {
   const retractRequest = async (userId: string) => {
     try {
       const sessionId = await getSessionId();
-      await fetch(`http://localhost:3001/circles/${circleId}/retract/${userId}`, {
+      await fetch(`${API_BASE}/circles/${circleId}/retract/${userId}`, {
         method: "DELETE",
         headers: { "x-session-id": sessionId || "" },
       });

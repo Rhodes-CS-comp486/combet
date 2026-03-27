@@ -7,8 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
+import { API_BASE } from "@/constants/api";
 
-const BASE_URL = "http://localhost:3001";
+
 
 export default function CreateCircle() {
   const router            = useRouter();
@@ -35,7 +36,7 @@ export default function CreateCircle() {
       const sessionId = await getSessionId();
       if (!sessionId) { Alert.alert("Not authenticated"); return; }
 
-      const res = await fetch(`${BASE_URL}/circles`, {
+      const res = await fetch(`${API_BASE}/circles`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body:    JSON.stringify({ name, description, icon: ICONS[iconIndex], is_private: isPrivate }),
@@ -57,7 +58,7 @@ export default function CreateCircle() {
     if (val.length < 5) return;
     try {
       setCheckingName(true);
-      const res = await fetch(`${BASE_URL}/circles/check-name?name=${encodeURIComponent(val)}`);
+      const res = await fetch(`${API_BASE}/circles/check-name?name=${encodeURIComponent(val)}`);
       const data = await res.json();
       if (data.taken) setNameError("A circle with that name already exists");
     } catch {}
