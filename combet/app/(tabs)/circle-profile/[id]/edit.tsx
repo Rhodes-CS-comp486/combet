@@ -7,6 +7,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
 import GradientBackground from "@/components/GradientBackground";
+import { API_BASE } from "@/constants/api";
 
 export default function EditCircle() {
   const router            = useRouter();
@@ -25,7 +26,7 @@ export default function EditCircle() {
 
   useEffect(() => {
     if (!circleId) return;
-    fetch(`http://localhost:3001/circles/${circleId}`)
+    fetch(`${API_BASE}/circles/${circleId}`)
       .then((res) => res.json())
       .then((data) => {
         setName(data.name);

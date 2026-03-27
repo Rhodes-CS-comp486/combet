@@ -6,8 +6,9 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import {router} from "expo-router";
 import GradientBackground from "@/components/GradientBackground";
+import { API_BASE } from "@/constants/api";
 
-const BASE_URL = "http://localhost:3001";
+
 
 type Notification = {
   notification_id: string;
@@ -46,7 +47,7 @@ export default function InboxScreen() {
     try {
       const sessionId = await getSessionId();
       if (!sessionId) return;
-      const res = await fetch(`${BASE_URL}/inbox`, {
+      const res = await fetch(`${API_BASE}/inbox`, {
         headers: { "x-session-id": sessionId },
       });
       setNotifications(await res.json());
@@ -61,7 +62,7 @@ export default function InboxScreen() {
     try {
       const sessionId = await getSessionId();
       if (!sessionId) return;
-      await fetch(`${BASE_URL}/inbox/invites/${inviteId}/accept`, {
+      await fetch(`${API_BASE}/inbox/invites/${inviteId}/accept`, {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });
@@ -77,7 +78,7 @@ export default function InboxScreen() {
     try {
       const sessionId = await getSessionId();
       if (!sessionId) return;
-      await fetch(`${BASE_URL}/inbox/invites/${inviteId}/decline`, {
+      await fetch(`${API_BASE}/inbox/invites/${inviteId}/decline`, {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });

@@ -7,6 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
+import { API_BASE } from "@/constants/api";
 
 type Circle = {
   circle_id:  string;
@@ -32,7 +33,7 @@ export default function CirclesScreen() {
           const sessionId = await getSessionId();
           if (!sessionId) return;
 
-          const res = await fetch("http://localhost:3001/circles/my", {
+          const res = await fetch(`${API_BASE}/circles/my`, {
             headers: { "x-session-id": sessionId },
           });
 

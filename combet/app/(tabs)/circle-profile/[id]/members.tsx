@@ -7,6 +7,7 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import GradientBackground from "@/components/GradientBackground";
+import { API_BASE } from "@/constants/api";
 
 type Member  = { id: string; username: string; joined_at: string };
 type Request = { request_id: string; user_id: string; username: string; created_at: string };
@@ -28,7 +29,7 @@ export default function MembersScreen() {
     try {
       const sessionId = await getSessionId();
 
-      const histRes = await fetch(`http://localhost:3001/circles/${circleId}/history`, {
+      const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId || "" },
       });
       if (histRes.ok) {
@@ -37,7 +38,7 @@ export default function MembersScreen() {
       }
 
       if (isPrivate) {
-        const reqRes = await fetch(`http://localhost:3001/circles/${circleId}/requests`, {
+        const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
           headers: { "x-session-id": sessionId || "" },
         });
         if (reqRes.ok) setRequests(await reqRes.json());
@@ -51,7 +52,7 @@ export default function MembersScreen() {
     setActioning(requestId);
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`http://localhost:3001/circles/${circleId}/requests/${requestId}/accept`, {
+      const res = await fetch(`${API_BASE}/circles/${circleId}/requests/${requestId}/accept`, {
         method: "POST", headers: { "x-session-id": sessionId || "" },
       });
       if (res.ok) { setRequests((prev) => prev.filter((r) => r.request_id !== requestId)); loadAll(); }
@@ -63,7 +64,7 @@ export default function MembersScreen() {
     setActioning(requestId);
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`http://localhost:3001/circles/${circleId}/requests/${requestId}/decline`, {
+      const res = await fetch(`${API_BASE}/circles/${circleId}/requests/${requestId}/decline`, {
         method: "POST", headers: { "x-session-id": sessionId || "" },
       });
       if (res.ok) setRequests((prev) => prev.filter((r) => r.request_id !== requestId));

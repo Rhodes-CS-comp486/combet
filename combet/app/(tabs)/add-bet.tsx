@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { API_BASE } from "@/constants/api";
 
 export default function AddBet() {
   const { theme, isDark } = useAppTheme();
@@ -47,8 +48,8 @@ export default function AddBet() {
         const sessionId = await getSessionId();
         if (!sessionId) return;
         const endpoint = postTo === "circles"
-          ? "http://localhost:3001/circles/my"
-          : "http://localhost:3001/users/friends";
+          ? `${API_BASE}/circles/my`
+          : "${API_BASE}/users/friends";
         const res  = await fetch(endpoint, { headers: { "x-session-id": sessionId } });
         const data = await res.json();
         if (res.ok) { setTargets(data); setSelectedTargetId(null); setSelectedTargetName(null); }
@@ -89,7 +90,7 @@ export default function AddBet() {
 
       const cleanedOptions = options.filter((o) => o.trim() !== "");
 
-      const response = await fetch("http://localhost:3001/bets", {
+      const response = await fetch("${API_BASE}/bets", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body: JSON.stringify({
