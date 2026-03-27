@@ -207,7 +207,7 @@ betsRouter.post("/:betId/settle", requireAuth, async (req: AuthRequest, res) => 
       await client.query("ROLLBACK");
       return res.status(403).json({ error: "Only the creator can settle this bet" });
     }
-    if (!["PENDING", "CLOSED"].includes(betResult.rows[0].status)) {
+    if (!["PENDING", "CLOSED", "PENDING_APPROVAL"].includes(betResult.rows[0].status)) {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "Bet cannot be settled" });
     }
@@ -253,10 +253,9 @@ betsRouter.post("/:betId/settle", requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
-// ─── Propose Winner ───────────────────────────────────────────────────────────
-betsRouter.post("/:betId/propose-winner", requireAuth, async (req: AuthRequest, res) => {
+// ─── Dispute Settled Bet ──────────────────────────────────────────────────────
+betsRouter.post("/:betId/dispute", requireAuth, async (req: AuthRequest, res) => {
   const { betId } = req.params;
-  const { winningOptionId } = req.body;
 
   try {
     const betResult = await pool.query(
@@ -264,142 +263,22 @@ betsRouter.post("/:betId/propose-winner", requireAuth, async (req: AuthRequest, 
       [betId]
     );
     if (!betResult.rows[0]) return res.status(404).json({ error: "Bet not found" });
-    if (betResult.rows[0].creator_user_id !== req.userId)
-      return res.status(403).json({ error: "Only the creator can propose a winner" });
-    if (!["PENDING", "CLOSED"].includes(betResult.rows[0].status))
-      return res.status(400).json({ error: "Bet cannot be settled" });
+    if (betResult.rows[0].status !== "SETTLED")
+      return res.status(400).json({ error: "Only settled bets can be disputed" });
+    if (betResult.rows[0].creator_user_id === req.userId)
+      return res.status(403).json({ error: "Creators cannot dispute their own settlement" });
 
-    await pool.query(
-      `UPDATE bets SET status = 'PENDING_APPROVAL', proposed_winner_option_id = $1 WHERE id = $2`,
-      [winningOptionId, betId]
-    );
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("PROPOSE WINNER ERROR:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ─── Vote on Winner ───────────────────────────────────────────────────────────
-betsRouter.post("/:betId/vote-winner", requireAuth, async (req: AuthRequest, res) => {
-  const { betId } = req.params;
-  const { approve } = req.body;
-  const client = await pool.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const betResult = await client.query(
-      `SELECT status, proposed_winner_option_id, stake_amount, custom_stake FROM bets WHERE id = $1`,
-      [betId]
-    );
-    if (!betResult.rows[0]) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ error: "Bet not found" });
-    }
-    if (betResult.rows[0].status !== "PENDING_APPROVAL") {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "Bet is not pending approval" });
-    }
-
-    // Check user is a participant
-    const participation = await client.query(
+    const participation = await pool.query(
       `SELECT id FROM bet_responses WHERE bet_id = $1 AND user_id = $2 AND status = 'accepted'`,
       [betId, req.userId]
     );
-    if (!participation.rows[0]) {
-      await client.query("ROLLBACK");
-      return res.status(403).json({ error: "Only participants can vote" });
-    }
+    if (!participation.rows[0])
+      return res.status(403).json({ error: "Only participants can dispute" });
 
-    // Record vote
-    await client.query(
-      `INSERT INTO bet_winner_votes (bet_id, user_id, approve)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (bet_id, user_id) DO UPDATE SET approve = EXCLUDED.approve`,
-      [betId, req.userId, approve]
-    );
-
-    // Count votes
-    // allParticipants = everyone who staked (for correct pot calculation)
-    const allParticipants = await client.query(
-      `SELECT COUNT(*) as total FROM bet_responses 
-       WHERE bet_id = $1 AND status = 'accepted'`,
-      [betId]
-    );
-    // votingParticipants = non-creators only (they are the ones who vote)
-    const votingParticipants = await client.query(
-      `SELECT COUNT(*) as total FROM bet_responses 
-       WHERE bet_id = $1 AND status = 'accepted'
-       AND user_id != (SELECT creator_user_id FROM bets WHERE id = $1)`,
-      [betId]
-    );
-    const votes = await client.query(
-      `SELECT 
-        COUNT(*) FILTER (WHERE approve = true) as approvals,
-        COUNT(*) as total_votes
-       FROM bet_winner_votes WHERE bet_id = $1`,
-      [betId]
-    );
-
-    const totalAllParticipants = Number(allParticipants.rows[0].total);
-    const totalVoters = Number(votingParticipants.rows[0].total);
-    const approvals = Number(votes.rows[0].approvals);
-    const totalVotes = Number(votes.rows[0].total_votes);
-    const stake = betResult.rows[0].stake_amount;
-    const isCustom = !!betResult.rows[0].custom_stake;
-    const winningOptionId = betResult.rows[0].proposed_winner_option_id;
-
-    // Threshold based on voters only (excludes creator) so it never gets stuck
-    const threshold = totalVoters <= 1 ? 1 : Math.ceil(totalVoters * 0.5);
-
-    if (approvals >= threshold) {
-      // Settle the bet — pot uses ALL participants so creator's stake is included
-      if (!isCustom && stake > 0) {
-        const winners = await client.query(
-          `SELECT user_id FROM bet_responses 
-           WHERE bet_id = $1 AND selected_option_id = $2 AND status = 'accepted'`,
-          [betId, winningOptionId]
-        );
-        const totalPot = totalAllParticipants * stake;
-        const winnerCount = winners.rows.length;
-        if (winnerCount > 0) {
-          const payout = Math.floor(totalPot / winnerCount);
-          for (const winner of winners.rows) {
-            await client.query(
-              `UPDATE users SET coins = coins + $1 WHERE id = $2`,
-              [payout, winner.user_id]
-            );
-          }
-        }
-      }
-      await client.query(
-        `UPDATE bets SET status = 'SETTLED', winning_option_id = $1 WHERE id = $2`,
-        [winningOptionId, betId]
-      );
-      await client.query("COMMIT");
-      return res.json({ success: true, settled: true });
-    }
-
-    // Check if majority disputed — also based on voters only
-    const disputes = totalVotes - approvals;
-    if (disputes > totalVoters / 2) {
-      await client.query(
-        `UPDATE bets SET status = 'DISPUTED' WHERE id = $1`,
-        [betId]
-      );
-      await client.query("COMMIT");
-      return res.json({ success: true, disputed: true });
-    }
-
-    await client.query("COMMIT");
-    res.json({ success: true, settled: false });
+    await pool.query(`UPDATE bets SET status = 'DISPUTED' WHERE id = $1`, [betId]);
+    res.json({ success: true });
   } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("VOTE WINNER ERROR:", err);
+    console.error("DISPUTE BET ERROR:", err);
     res.status(500).json({ error: "Server error" });
-  } finally {
-    client.release();
   }
 });

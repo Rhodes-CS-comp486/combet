@@ -143,12 +143,12 @@ export default function BetCard({
         <View style={{ flex: 1, alignItems: "center" }}>
           {mode === "active" ? (
             <View style={{
-              backgroundColor: isClosed ? "rgba(239,68,68,0.1)" : "rgba(157,212,190,0.1)",
+                backgroundColor: isClosed ? "rgba(239,68,68,0.1)" : "rgba(157,212,190,0.1)",
+borderColor: isClosed ? "rgba(239,68,68,0.25)" : "rgba(157,212,190,0.25)",
               borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
               borderWidth: 1,
-              borderColor: isClosed ? "rgba(239,68,68,0.25)" : "rgba(157,212,190,0.25)",
             }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: isClosed ? "#ef4444" : theme.colors.primary }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: isClosed ? "#e87060" : theme.colors.primary }}>
                 {isClosed ? "Closed" : "Open"}
               </Text>
             </View>
@@ -268,6 +268,26 @@ export default function BetCard({
                   {iWon && stake > 0 ? `  •  +${payout} coins` : ""}
                 </Text>
               </View>
+                {!isCreator && !iWon && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const sessionId = await getSessionId();
+                      const res = await fetch(`${API_BASE}/bets/${item.id}/dispute`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+                      });
+                      if (res.ok) onRefresh?.();
+                    }}
+                    style={{
+                      alignSelf: "flex-end", marginTop: 6,
+                      backgroundColor: "rgba(232,112,96,0.1)",
+                      borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
+                      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: "#e87060", fontWeight: "500" }}>Dispute result</Text>
+                  </TouchableOpacity>
+                )}
             </View>
           );
         })()}
@@ -275,29 +295,30 @@ export default function BetCard({
 
       {/* ── ACTIONS ── */}
       {mode === "feed" && (
-        <TouchableOpacity
-          onPress={async () => {
-            const sessionId = await getSessionId();
-            await fetch(`${API_BASE}/bets/${item.id}/decline`, {
-              method: "POST",
-              headers: { "x-session-id": sessionId ?? "" },
-            });
-            onRemove?.(item.id);
-          }}
-          style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}
-        >
-            <Text style={{ fontSize: 13, color: "#e87060", fontWeight: "500" }}>  Pass</Text>
-        </TouchableOpacity>
+        <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
+          <TouchableOpacity
+            onPress={async () => {
+              const sessionId = await getSessionId();
+              await fetch(`${API_BASE}/bets/${item.id}/decline`, {
+                method: "POST",
+                headers: { "x-session-id": sessionId ?? "" },
+              });
+              onRemove?.(item.id);
+            }}
+            style={{
+              backgroundColor: "rgba(232,112,96,0.1)",
+              borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
+              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+            }}
+          >
+            <Text style={{ fontSize: 12, color: "#e87060", fontWeight: "500" }}>Pass</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {mode === "active" && (() => {
-        const isPendingApproval = item.status === "PENDING_APPROVAL";
         const isDisputed = item.status === "DISPUTED";
-        const myVote = item.my_vote;
-        const approvalCount = Number(item.approval_count ?? 0);
         const totalJoinedNum = Number(item.total_joined ?? 0);
-        const threshold = totalJoinedNum <= 2 ? 1 : Math.ceil(totalJoinedNum * 0.5);
-        const proposedOption = options.find((o: any) => o.id === item.proposed_winner_option_id);
 
         if (isDisputed) return (
           <View style={{ padding: 12, paddingTop: 0 }}>
@@ -310,76 +331,31 @@ export default function BetCard({
           </View>
         );
 
-        if (isPendingApproval) return (
-          <View style={{ padding: 12, paddingTop: 0, gap: 10 }}>
-            <View style={{ borderRadius: 12, padding: 12, backgroundColor: "rgba(157,212,190,0.08)", borderWidth: 1, borderColor: "rgba(157,212,190,0.2)" }}>
-              <Text style={{ color: theme.colors.primary, fontWeight: "700", textAlign: "center" }}>
-                 Proposed winner: {proposedOption?.text ?? "?"}
-              </Text>
-              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4, fontSize: 12 }}>
-                {approvalCount}/{threshold} approvals needed
-              </Text>
-            </View>
-            {!isCreator && (myVote === null || myVote === undefined) ? (
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <Button
-                  mode="contained"
-                  onPress={async () => {
-                    const sessionId = await getSessionId();
-                    const res = await fetch(`${API_BASE}/bets/${item.id}/vote-winner`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                      body: JSON.stringify({ approve: true }),
-                    });
-                    if (res.ok) { onRefresh?.(); DeviceEventEmitter.emit("coinsUpdated"); }
-                  }}
-                  style={{ flex: 1, borderRadius: 10, backgroundColor: "#10b981" }}
-                  labelStyle={{ fontWeight: "700" }}
-                >✓ Approve</Button>
-                <Button
-                  mode="outlined"
-                  onPress={async () => {
-                    const sessionId = await getSessionId();
-                    const res = await fetch(`${API_BASE}/bets/${item.id}/vote-winner`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                      body: JSON.stringify({ approve: false }),
-                    });
-                    if (res.ok) onRefresh?.();
-                  }}
-                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(239,68,68,0.4)" }}
-                  labelStyle={{ color: "#ef4444", fontWeight: "700" }}
-                >✕ Dispute</Button>
-              </View>
-            ) : !isCreator && myVote !== null && myVote !== undefined ? (
-              <View style={{ borderRadius: 12, padding: 10, alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)" }}>
-                <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: "600", fontSize: 13 }}>
-                  You voted: {myVote ? "✓ Approved" : "✕ Disputed"}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        );
-
         if (isCreator) return (
-          <TouchableOpacity
-            onPress={async () => {
-              if (isClosed) {
-                onSettle?.(item);
-                return;
-              }
-              const sessionId = await getSessionId();
-              const res = await fetch(`${API_BASE}/bets/${item.id}/close`, {
-                method: "POST", headers: { "x-session-id": sessionId ?? "" },
-              });
-              if (res.ok) onRefresh?.();
-            }}
-            style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}
-          >
-            <Text style={{ fontSize: 13, color: isClosed ? theme.colors.primary : "rgba(239,68,68,0.7)", fontWeight: "500" }}>
-              {isClosed ? "Declare Winner →" : "Close Bet"}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (isClosed) {
+                    onSettle?.(item);
+                    return;
+                  }
+                  const sessionId = await getSessionId();
+                  const res = await fetch(`${API_BASE}/bets/${item.id}/close`, {
+                    method: "POST", headers: { "x-session-id": sessionId ?? "" },
+                  });
+                  if (res.ok) onRefresh?.();
+                }}
+                style={{
+                  backgroundColor: isClosed ? "rgba(157,212,190,0.1)" : "rgba(232,112,96,0.1)",
+                  borderWidth: 1, borderColor: isClosed ? "rgba(157,212,190,0.25)" : "rgba(232,112,96,0.25)",
+                  borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: isClosed ? theme.colors.primary : "#e87060", fontWeight: "500" }}>
+                  {isClosed ? "Declare Winner →" : "Close Bet"}
+                </Text>
+              </TouchableOpacity>
+            </View>
         );
 
 

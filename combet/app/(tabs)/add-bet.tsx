@@ -5,6 +5,8 @@ import { View, ScrollView, Alert, Pressable, Platform } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
+import GradientBackground from "@/components/GradientBackground";
+
 
 import {
   Text,
@@ -17,7 +19,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
-import { useAppTheme } from "@/context/ThemeContext";
+import {DesignTokens, useAppTheme} from "@/context/ThemeContext";
 
 export default function AddBet() {
   const { theme, isDark } = useAppTheme();
@@ -117,9 +119,9 @@ export default function AddBet() {
     }
   };
 
-  const cardBg       = isDark ? "#0D1F35" : "#ffffff";
-  const subtleBg     = isDark ? "#091828" : "#f2f6ff";
-  const optionColors = ["#1D4ED8", "#2E6CF6", "#60A5FA", "#93C5FD"];
+  const cardBg   = "rgba(255,255,255,0.09)";
+    const subtleBg = "rgba(255,255,255,0.06)";
+    const optionColors = DesignTokens.optionColors.map((c: any) => c.btn);
   const stepLabels   = ["The Bet", "The Picks", "Who & Stakes"];
 
   const StepIndicator = () => (
@@ -133,7 +135,7 @@ export default function AddBet() {
           }}>
             <View style={{
               width:           32, height: 32, borderRadius: 16,
-              backgroundColor: step >= s ? theme.colors.primary : (isDark ? "#1a2f4a" : "#e0e7ff"),
+              backgroundColor: step >= s ? theme.colors.primary : (isDark ? "rgba(255,255,255,0.08)" : "#e0e7ff"),
               alignItems: "center", justifyContent: "center",
               shadowColor:    step === s ? theme.colors.primary : "transparent",
               shadowOpacity:  0.5, shadowRadius: 8,
@@ -148,7 +150,7 @@ export default function AddBet() {
           {s < 3 && (
             <View style={{
               width: 40, height: 2,
-              backgroundColor: step > s ? theme.colors.primary : (isDark ? "#1a2f4a" : "#e0e7ff"),
+              backgroundColor: step > s ? theme.colors.primary : (isDark ? "rgba(255,255,255,0.08)" : "#e0e7ff"),
               marginHorizontal: 4,
             }} />
           )}
@@ -158,7 +160,7 @@ export default function AddBet() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <GradientBackground>
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
@@ -166,8 +168,8 @@ export default function AddBet() {
       >
         {/* ── Header ── */}
         <Text variant="headlineMedium" style={{
-          color: theme.colors.onSurface, fontWeight: "900",
-          textAlign: "center", marginBottom: 6, letterSpacing: 0.5,
+          color: theme.colors.onSurface, fontWeight: "300",
+          textAlign: "center", marginBottom: 6, letterSpacing: 1,
         }}>
           Create a Bet
         </Text>
@@ -181,34 +183,53 @@ export default function AddBet() {
 
         {/* ══ STEP 1 ══ */}
         {step === 1 && (
-          <Surface elevation={0} style={{
-            borderRadius: 20, backgroundColor: cardBg, padding: 20,
-            borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-          }}>
-            <Text variant="labelLarge" style={{
-              color: theme.colors.onSurfaceVariant, fontWeight: "700",
-              letterSpacing: 0.5, marginBottom: 16,
-            }}>
-              WHAT'S THE BET?
-            </Text>
+          <View style={{
+          borderRadius: 20,
+          backgroundColor: "rgba(255,255,255,0.09)",
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+          padding: 20, marginBottom: 16,
+        }}>
+            <Text style={{
+          color: theme.colors.onSurfaceVariant, fontWeight: "400",
+          letterSpacing: 0.5, marginBottom: 16, fontSize: 16, textTransform: "uppercase"
+        }}>
+          What's the bet?
+        </Text>
 
-            <TextInput label="Bet title" value={title} onChangeText={setTitle}
-              mode="outlined" outlineStyle={{ borderRadius: 12 }}
-              style={{ backgroundColor: subtleBg, marginBottom: 4 }}
-              placeholder="e.g. Will Sophia wake up on time?" />
-            <HelperText type="info" visible style={{ marginBottom: 8 }}>
-              {title.length}/80 characters
-            </HelperText>
+        <View style={{
+          backgroundColor: "rgba(255,255,255,0.07)",
+          borderRadius: 12, marginBottom: 8,
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+        }}>
+          <TextInput label="Bet title" value={title} onChangeText={setTitle}
+            maxLength={80} mode="flat"
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant } }}
+          />
+        </View>
+        <HelperText type="info" visible style={{ marginBottom: 8 }}>
+          {title.length}/80 characters
+        </HelperText>
 
-            <TextInput label="Description" value={description} onChangeText={setDescription}
-              mode="outlined" multiline numberOfLines={3}
-              outlineStyle={{ borderRadius: 12 }} style={{ backgroundColor: subtleBg }}
-              placeholder="Give some context about this bet..." />
-
-            <Button mode="contained" onPress={() => setStep(2)} disabled={!canProceedStep1}
-              contentStyle={{ paddingVertical: 6 }} labelStyle={{ fontWeight: "800", fontSize: 15 }}
-              style={{ borderRadius: 14, marginTop: 20 }}>
-              Next: Add Picks →
+        <View style={{
+          backgroundColor: "rgba(255,255,255,0.07)",
+          borderRadius: 12, marginBottom: 16,
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+        }}>
+          <TextInput label="Description" value={description} onChangeText={setDescription}
+            mode="flat" multiline numberOfLines={3}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant } }}
+          />
+        </View>
+            <Button mode="outlined" onPress={() => setStep(2)} disabled={!canProceedStep1}
+              style={{ borderRadius: 14, marginTop: 20, borderColor: theme.colors.primary }}
+              labelStyle={{ fontWeight: "400", color: theme.colors.primary }}>
+               Add Picks →
             </Button>
 
             <Button mode="text" onPress={() => router.back()}
@@ -216,24 +237,24 @@ export default function AddBet() {
               labelStyle={{ color: theme.colors.onSurfaceVariant }}>
               Cancel
             </Button>
-          </Surface>
+          </View>
         )}
 
         {/* ══ STEP 2 ══ */}
         {step === 2 && (
-          <Surface elevation={0} style={{
-            borderRadius: 20, backgroundColor: cardBg, padding: 20,
-            borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-          }}>
+          <View style={{
+              borderRadius: 20,
+              backgroundColor: "rgba(255,255,255,0.09)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              padding: 20, marginBottom: 16,
+            }}>
             <Text variant="labelLarge" style={{
-              color: theme.colors.onSurfaceVariant, fontWeight: "700",
+              color: theme.colors.onSurfaceVariant, fontSize:16, fontWeight: "400",
               letterSpacing: 0.5, marginBottom: 4,
             }}>
               PICKS
             </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
-              Add 2–4 options for people to choose from
-            </Text>
+
 
             {options.map((opt, index) => (
               <View key={index} style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
@@ -241,19 +262,26 @@ export default function AddBet() {
                   width: 38, height: 38, borderRadius: 19,
                   backgroundColor: optionColors[index],
                   alignItems: "center", justifyContent: "center", marginRight: 12,
-                  shadowColor: optionColors[index], shadowOpacity: 0.4, shadowRadius: 6, elevation: 3,
                 }}>
                   <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
                     {String.fromCharCode(65 + index)}
                   </Text>
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={{
+                  flex: 1,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderRadius: 12,
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                }}>
                   <TextInput
                     label={`Option ${String.fromCharCode(65 + index)}`}
                     value={opt} onChangeText={(text) => updateOption(index, text)}
-                    mode="outlined"
-                    outlineStyle={{ borderRadius: 10, borderColor: optionColors[index] }}
-                    style={{ backgroundColor: subtleBg }} />
+                    mode="flat"
+                    style={{ backgroundColor: "transparent" }}
+                    underlineColor="transparent"
+                    activeUnderlineColor={theme.colors.primary}
+                    theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                  />
                 </View>
                 {options.length > 2 && (
                   <Pressable onPress={() => removeOption(index)} style={{ marginLeft: 8, padding: 4 }}>
@@ -271,7 +299,7 @@ export default function AddBet() {
                   borderColor: theme.colors.primary, marginTop: 4, marginBottom: 16,
                 }}>
                 <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} />
-                <Text style={{ color: theme.colors.primary, fontWeight: "700", marginLeft: 6 }}>
+                <Text style={{ color: theme.colors.primary, fontWeight: "400", marginLeft: 6 }}>
                   Add Option {String.fromCharCode(65 + options.length)}
                 </Text>
               </Pressable>
@@ -279,13 +307,14 @@ export default function AddBet() {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Button mode="outlined" onPress={() => setStep(1)}
-                style={{ flex: 1, borderRadius: 14 }} labelStyle={{ fontWeight: "700" }}>
+                style={{ flex: 1, borderRadius: 14 }} labelStyle={{ fontWeight: "400" }}>
                 ← Back
               </Button>
-              <Button mode="contained" onPress={() => setStep(3)} disabled={!canProceedStep2}
-                style={{ flex: 2, borderRadius: 14 }} labelStyle={{ fontWeight: "800" }}>
-                Next: Who & Stakes →
-              </Button>
+              <Button mode="outlined" onPress={() => setStep(3)} disabled={!canProceedStep2}
+                  style={{ flex: 2, borderRadius: 14, borderColor: theme.colors.primary }}
+                  labelStyle={{ fontWeight: "400", color: theme.colors.primary }}>
+                   Who & Stakes →
+                </Button>
             </View>
 
             <Button mode="text" onPress={() => router.back()}
@@ -293,42 +322,53 @@ export default function AddBet() {
               labelStyle={{ color: theme.colors.onSurfaceVariant }}>
               Cancel
             </Button>
-          </Surface>
+          </View>
         )}
 
         {/* ══ STEP 3 ══ */}
         {step === 3 && (
           <View style={{ gap: 16 }}>
-            <Surface elevation={0} style={{
-              borderRadius: 20, backgroundColor: cardBg, padding: 20,
-              borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+            <View style={{
+              borderRadius: 20,
+              backgroundColor: "rgba(255,255,255,0.09)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              padding: 20, marginBottom: 16,
             }}>
               <Text variant="labelLarge" style={{
-                color: theme.colors.onSurfaceVariant, fontWeight: "700",
+                color: theme.colors.onSurfaceVariant, fontWeight: "400", fontSize: 16,
                 letterSpacing: 0.5, marginBottom: 14,
               }}>
                 POST TO
               </Text>
 
-              <SegmentedButtons
-                value={postTo}
-                onValueChange={(v) => {
-                  setPostTo(v as "circles" | "friends");
-                  setSearchQuery(""); setSelectedTargetId(null); setSelectedTargetName(null);
-                }}
-                buttons={[
-                  { value: "circles", label: "Circles", icon: "people-outline" as any },
-                  { value: "friends", label: "Friends", icon: "person-outline" as any },
-                ]}
-                style={{ marginBottom: 16 }}
-              />
+                <View style={{ flexDirection: "row", marginBottom: 16 }}>
+              {(["circles", "friends"] as const).map((tab) => (
+                <Pressable
+                  key={tab}
+                  onPress={() => { setPostTo(tab); setSearchQuery(""); setSelectedTargetId(null); setSelectedTargetName(null); }}
+                  style={{
+                    flex: 1, paddingVertical: 10, alignItems: "center",
+                    borderBottomWidth: 2,
+                    borderBottomColor: postTo === tab ? theme.colors.primary : "rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 14, fontWeight: postTo === tab ? "600" : "400",
+                    color: postTo === tab ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                  }}>
+                    {tab === "circles" ? "Circles" : "Friends"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
 
               {selectedTargetId && !searchQuery && (
                 <View style={{
                   flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-                  backgroundColor: isDark ? "rgba(46,108,246,0.2)" : "rgba(46,108,246,0.1)",
+                    backgroundColor: "rgba(157,212,190,0.12)",
+                    borderWidth: 1, borderColor: "rgba(157,212,190,0.25)",
                   borderRadius: 12, padding: 12, marginBottom: 12,
-                  borderWidth: 1, borderColor: theme.colors.primary,
                 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
@@ -342,9 +382,18 @@ export default function AddBet() {
                 </View>
               )}
 
-              <TextInput label={`Search ${postTo}`} value={searchQuery} onChangeText={setSearchQuery}
-                mode="outlined" outlineStyle={{ borderRadius: 12 }} style={{ backgroundColor: subtleBg }}
-                left={<TextInput.Icon icon="magnify" />} />
+             <View style={{
+                  backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 8,
+                }}>
+                  <TextInput label={`Search ${postTo}`} value={searchQuery} onChangeText={setSearchQuery}
+                    mode="flat"
+                    style={{ backgroundColor: "transparent" }}
+                    underlineColor="transparent"
+                    activeUnderlineColor={theme.colors.primary}
+                    theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                    left={<TextInput.Icon icon="magnify" />} />
+                </View>
 
               {searchQuery.length > 0 && filteredTargets.map((item) => {
                 const id       = item.id ?? item.circle_id;
@@ -380,45 +429,74 @@ export default function AddBet() {
                   No {postTo} found matching &quot;{searchQuery}&quot;
                 </Text>
               )}
-            </Surface>
+            </View>
 
-            <Surface elevation={0} style={{
-              borderRadius: 20, backgroundColor: cardBg, padding: 20,
-              borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+            <View style={{
+              borderRadius: 20,
+              backgroundColor: "rgba(255,255,255,0.09)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              padding: 20, marginBottom: 16,
             }}>
               <Text variant="labelLarge" style={{
-                color: theme.colors.onSurfaceVariant, fontWeight: "700",
+                color: theme.colors.onSurfaceVariant, fontWeight: "400", fontSize:16,
                 letterSpacing: 0.5, marginBottom: 14,
               }}>
                 STAKE & DEADLINE
               </Text>
 
-              <SegmentedButtons
-                value={stakeType}
-                onValueChange={(v) => setStakeType(v as "coins" | "custom")}
-                buttons={[
-                  { value: "coins", label: "Coins", icon: "cash" as any },
-                  { value: "custom", label: "Custom", icon: "create-outline" as any },
-                ]}
-                style={{ marginBottom: 16 }}
-              />
+             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+                  {(["coins", "custom"] as const).map((type) => (
+                    <Pressable
+                      key={type}
+                      onPress={() => setStakeType(type)}
+                      style={{
+                        paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+                        backgroundColor: stakeType === type ? "rgba(157,212,190,0.15)" : "transparent",
+                        borderWidth: 1,
+                        borderColor: stakeType === type ? "rgba(157,212,190,0.3)" : "rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <Text style={{
+                        fontSize: 12, fontWeight: stakeType === type ? "600" : "400",
+                        color: stakeType === type ? theme.colors.primary : theme.colors.onSurfaceVariant,
+                      }}>
+                        {type === "coins" ? "Coins" : "Custom"}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
 
               {stakeType === "coins" ? (
-                <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
-                  mode="outlined" keyboardType="numeric" outlineStyle={{ borderRadius: 12 }}
-                  style={{ backgroundColor: subtleBg, marginBottom: 12 }}
-                  left={<TextInput.Icon icon="cash" />} />
-              ) : (
-                <TextInput label="What's at stake?" value={customStake} onChangeText={setCustomStake}
-                  mode="outlined" outlineStyle={{ borderRadius: 12 }}
-                  style={{ backgroundColor: subtleBg, marginBottom: 12 }}
-                  placeholder="e.g. loser buys coffee"
-                           left={<TextInput.Icon icon={"trophy-outline" as any} />} />
-
-              )}
+                  <View style={{
+                    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
+                  }}>
+                    <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
+                      mode="flat" keyboardType="numeric"
+                      style={{ backgroundColor: "transparent" }}
+                      underlineColor="transparent"
+                      activeUnderlineColor={theme.colors.primary}
+                      theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                      left={<TextInput.Icon icon="cash" />} />
+                  </View>
+                ) : (
+                  <View style={{
+                    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
+                  }}>
+                    <TextInput label="What's at stake?" value={customStake} onChangeText={setCustomStake}
+                      mode="flat"
+                      style={{ backgroundColor: "transparent" }}
+                      underlineColor="transparent"
+                      activeUnderlineColor={theme.colors.primary}
+                      theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                      placeholder="e.g. loser buys coffee"
+                      left={<TextInput.Icon icon={"trophy-outline" as any} />} />
+                  </View>
+                )}
 
               {showDatePicker && (
-                <View style={{ backgroundColor: isDark ? "#0D1F35" : "#ffffff", borderRadius: 16, marginBottom: 12, overflow: "hidden" }}>
+                  <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, marginBottom: 12, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
                   <DateTimePickerModal
                     mode="single"
 
@@ -440,80 +518,107 @@ export default function AddBet() {
                       day_label: { color: "#ffffff" },
                       day_cell: { backgroundColor: "transparent" },
                       selected: { backgroundColor: theme.colors.primary },
-                      selected_label: { color: "#ffffff" },
+                      selected_label: { color: "#0d2a22" },
                       today: { borderColor: theme.colors.primary },
                       today_label: { color: theme.colors.primary },
                       month_label: { color: "#ffffff" },
                       year_label: { color: "#ffffff" },
-                      weekday_label: { color: "#aab4c4" },
+                      weekday_label: { color: "rgba(255,255,255,0.5)" },
                       caption_label: { color: "#ffffff" },
                       header_label: { color: "#ffffff" },
                       title: { color: "#ffffff" },
+                      header: { backgroundColor: "transparent" },
                     } as any}
                   />
                 </View>
               )}
 
               <Pressable onPress={() => setShowDatePicker(!showDatePicker)}>
-                <View pointerEvents="none">
-                  <TextInput
-                    label="Closes at (optional)"
-                    value={closeAt ? dayjs(closeAt).format("MMM D, YYYY") : ""}
-                    mode="outlined"
-                    outlineStyle={{ borderRadius: 12 }}
-                    style={{ backgroundColor: subtleBg }}
-                    left={<TextInput.Icon icon="calendar" />}
-                    placeholder="Select a date"
-                    editable={false}
-                  />
-                </View>
-              </Pressable>
+                  <View pointerEvents="none" style={{
+                    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                  }}>
+                    <TextInput
+                      label="Closes at (optional)"
+                      value={closeAt ? dayjs(closeAt).format("MMM D, YYYY") : ""}
+                      mode="flat"
+                      style={{ backgroundColor: "transparent" }}
+                      underlineColor="transparent"
+                      activeUnderlineColor={theme.colors.primary}
+                      theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                      left={<TextInput.Icon icon="calendar" />}
+                      placeholder="Select a date"
+                      editable={false}
+                    />
+                  </View>
+                </Pressable>
 
-
-            </Surface>
+            </View>
 
             {canSubmit && (
-              <Surface elevation={0} style={{
+              <View style={{
                 borderRadius: 20,
-                backgroundColor: isDark ? "rgba(46,108,246,0.12)" : "rgba(46,108,246,0.07)",
-                padding: 16, borderWidth: 1,
-                borderColor: isDark ? "rgba(46,108,246,0.3)" : "rgba(46,108,246,0.2)",
+                backgroundColor: "rgba(255,255,255,0.09)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                padding: 16, marginBottom: 16,
               }}>
-                <Text variant="labelLarge" style={{ color: theme.colors.primary, fontWeight: "700", marginBottom: 10 }}>
-                  📋 BET SUMMARY
+                <Text style={{ fontSize: 16, fontWeight: "400", color: theme.colors.onSurfaceVariant, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 12 }}>
+                  Bet Summary
                 </Text>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, fontWeight: "600", marginBottom: 4 }}>
-                  {title}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
-                  {description}
-                </Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: "rgba(157,212,190,0.12)",
+                    borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Ionicons name="people" size={20} color={theme.colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
+                    <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{selectedTargetName}</Text>
+                  </View>
+                  <View style={{
+                    backgroundColor: "rgba(240,192,112,0.12)",
+                    borderColor: "rgba(240,192,112,0.2)",
+                    borderWidth: 1, borderRadius: 20,
+                    paddingHorizontal: 12, paddingVertical: 5,
+                  }}>
+                    <Text style={{ color: "#f0c070", fontWeight: "600", fontSize: 12 }}>
+                      {stakeType === "coins" ? `${stake} coins` : customStake}
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ gap: 6 }}>
                   {options.filter(Boolean).map((opt, i) => (
                     <View key={i} style={{
-                      backgroundColor: optionColors[i],
-                      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                      borderRadius: 10, padding: 10,
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      backgroundColor: "rgba(255,255,255,0.04)",
                     }}>
-                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>
-                        {String.fromCharCode(65 + i)}: {opt}
-                      </Text>
+                      <View style={{
+                        width: 24, height: 24, borderRadius: 12,
+                        backgroundColor: optionColors[i],
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 11 }}>{String.fromCharCode(65 + i)}</Text>
+                      </View>
+                      <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>{opt}</Text>
                     </View>
                   ))}
                 </View>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  📍 {selectedTargetName} · {stakeType === "coins" ? `🪙 ${stake} coins` : `🏆 ${customStake}`}
-                </Text>
-              </Surface>
+              </View>
             )}
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Button mode="outlined" onPress={() => setStep(2)}
-                style={{ flex: 1, borderRadius: 14 }} labelStyle={{ fontWeight: "700" }}>
+                style={{ flex: 1, alignSelf: "center" ,borderRadius: 14 }} labelStyle={{ fontWeight: "400" }}>
                 ← Back
               </Button>
               <Button mode="contained" onPress={handleCreateBet} loading={loading}
                 disabled={!canSubmit || loading} style={{ flex: 2, borderRadius: 14 }}
-                contentStyle={{ paddingVertical: 6 }} labelStyle={{ fontWeight: "900", fontSize: 15 }}>
+                contentStyle={{ paddingVertical: 6 }} labelStyle={{ fontWeight: "400", fontSize: 15 }}>
                  Place Bet
               </Button>
             </View>
@@ -525,6 +630,6 @@ export default function AddBet() {
           </View>
         )}
       </ScrollView>
-    </View>
+      </GradientBackground>
   );
 }

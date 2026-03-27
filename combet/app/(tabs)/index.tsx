@@ -574,7 +574,7 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
                 mode="outlined"
                 onPress={async () => {
                   const sessionId = await getSessionId();
-                  const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/propose-winner`, {
+                  const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
                     body: JSON.stringify({ winningOptionId: opt.id }),
@@ -584,6 +584,9 @@ const renderActiveBetItem = ({ item }: { item: any }) => (
                     setSettlingBet(null);
                     fetchActiveBets();
                     fetchRecentResults();
+                    fetchCoins();
+                    setSettlingBet(null);
+
                 }}}
                 style={{ borderRadius: 12, borderColor: theme.colors.primary }}
                 labelStyle={{ color: theme.colors.primary, fontWeight: "700" }}
