@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, Alert } from "react-native";
+import { View, ScrollView, Alert, Switch } from "react-native";
 import { Text, TextInput, Button, HelperText } from "react-native-paper";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
@@ -16,6 +17,7 @@ export default function EditCircle() {
   const [iconIndex, setIconIndex]     = useState(0);
   const [name, setName]               = useState("");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate]     = useState(false);
   const [nameError, setNameError]     = useState<string | null>(null);
   const [descError, setDescError]     = useState<string | null>(null);
   const [loading, setLoading]         = useState(false);
@@ -28,6 +30,7 @@ export default function EditCircle() {
       .then((data) => {
         setName(data.name);
         setDescription(data.description || "");
+        setIsPrivate(data.is_private ?? false);
         const idx = ICONS.indexOf(data.icon);
         setIconIndex(idx >= 0 ? idx : 0);
         setReady(true);
@@ -35,10 +38,21 @@ export default function EditCircle() {
       .catch(console.error);
   }, [circleId]);
 
+  const checkNameUnique = async (val: string) => {
+    if (val.length < 5) return;
+    try {
+      const res = await fetch(
+        `http://localhost:3001/circles/check-name?name=${encodeURIComponent(val)}&excludeId=${circleId}`
+      );
+      const data = await res.json();
+      if (data.taken) setNameError("A circle with that name already exists");
+    } catch {}
+  };
+
   const handleSave = async () => {
     setNameError(null);
     setDescError(null);
-    if (name.length < 5 || name.length > 15) { setNameError("Name must be 5–15 characters"); return; }
+    if (name.length < 5 || name.length > 15) { setNameError("Name must be 5-15 characters"); return; }
     if (description.length > 100)            { setDescError("Description must be under 100 characters"); return; }
 
     try {
@@ -46,8 +60,10 @@ export default function EditCircle() {
       const res = await fetch(`http://localhost:3001/circles/${circleId}`, {
         method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex] }),
+        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex], is_private: isPrivate }),
       });
+
+      if (res.status === 409) { const data = await res.json(); setNameError(data.error); return; }
       if (!res.ok) throw new Error("Failed to update");
       router.replace(`/circle-profile/${circleId}`);
     } catch {
@@ -57,12 +73,12 @@ export default function EditCircle() {
     }
   };
 
-  const subtleBg = isDark ? "#0F223A" : "#f0f4ff";
-
   if (!ready) return null;
 
+  const inputBg = isDark ? "rgba(13,31,53,0.8)" : "#f0f4ff";
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
       <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
       <ScrollView
@@ -70,39 +86,40 @@ export default function EditCircle() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text variant="headlineSmall" style={{
-          color:        theme.colors.onSurface,
-          fontWeight:   "800",
-          textAlign:    "center",
-          marginTop:    20,
-          marginBottom: 28,
+        <Text style={{
+          color:         theme.colors.onSurface,
+          fontSize:      28,
+          fontWeight:    "300",
+          letterSpacing: 0.5,
+          marginBottom:  28,
+          marginTop:     8,
         }}>
           Edit Circle
         </Text>
 
-        {/* ── Icon carousel ── */}
         <Text variant="labelLarge" style={{
           color:         theme.colors.onSurfaceVariant,
-          fontWeight:    "700",
-          letterSpacing: 1,
-          textAlign:     "center",
+          fontWeight:    "600",
+          letterSpacing: 1.5,
           marginBottom:  16,
+          fontSize:      11,
+          textAlign:     "center",
         }}>
           CHANGE ICON
         </Text>
 
         <IconCarousel selectedIndex={iconIndex} onIndexChange={setIconIndex} />
 
-        {/* ── Inputs ── */}
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ marginTop: 28 }}>
           <TextInput
             label="Circle name"
             value={name}
             onChangeText={(t) => { setName(t); setNameError(null); }}
+            onBlur={() => checkNameUnique(name)}
             mode="outlined"
             maxLength={15}
-            outlineStyle={{ borderRadius: 12 }}
-            style={{ backgroundColor: subtleBg }}
+            outlineStyle={{ borderRadius: 14, borderColor: "rgba(255,255,255,0.1)" }}
+            style={{ backgroundColor: inputBg, marginBottom: 2 }}
             right={
               <TextInput.Affix
                 text={`${name.length}/15`}
@@ -110,7 +127,9 @@ export default function EditCircle() {
               />
             }
           />
-          <HelperText type="error" visible={!!nameError}>{nameError ?? " "}</HelperText>
+          <HelperText type="error" visible={!!nameError} style={{ marginBottom: 8 }}>
+            {nameError ?? " "}
+          </HelperText>
 
           <TextInput
             label="Description (optional)"
@@ -120,8 +139,8 @@ export default function EditCircle() {
             multiline
             numberOfLines={3}
             maxLength={100}
-            outlineStyle={{ borderRadius: 12 }}
-            style={{ backgroundColor: subtleBg, marginTop: 4 }}
+            outlineStyle={{ borderRadius: 14, borderColor: "rgba(255,255,255,0.1)" }}
+            style={{ backgroundColor: inputBg, marginBottom: 2 }}
             right={
               <TextInput.Affix
                 text={`${description.length}/100`}
@@ -129,16 +148,53 @@ export default function EditCircle() {
               />
             }
           />
-          <HelperText type="error" visible={!!descError}>{descError ?? " "}</HelperText>
+          <HelperText type="error" visible={!!descError} style={{ marginBottom: 16 }}>
+            {descError ?? " "}
+          </HelperText>
+
+          <View style={{
+            flexDirection:     "row",
+            alignItems:        "center",
+            justifyContent:    "space-between",
+            backgroundColor:   inputBg,
+            borderRadius:      14,
+            paddingHorizontal: 16,
+            paddingVertical:   14,
+            marginBottom:      32,
+            borderWidth:       1,
+            borderColor:       "rgba(255,255,255,0.12)",
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <Ionicons
+                name={isPrivate ? "lock-closed" : "globe-outline"}
+                size={18}
+                color={isPrivate ? theme.colors.primary : theme.colors.onSurfaceVariant}
+              />
+              <View>
+                <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                  {isPrivate ? "Private" : "Public"}
+                </Text>
+                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 2 }}>
+                  {isPrivate ? "Members must request to join" : "Anyone can search and join"}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: isDark ? "#2a3a4a" : "#d0d8e8", true: theme.colors.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
 
           <Button
             mode="contained"
             onPress={handleSave}
             loading={loading}
-            disabled={loading}
+            disabled={loading || !!nameError}
             contentStyle={{ paddingVertical: 8 }}
-            labelStyle={{ fontWeight: "900", fontSize: 16 }}
-            style={{ borderRadius: 16, marginTop: 8 }}
+            labelStyle={{ fontWeight: "700", fontSize: 15 }}
+            style={{ borderRadius: 14, marginBottom: 8 }}
           >
             Save Changes
           </Button>
@@ -146,13 +202,12 @@ export default function EditCircle() {
           <Button
             mode="text"
             onPress={() => router.replace(`/circle-profile/${circleId}`)}
-            style={{ marginTop: 6 }}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}
+            labelStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}
           >
             Cancel
           </Button>
         </View>
       </ScrollView>
-    </View>
+    </GradientBackground>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, ScrollView, Alert } from "react-native";
+import { View, ScrollView, Alert, Switch } from "react-native";
 import { Text, TextInput, Button, HelperText } from "react-native-paper";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
@@ -17,8 +18,10 @@ export default function CreateCircle() {
   const [iconIndex, setIconIndex] = useState(0);
   const [name, setName]           = useState("");
   const [description, setDesc]    = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading]     = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [checkingName, setCheckingName] = useState(false);
   const [descError, setDescError] = useState<string | null>(null);
 
   const handleCreate = async () => {
@@ -35,17 +38,30 @@ export default function CreateCircle() {
       const res = await fetch(`${BASE_URL}/circles`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
-        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex] }),
+        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex], is_private: isPrivate }),
       });
 
       const data = await res.json();
-      if (!res.ok) { Alert.alert(data.error || "Error creating circle"); return; }
+      if (res.status === 409) { setNameError(data.error); return; }
+      if (!res.ok)            { Alert.alert(data.error || "Error creating circle"); return; }
       router.replace("/(tabs)/circles");
     } catch {
       Alert.alert("Server connection failed");
     } finally {
       setLoading(false);
     }
+  };
+
+
+  const checkNameUnique = async (val: string) => {
+    if (val.length < 5) return;
+    try {
+      setCheckingName(true);
+      const res = await fetch(`${BASE_URL}/circles/check-name?name=${encodeURIComponent(val)}`);
+      const data = await res.json();
+      if (data.taken) setNameError("A circle with that name already exists");
+    } catch {}
+    finally { setCheckingName(false); }
   };
 
   const subtleBg = isDark ? "#0F223A" : "#f0f4ff";
@@ -100,6 +116,7 @@ export default function CreateCircle() {
             label="Circle name"
             value={name}
             onChangeText={(t) => { setName(t); setNameError(null); }}
+            onBlur={() => checkNameUnique(name)}
             mode="outlined"
             maxLength={15}
             outlineStyle={{ borderRadius: 14 }}
@@ -111,8 +128,8 @@ export default function CreateCircle() {
               />
             }
           />
-          <HelperText type={nameError ? "error" : "info"} visible style={{ marginBottom: 8 }}>
-            {nameError ?? "5–15 characters"}
+          <HelperText type="error" visible={!!nameError} style={{ marginBottom: 8 }}>
+            {nameError ?? " "}
           </HelperText>
 
           <TextInput
@@ -132,9 +149,47 @@ export default function CreateCircle() {
               />
             }
           />
-          <HelperText type="error" visible={!!descError} style={{ marginBottom: 24 }}>
+          <HelperText type="error" visible={!!descError} style={{ marginBottom: 16 }}>
             {descError ?? " "}
           </HelperText>
+
+          {/* ── Privacy Toggle ── */}
+          <View style={{
+            flexDirection:   "row",
+            alignItems:      "center",
+            justifyContent:  "space-between",
+            backgroundColor: subtleBg,
+            borderRadius:    14,
+            paddingHorizontal: 16,
+            paddingVertical:   14,
+            marginBottom:    24,
+            borderWidth:     1,
+            borderColor:     isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Ionicons
+                name={isPrivate ? "lock-closed" : "globe-outline"}
+                size={18}
+                color={isPrivate ? theme.colors.primary : theme.colors.onSurfaceVariant}
+              />
+              <View>
+                <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                  {isPrivate ? "Private" : "Public"}
+                </Text>
+                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+                  {isPrivate
+                    ? "Members must request to join"
+                    : "Anyone can search and join"}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: isDark ? "#2a3a4a" : "#d0d8e8", true: theme.colors.primary }}
+              thumbColor={"#ffffff"}
+            />
+          </View>
 
           <Button
             mode="contained"

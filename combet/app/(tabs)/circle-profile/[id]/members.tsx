@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList } from "react-native";
-import { Text, Surface } from "react-native-paper";
+import { View, FlatList, TouchableOpacity } from "react-native";
+import { Text, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
@@ -8,46 +8,219 @@ import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import GradientBackground from "@/components/GradientBackground";
 
+type Member  = { id: string; username: string; joined_at: string };
+type Request = { request_id: string; user_id: string; username: string; created_at: string };
 
 export default function MembersScreen() {
-  const { theme, isDark } = useAppTheme();
-  const { id } = useLocalSearchParams();
-  const circleId = id as string;
-  const [members, setMembers] = useState<any[]>([]);
+  const { theme } = useAppTheme();
+  const params    = useLocalSearchParams();
+  const circleId  = params.id as string;
+  const isPrivate = params.isPrivate === "1";
 
-  useEffect(() => { loadMembers(); }, []);
+  const [activeTab, setActiveTab] = useState<"members" | "requests">("members");
+  const [members,   setMembers]   = useState<Member[]>([]);
+  const [requests,  setRequests]  = useState<Request[]>([]);
+  const [actioning, setActioning] = useState<string | null>(null);
 
-  const loadMembers = async () => {
+  useEffect(() => { loadAll(); }, []);
+
+  const loadAll = async () => {
     try {
       const sessionId = await getSessionId();
-      const res = await fetch(`http://localhost:3001/circles/${circleId}/history`, {
+
+      const histRes = await fetch(`http://localhost:3001/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId || "" },
       });
-      if (!res.ok) throw new Error("Failed to fetch members");
-      const data = await res.json();
-      setMembers(data.members ?? []);
+      if (histRes.ok) {
+        const data = await histRes.json();
+        setMembers(data.members ?? []);
+      }
+
+      if (isPrivate) {
+        const reqRes = await fetch(`http://localhost:3001/circles/${circleId}/requests`, {
+          headers: { "x-session-id": sessionId || "" },
+        });
+        if (reqRes.ok) setRequests(await reqRes.json());
+      }
     } catch (err) {
       console.error("Error loading members:", err);
     }
   };
 
-  const cardBg = isDark ? "#0F2A44" : "#ffffff";
+  const handleAccept = async (requestId: string) => {
+    setActioning(requestId);
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`http://localhost:3001/circles/${circleId}/requests/${requestId}/accept`, {
+        method: "POST", headers: { "x-session-id": sessionId || "" },
+      });
+      if (res.ok) { setRequests((prev) => prev.filter((r) => r.request_id !== requestId)); loadAll(); }
+    } catch (err) { console.error("Accept error:", err); }
+    finally { setActioning(null); }
+  };
+
+  const handleDecline = async (requestId: string) => {
+    setActioning(requestId);
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`http://localhost:3001/circles/${circleId}/requests/${requestId}/decline`, {
+        method: "POST", headers: { "x-session-id": sessionId || "" },
+      });
+      if (res.ok) setRequests((prev) => prev.filter((r) => r.request_id !== requestId));
+    } catch (err) { console.error("Decline error:", err); }
+    finally { setActioning(null); }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff  = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 1)   return "just now";
+    if (mins < 60)  return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  const memberRow = (item: Member) => (
+    <View style={{
+      flexDirection: "row", alignItems: "center",
+      backgroundColor: "rgba(255,255,255,0.09)",
+      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+      borderRadius: 14, padding: 14, marginBottom: 10,
+    }}>
+      <View style={{
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: "rgba(157,212,190,0.12)",
+        borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+        alignItems: "center", justifyContent: "center", marginRight: 14,
+      }}>
+        <Ionicons name="person" size={20} color={theme.colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+          {item.username}
+        </Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          @{item.username}
+        </Text>
+      </View>
+      {item.joined_at && (
+        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, opacity: 0.8 }}>
+          Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </Text>
+      )}
+    </View>
+  );
+
+  const requestRow = (item: Request) => (
+    <View style={{
+      flexDirection: "row", alignItems: "center",
+      backgroundColor: "rgba(255,255,255,0.09)",
+      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+      borderRadius: 14, padding: 14, marginBottom: 10, gap: 12,
+    }}>
+      <View style={{
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: "rgba(157,212,190,0.12)",
+        borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <Ionicons name="person" size={20} color={theme.colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+          {item.username}
+        </Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          Requested {timeAgo(item.created_at)}
+        </Text>
+      </View>
+      {actioning === item.request_id ? (
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+      ) : (
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => handleDecline(item.request_id)}
+            style={{
+              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+            }}
+          >
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13 }}>Decline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleAccept(item.request_id)}
+            style={{
+              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+              backgroundColor: theme.colors.primary,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Accept</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
-      <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+    <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
       <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
       <Text style={{
-          color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
-          letterSpacing: 2, marginBottom: 24,
-        }}>
-          Members
-        </Text>
+        color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
+        letterSpacing: 2, marginBottom: 20,
+      }}>
+        Members
+      </Text>
 
+      {/* ── Tabs — only shown for private circles ── */}
+      {isPrivate && (
+        <View style={{ flexDirection: "row", marginBottom: 20 }}>
+          {(["members", "requests"] as const).map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={{
+                  flex: 1, paddingVertical: 12, alignItems: "center",
+                  borderBottomWidth: 2,
+                  borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{
+                    fontSize: 13, fontWeight: active ? "600" : "400",
+                    color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                  }}>
+                    {tab === "members" ? "Members" : "Requests"}
+                  </Text>
+                  {tab === "requests" && requests.length > 0 && (
+                    <View style={{
+                      backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 10,
+                      minWidth: 18, height: 18, alignItems: "center", justifyContent: "center",
+                      paddingHorizontal: 4,
+                    }}>
+                      <Text style={{ color: theme.colors.onSurface, fontSize: 11, fontWeight: "600" }}>
+                        {requests.length}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {/* ── Content ── */}
+      {activeTab === "members" ? (
         <FlatList
           data={members}
           keyExtractor={(item) => item.id ?? item.username}
           contentContainerStyle={{ paddingBottom: 120 }}
+          renderItem={({ item }) => memberRow(item)}
           ListEmptyComponent={
             <Text variant="bodyMedium" style={{
               color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40,
@@ -55,37 +228,23 @@ export default function MembersScreen() {
               No members found
             </Text>
           }
-          renderItem={({ item }) => (
-            <View style={{
-              flexDirection: "row", alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.09)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-              borderRadius: 14, padding: 14, marginBottom: 10,
-            }}>
-              <View style={{
-                width: 44, height: 44, borderRadius: 22,
-                backgroundColor: "rgba(157,212,190,0.12)",
-                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-                alignItems: "center", justifyContent: "center", marginRight: 14,
-              }}>
-                <Ionicons name="person" size={20} color={theme.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-                  {item.username}
-                </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  @{item.username}
-                </Text>
-              </View>
-              {item.joined_at && (
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, opacity: 0.8 }}>
-                  Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </Text>
-              )}
-            </View>
-          )}
         />
-      </GradientBackground>
+      ) : (
+        <FlatList
+          data={requests}
+          keyExtractor={(item) => item.request_id}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          renderItem={({ item }) => requestRow(item)}
+          ListEmptyComponent={
+            <View style={{ alignItems: "center", paddingTop: 40 }}>
+              <Ionicons name="checkmark-circle-outline" size={40} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>
+                No pending requests
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </GradientBackground>
   );
 }
