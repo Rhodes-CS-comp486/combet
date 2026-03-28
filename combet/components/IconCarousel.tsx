@@ -30,8 +30,8 @@ export default function IconCarousel({ selectedIndex, onIndexChange , selectedCo
   const currIcon = ICONS[selectedIndex];
   const nextIcon = canGoRight ? ICONS[selectedIndex + 1] : null;
 
-  const arrowBg     = isDark ? "rgba(46,108,246,0.18)" : "rgba(46,108,246,0.12)";
-  const arrowColor  = theme.colors.primary;
+  const arrowBg = "rgba(255,255,255,0.08)";
+  const arrowColor = "#ffffff";
   const disabledBg  = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
   const disabledClr = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
 

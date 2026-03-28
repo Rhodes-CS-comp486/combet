@@ -111,16 +111,17 @@ export default function CircleProfile() {
           <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={() => {}} />
         ))}
         {history.bets.length === 0 && (
-          <Surface elevation={0} style={{
-            borderRadius: 16, backgroundColor: cardBg, padding: 28,
-            borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-            alignItems: "center",
-          }}>
-            <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 10 }} />
-            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center" }}>
-              No bets posted yet.{"\n"}Hit the + button to create one!
-            </Text>
-          </Surface>
+          <View style={{
+              borderRadius: 16, padding: 28,
+              backgroundColor: "rgba(255,255,255,0.07)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+              alignItems: "center",
+            }}>
+              <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
+                No bets posted yet.{"\n"}Hit the + button to create one!
+              </Text>
+            </View>
         )}
       </View>
     );

@@ -48,9 +48,13 @@ export default function AddBet() {
         if (!sessionId) return;
         const endpoint = postTo === "circles"
           ? `${API_BASE}/circles/my`
-          : "${API_BASE}/users/friends";
+            : `${API_BASE}/users/friends`;
         const res  = await fetch(endpoint, { headers: { "x-session-id": sessionId } });
         const data = await res.json();
+
+        console.log("targets fetched for", postTo, data);
+
+
         if (res.ok) { setTargets(data); setSelectedTargetId(null); setSelectedTargetName(null); }
       } catch (err) {
         console.error("Fetch targets error:", err);
@@ -60,7 +64,7 @@ export default function AddBet() {
   }, [postTo]);
 
   const filteredTargets = targets.filter((item) => {
-    const name = item.name ?? item.username;
+    const name = item.username ?? item.name;
     return name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -89,7 +93,7 @@ export default function AddBet() {
 
       const cleanedOptions = options.filter((o) => o.trim() !== "");
 
-      const response = await fetch("${API_BASE}/bets", {
+      const response = await fetch('${API_BASE}/bets', {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body: JSON.stringify({
