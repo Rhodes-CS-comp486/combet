@@ -170,6 +170,8 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
         b.winning_option_id,
         b.creator_user_id,
         creator.username,
+        creator.avatar_color,
+        creator.avatar_icon,
         bt.target_type,
         c.name,
         c.icon,

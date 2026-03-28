@@ -20,7 +20,7 @@ type Bet = {
   creator_username: string; my_response: "accepted" | "declined" | null;
   my_selected_option_id: string | null; options: BetOption[];
 };
-type Circle      = { circle_id: string; name: string; description?: string; icon?: string; created_at: string; is_private?: boolean };
+type Circle      = { circle_id: string; name: string; description?: string; icon?: string; icon_color?: string; created_at: string; is_private?: boolean };
 type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 
 export default function CircleProfile() {
@@ -144,10 +144,10 @@ export default function CircleProfile() {
         <View style={{ alignItems: "center", paddingTop: 8, paddingBottom: 24, paddingHorizontal: 20 }}>
           <Surface elevation={2} style={{
             width: 150, height: 150, borderRadius: 75,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: circle.icon_color ?? theme.colors.surface,
             justifyContent: "center", alignItems: "center", marginBottom: 16,
           }}>
-            <Ionicons name={(circle.icon as any) || "people"} size={70} color={theme.colors.primary} />
+            <Ionicons name={(circle.icon as any) || "people"} size={70} color= "#fff" />
           </Surface>
 
           <Text variant="headlineSmall" style={{

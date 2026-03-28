@@ -17,9 +17,10 @@ export const ICONS: (keyof typeof Ionicons.glyphMap)[] = [
 interface Props {
   selectedIndex: number;
   onIndexChange: (index: number) => void;
+  selectedColor?: string;
 }
 
-export default function IconCarousel({ selectedIndex, onIndexChange }: Props) {
+export default function IconCarousel({ selectedIndex, onIndexChange , selectedColor}: Props) {
   const { theme, isDark } = useAppTheme();
 
   const canGoLeft  = selectedIndex > 0;
@@ -63,7 +64,7 @@ export default function IconCarousel({ selectedIndex, onIndexChange }: Props) {
           {/* Previous icon peeking */}
           <View style={{
             width: 72, height: 72, borderRadius: 36,
-            backgroundColor: theme.colors.primary,
+            backgroundColor: selectedColor ?? theme.colors.primary,
             alignItems: "center", justifyContent: "center",
             opacity: prevIcon ? 0.3 : 0,
           }}>
@@ -76,11 +77,11 @@ export default function IconCarousel({ selectedIndex, onIndexChange }: Props) {
           width:           130,
           height:          130,
           borderRadius:    65,
-          backgroundColor: theme.colors.primary,
+          backgroundColor: selectedColor ?? theme.colors.primary,
           alignItems:      "center",
           justifyContent:  "center",
           marginHorizontal: 12,
-          shadowColor:     theme.colors.primary,
+          shadowColor: selectedColor ?? theme.colors.primary,
           shadowOpacity:   0.55,
           shadowRadius:    22,
           shadowOffset:    { width: 0, height: 8 },
@@ -94,7 +95,7 @@ export default function IconCarousel({ selectedIndex, onIndexChange }: Props) {
           {/* Next icon peeking */}
           <View style={{
             width: 72, height: 72, borderRadius: 36,
-            backgroundColor: theme.colors.primary,
+            backgroundColor: selectedColor ?? theme.colors.primary,
             alignItems: "center", justifyContent: "center",
             opacity: nextIcon ? 0.3 : 0,
           }}>

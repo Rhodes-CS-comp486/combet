@@ -8,9 +8,10 @@ import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import UserAvatar from "@/components/UserAvatar";
 
-type Member  = { id: string; username: string; joined_at: string };
-type Request = { request_id: string; user_id: string; username: string; created_at: string };
+type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string };
+type Request = { request_id: string; user_id: string; username: string; created_at: string; avatar_color?: string; avatar_icon?: string };
 
 export default function MembersScreen() {
   const { theme } = useAppTheme();
@@ -90,14 +91,9 @@ export default function MembersScreen() {
       borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
       borderRadius: 14, padding: 14, marginBottom: 10,
     }}>
-      <View style={{
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: "rgba(157,212,190,0.12)",
-        borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-        alignItems: "center", justifyContent: "center", marginRight: 14,
-      }}>
-        <Ionicons name="person" size={20} color={theme.colors.primary} />
-      </View>
+      <View style={{ marginRight: 14 }}>
+      <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
+    </View>
       <View style={{ flex: 1 }}>
         <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
           {item.username}
@@ -121,14 +117,7 @@ export default function MembersScreen() {
       borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
       borderRadius: 14, padding: 14, marginBottom: 10, gap: 12,
     }}>
-      <View style={{
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: "rgba(157,212,190,0.12)",
-        borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <Ionicons name="person" size={20} color={theme.colors.primary} />
-      </View>
+      <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
       <View style={{ flex: 1 }}>
         <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
           {item.username}

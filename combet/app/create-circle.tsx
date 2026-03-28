@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, Alert, Switch } from "react-native";
+import { View, ScrollView, Alert, Switch , TouchableOpacity} from "react-native";
 import { Text, TextInput, Button, HelperText } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -8,6 +8,7 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
 import { API_BASE } from "@/constants/api";
+import { AVATAR_COLORS } from "@/components/UserAvatar";
 
 
 
@@ -24,6 +25,7 @@ export default function CreateCircle() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [checkingName, setCheckingName] = useState(false);
   const [descError, setDescError] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState("#9dd4be");
 
   const handleCreate = async () => {
     setNameError(null);
@@ -39,7 +41,7 @@ export default function CreateCircle() {
       const res = await fetch(`${API_BASE}/circles`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
-        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex], is_private: isPrivate }),
+        body: JSON.stringify({ name, description, icon: ICONS[iconIndex], icon_color: selectedColor, is_private: isPrivate }),
       });
 
       const data = await res.json();
@@ -109,8 +111,29 @@ export default function CreateCircle() {
           PICK AN ICON
         </Text>
 
-        <IconCarousel selectedIndex={iconIndex} onIndexChange={setIconIndex} />
+        <IconCarousel selectedIndex={iconIndex} onIndexChange={setIconIndex} selectedColor={selectedColor}/>
 
+        {/* Color picker */}
+        <Text variant="labelLarge" style={{
+          color: theme.colors.onSurfaceVariant, fontWeight: "600",
+          letterSpacing: 1.5, marginBottom: 12, fontSize: 11, textAlign: "center",
+        }}>
+          PICK A COLOR
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginBottom: 28, paddingHorizontal: 20 }}>
+          {AVATAR_COLORS.map((color) => (
+            <TouchableOpacity
+              key={color}
+              onPress={() => setSelectedColor(color)}
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                backgroundColor: color,
+                borderWidth: selectedColor === color ? 3 : 0,
+                borderColor: "#fff",
+              }}
+            />
+          ))}
+        </View>
         {/* ── Inputs ── */}
         <View style={{ paddingHorizontal: 20 }}>
           <TextInput

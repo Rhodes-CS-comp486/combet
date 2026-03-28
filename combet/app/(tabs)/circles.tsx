@@ -13,6 +13,7 @@ type Circle = {
   circle_id:  string;
   name:       string;
   icon?:      string;
+  icon_color?: string;
   is_private: boolean;
 };
 
@@ -70,7 +71,7 @@ export default function CirclesScreen() {
           width:           150,
           height:          150,
           borderRadius:    75,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: item.icon_color ?? theme.colors.primary,
           justifyContent:  "center",
           alignItems:      "center",
           marginBottom:    8,
@@ -79,7 +80,7 @@ export default function CirclesScreen() {
         <Ionicons
           name={(item.icon as any) || "people"}
           size={70}
-          color={theme.colors.primary}
+          color="#fff"
         />
       </Surface>
 
