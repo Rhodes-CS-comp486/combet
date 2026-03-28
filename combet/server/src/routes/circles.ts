@@ -6,7 +6,7 @@ export const circlesRouter = Router();
 
 // ─── Create Circle ────────────────────────────────────────────────────────────
 circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
-  const { name, description, icon, is_private } = req.body;
+  const { name, description, icon, icon_color, is_private } = req.body;
   const userId = req.userId;
 
   if (!name || name.length < 5 || name.length > 15)
@@ -22,9 +22,9 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
       return res.status(409).json({ error: "A circle with that name already exists" });
 
     const circleResult = await pool.query(
-      `INSERT INTO circles (name, description, icon, is_private)
-       VALUES ($1, $2, $3, $4) RETURNING circle_id`,
-      [name, description, icon, is_private ?? false]
+      `INSERT INTO circles (name, description, icon, icon_color, is_private)
+       VALUES ($1, $2, $3, $4, $5) RETURNING circle_id`,
+      [name, description, icon, icon_color, is_private ?? false]
     );
     const circleId = circleResult.rows[0].circle_id;
     await pool.query(
@@ -42,7 +42,7 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
-      `SELECT c.circle_id, c.name, c.icon, c.is_private
+      `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private
        FROM circles c
        JOIN circle_members m ON m.circle_id = c.circle_id
        WHERE m.user_id = $1`,
@@ -73,7 +73,7 @@ circlesRouter.get("/check-name", async (req, res) => {
 // ─── Update Circle ────────────────────────────────────────────────────────────
 circlesRouter.put("/:circleId", async (req, res) => {
   const { circleId } = req.params;
-  const { name, description, icon, is_private } = req.body;
+  const { name, description, icon, icon_color, is_private } = req.body;
 
   if (!name || name.length < 5 || name.length > 15)
     return res.status(400).json({ error: "Name must be 5–15 characters" });
@@ -88,11 +88,11 @@ circlesRouter.put("/:circleId", async (req, res) => {
     if (existing.rows.length)
       return res.status(409).json({ error: "A circle with that name already exists" });
 
-    const result = await pool.query(
-      `UPDATE circles SET name = $1, description = $2, icon = $3, is_private = $4
-       WHERE circle_id = $5
-       RETURNING circle_id, name, description, icon, is_private`,
-      [name, description, icon, is_private ?? false, circleId]
+const result = await pool.query(
+      `UPDATE circles SET name = $1, description = $2, icon = $3, icon_color = $4, is_private = $5
+       WHERE circle_id = $6
+       RETURNING circle_id, name, description, icon, icon_color, is_private`,
+      [name, description, icon, icon_color, is_private ?? false, circleId]
     );
     if (!result.rows.length) return res.status(404).json({ error: "Circle not found" });
     res.json(result.rows[0]);
@@ -250,7 +250,7 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
 
   try {
     const circleResult = await pool.query(
-      `SELECT circle_id, name, description, icon, created_at FROM circles WHERE circle_id = $1`,
+      `SELECT circle_id, name, description, icon, icon_color, created_at FROM circles WHERE circle_id = $1`,
       [circleId]
     );
     if (!circleResult.rows.length) return res.status(404).json({ error: "Circle not found" });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, Alert, Switch } from "react-native";
+import { View, ScrollView, Alert, Switch, TouchableOpacity} from "react-native";
 import { Text, TextInput, Button, HelperText } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -8,6 +8,7 @@ import BackHeader from "@/components/Backheader";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import { AVATAR_COLORS } from "@/components/UserAvatar";
 
 export default function EditCircle() {
   const router            = useRouter();
@@ -23,6 +24,7 @@ export default function EditCircle() {
   const [descError, setDescError]     = useState<string | null>(null);
   const [loading, setLoading]         = useState(false);
   const [ready, setReady]             = useState(false);
+  const [selectedColor, setSelectedColor] = useState("#9dd4be");
 
   useEffect(() => {
     if (!circleId) return;
@@ -35,6 +37,7 @@ export default function EditCircle() {
         const idx = ICONS.indexOf(data.icon);
         setIconIndex(idx >= 0 ? idx : 0);
         setReady(true);
+        setSelectedColor(data.icon_color ?? "#9dd4be");
       })
       .catch(console.error);
   }, [circleId]);
@@ -61,7 +64,7 @@ export default function EditCircle() {
       const res = await fetch(`http://localhost:3001/circles/${circleId}`, {
         method:  "PUT",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name, description, icon: ICONS[iconIndex], is_private: isPrivate }),
+        body: JSON.stringify({ name, description, icon: ICONS[iconIndex], icon_color: selectedColor, is_private: isPrivate }),
       });
 
       if (res.status === 409) { const data = await res.json(); setNameError(data.error); return; }
@@ -109,7 +112,34 @@ export default function EditCircle() {
           CHANGE ICON
         </Text>
 
-        <IconCarousel selectedIndex={iconIndex} onIndexChange={setIconIndex} />
+        <IconCarousel
+          selectedIndex={iconIndex}
+          onIndexChange={setIconIndex}
+          selectedColor={selectedColor}
+        />
+
+        {/* Color picker */}
+        <Text variant="labelLarge" style={{
+          color: theme.colors.onSurfaceVariant, fontWeight: "600",
+          letterSpacing: 1.5, marginBottom: 12, fontSize: 11, textAlign: "center",
+          marginTop: 8,
+        }}>
+          PICK A COLOR
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginBottom: 28 }}>
+          {AVATAR_COLORS.map((color) => (
+            <TouchableOpacity
+              key={color}
+              onPress={() => setSelectedColor(color)}
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                backgroundColor: color,
+                borderWidth: selectedColor === color ? 3 : 0,
+                borderColor: "#fff",
+              }}
+            />
+          ))}
+        </View>
 
         <View style={{ marginTop: 28 }}>
           <TextInput

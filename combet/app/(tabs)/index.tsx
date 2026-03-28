@@ -9,8 +9,7 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
-type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; };
-type SearchResult = UserResult | CircleResult;
+type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; icon?: string; icon_color?: string; };type SearchResult = UserResult | CircleResult;
 import { API_BASE } from "@/constants/api";
 
 
@@ -323,17 +322,15 @@ export default function HomeScreen() {
                   borderBottomColor: theme.colors.outline,
                 }}>
                   <View style={{
-                    width:           42,
-                    height:          42,
-                    borderRadius:    12,
-                    backgroundColor: theme.colors.surfaceVariant,
-                    borderWidth:     0.5,
-                    borderColor:     theme.colors.outline,
-                    alignItems:      "center",
-                    justifyContent:  "center",
-                  }}>
-                    <Ionicons name="people" size={20} color="#a78bfa" />
-                  </View>
+                  width:           42,
+                  height:          42,
+                  borderRadius:    12,
+                  backgroundColor: item.icon_color ?? theme.colors.primary,
+                  alignItems:      "center",
+                  justifyContent:  "center",
+                }}>
+                  <Ionicons name={(item.icon as any) || "people"} size={20} color="#fff" />
+                </View>
 
                   <View style={{ flex: 1 }}>
                     {/* Circle name + privacy badge on same line */}

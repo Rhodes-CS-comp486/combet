@@ -102,7 +102,9 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
         u.avatar_color,
         u.avatar_icon,
         NULL::text AS join_status,
-        NULL::boolean AS is_private
+        NULL::boolean AS is_private,
+        NULL::text AS icon,
+        NULL::text AS icon_color
       FROM users u
       LEFT JOIN follows f ON f.following_id = u.id AND f.follower_id = $1
       WHERE u.id <> $1
@@ -128,7 +130,9 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
           WHEN cjr.status = 'pending' THEN 'pending'
           ELSE NULL
         END AS join_status,
-        c.is_private
+        c.is_private,
+        c.icon,
+        c.icon_color
       FROM circles c
       LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $1
       LEFT JOIN circle_join_requests cjr ON cjr.circle_id = c.circle_id AND cjr.user_id = $1 AND cjr.status = 'pending'
