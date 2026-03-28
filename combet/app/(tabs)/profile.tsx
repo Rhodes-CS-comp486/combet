@@ -391,7 +391,8 @@ export default function ProfileScreen() {
         <Modal
           visible={editVisible}
           onDismiss={() => setEditVisible(false)}
-          contentContainerStyle={[s.modal, { backgroundColor: theme.colors.surface }]}
+          contentContainerStyle={s.modal}
+            style={s.modalBackdrop}
         >
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Profile
@@ -428,7 +429,8 @@ export default function ProfileScreen() {
         <Modal
           visible={avatarVisible}
           onDismiss={() => setAvatarVisible(false)}
-          contentContainerStyle={[s.modal, { backgroundColor: theme.colors.surface }]}
+          contentContainerStyle={s.modal}
+            style={s.modalBackdrop}
         >
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Avatar
@@ -478,12 +480,12 @@ export default function ProfileScreen() {
                     height: 48,
                     borderRadius: 12,
                     backgroundColor: selectedIcon === item.key
-                      ? theme.colors.primary
-                      : theme.colors.surfaceVariant,
+                      ? selectedColor
+                      : "rgba(255, 255, 255, 0.08)",
                     justifyContent: "center",
                     alignItems: "center",
                     borderWidth: selectedIcon === item.key ? 2 : 0,
-                    borderColor: theme.colors.primary,
+                    borderColor: selectedColor,
                   }}
                 >
                   {item.key === "initials" ? (
@@ -564,7 +566,14 @@ const styles = (theme: any) =>
     optionChip: { flexDirection: "row", alignItems: "center", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, gap: 6, maxWidth: "48%" },
     optionLabel: { fontWeight: "700", fontSize: 12 },
     optionText: { fontSize: 12, flex: 1 },
-    modal: { margin: 24, borderRadius: 16, padding: 24 },
+    modal: {
+      margin: 24,
+      borderRadius: 20,
+      padding: 24,
+      backgroundColor: "#1f3347",
+      borderWidth: 1,
+      borderColor: "rgba(157, 212, 190, 0.2)",
+    },    modalBackdrop: { backgroundColor: "rgba(10, 20, 30, 0.85)" },
     modalTitle: { fontWeight: "700", marginBottom: 16 },
     input: { marginBottom: 12, backgroundColor: "transparent" },
     modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },

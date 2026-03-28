@@ -51,37 +51,26 @@ export default function BetCard({
         {/* ── HEADER ── */}
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 5, marginTop: 5 }}>
-            {mode === "feed" ? (
-              item.target_type === "circle" ? (
-                <View style={{
-                  width: 60, height: 60, borderRadius: 30,
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
-                </View>
-              ) : (
-                <UserAvatar
-                  user={{
-                    display_name: item.creator_name || item.creator_username,
-                    username: item.creator_username,
-                    avatar_color: item.creator_avatar_color,
-                    avatar_icon: item.creator_avatar_icon,
-                  }}
-                  size={60}
-                />
-              )
-            ) : (
-              <View style={{
-                width: 60, height: 60, borderRadius: 30,
-                backgroundColor: "rgba(157,212,190,0.15)",
-                borderWidth: 1, borderColor: "rgba(157,212,190,0.25)",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
-              </View>
-            )}
+            {item.target_type === "circle" ? (
+          <View style={{
+            width: 60, height: 60, borderRadius: 30,
+            backgroundColor: "rgba(255,255,255,0.08)",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name={(item.icon as any) || "people"} size={26} color={theme.colors.primary} />
+          </View>
+        ) : (
+          <UserAvatar
+            user={{
+              display_name: item.creator_name || item.creator_username,
+              username: item.creator_username,
+              avatar_color: item.creator_avatar_color,
+              avatar_icon: item.creator_avatar_icon,
+            }}
+            size={60}
+          />
+        )}
 
             <View style={{ flex: 1, marginTop: 6 }}>
               <Text style={{ fontSize: 20, fontWeight: "600", color: theme.colors.onSurface, lineHeight: 22 }}>
