@@ -474,6 +474,123 @@ circlesRouter.post("/:circleId/requests/:requestId/decline", requireAuth, async 
   }
 });
 
+// ─── Get Circle Messages ──────────────────────────────────────────────────────
+// GET /circles/:circleId/messages?before=<message_id>
+circlesRouter.get("/:circleId/messages", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId       = req.userId;
+  const before       = req.query.before ? Number(req.query.before) : null;
+  const limit        = 40;
+
+  try {
+    // Must be a member
+    const member = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!member.rows.length) return res.status(403).json({ error: "Not a member" });
+
+    const result = before
+      ? await pool.query(
+          `SELECT
+             m.message_id, m.content, m.created_at,
+             u.id AS user_id, u.username, u.avatar_color, u.avatar_icon
+           FROM circle_messages m
+           JOIN users u ON u.id = m.user_id
+           WHERE m.circle_id = $1 AND m.message_id < $2
+           ORDER BY m.created_at DESC
+           LIMIT $3`,
+          [circleId, before, limit]
+        )
+      : await pool.query(
+          `SELECT
+             m.message_id, m.content, m.created_at,
+             u.id AS user_id, u.username, u.avatar_color, u.avatar_icon
+           FROM circle_messages m
+           JOIN users u ON u.id = m.user_id
+           WHERE m.circle_id = $1
+           ORDER BY m.created_at DESC
+           LIMIT $2`,
+          [circleId, limit]
+        );
+
+    // Return oldest-first so the UI can render top-to-bottom
+    res.json(result.rows.reverse());
+  } catch (err) {
+    console.error("GET MESSAGES ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Post Circle Message ──────────────────────────────────────────────────────
+// POST /circles/:circleId/messages
+circlesRouter.post("/:circleId/messages", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId       = req.userId;
+  const { content }  = req.body;
+
+  if (!content || !content.trim())
+    return res.status(400).json({ error: "Message cannot be empty" });
+  if (content.trim().length > 500)
+    return res.status(400).json({ error: "Message too long (max 500 chars)" });
+
+  try {
+    // Must be a member
+    const member = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!member.rows.length) return res.status(403).json({ error: "Not a member" });
+
+    const result = await pool.query(
+      `INSERT INTO circle_messages (circle_id, user_id, content)
+       VALUES ($1, $2, $3)
+       RETURNING message_id, content, created_at`,
+      [circleId, userId, content.trim()]
+    );
+
+    const userResult = await pool.query(
+      `SELECT id AS user_id, username, avatar_color, avatar_icon FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    res.status(201).json({ ...result.rows[0], ...userResult.rows[0] });
+  } catch (err) {
+    console.error("POST MESSAGE ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Poll for New Messages ────────────────────────────────────────────────────
+// GET /circles/:circleId/messages/since/:messageId
+circlesRouter.get("/:circleId/messages/since/:messageId", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId, messageId } = req.params;
+  const userId                   = req.userId;
+
+  try {
+    const member = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!member.rows.length) return res.status(403).json({ error: "Not a member" });
+
+    const result = await pool.query(
+      `SELECT
+         m.message_id, m.content, m.created_at,
+         u.id AS user_id, u.username, u.avatar_color, u.avatar_icon
+       FROM circle_messages m
+       JOIN users u ON u.id = m.user_id
+       WHERE m.circle_id = $1 AND m.message_id > $2
+       ORDER BY m.created_at ASC`,
+      [circleId, messageId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("POLL MESSAGES ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 // ─── Get Single Circle ────────────────────────────────────────────────────────
 circlesRouter.get("/:circleId", async (req, res) => {
   const { circleId } = req.params;
