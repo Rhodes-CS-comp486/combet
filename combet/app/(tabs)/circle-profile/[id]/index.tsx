@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { View, ScrollView, Alert, TouchableOpacity } from "react-native";
-import { Text, Surface, Button, Chip } from "react-native-paper";
+import { Text, Surface, Button} from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";

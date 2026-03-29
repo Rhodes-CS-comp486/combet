@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, Alert, Pressable, Platform } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { View, ScrollView, Alert, Pressable} from "react-native";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
 import GradientBackground from "@/components/GradientBackground";
@@ -8,9 +7,7 @@ import {
   Text,
   TextInput,
   Button,
-  Surface,
   HelperText,
-  SegmentedButtons,
 } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
