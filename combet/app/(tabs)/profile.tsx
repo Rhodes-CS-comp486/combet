@@ -43,9 +43,11 @@ type Bet = {
   stake_amount: number;
   custom_stake?: string;
   status: string;
+  response_status: string | null;
   created_at: string;
   closes_at: string;
   creator_name: string;
+  is_creator?: boolean;
   circle_name?: string;
   options: { id: number; label: string; option_text: string }[];
 };
@@ -71,7 +73,7 @@ export default function ProfileScreen() {
   const [avatarSaving, setAvatarSaving] = useState(false);
 
   // Section Label
-  const [betFilter, setBetFilter] = useState<"all" | "circle" | "current" | "past">("all");
+  const [betFilter, setBetFilter] = useState<"all" | "created" | "pending" | "current" | "past" | "circle">("all");
 
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,19 +182,34 @@ export default function ProfileScreen() {
     );
   }
 
-  const statusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case "ACCEPTED": return "#4CAF50";
-      case "DECLINED": return theme.colors.error;
-      default: return theme.colors.onSurfaceVariant;
-    }
-  };
+  const badgeConfig = (bet: Bet): { label: string; color: string; bg: string } => {
+    const r = bet.response_status?.toLowerCase();
 
-  const statusBg = (status: string) => {
-    switch (status.toUpperCase()) {
-      case "ACCEPTED": return "rgba(76,175,80,0.1)";
-      case "DECLINED": return "rgba(229,57,53,0.1)";
-      default: return "rgba(255,255,255,0.06)";
+    // Passed — user declined or bet was cancelled
+    if (r === "declined") return { label: "Passed",  color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
+
+    // Accepted — show the bet's current lifecycle state
+    if (r === "accepted") {
+      switch (bet.status.toUpperCase()) {
+        case "PENDING":
+        case "CLOSED":
+        case "PENDING_APPROVAL":
+        case "DISPUTED":         return { label: "Open",    color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
+        case "SETTLED":          return { label: "Settled", color: "#fcd34d", bg: "rgba(252,211,77,0.12)"  };
+        case "CANCELLED":        return { label: "Passed",  color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
+        default:                 return { label: "Open",    color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
+      }
+    }
+
+    // Creator (no response_status) — show lifecycle state
+    switch (bet.status.toUpperCase()) {
+      case "PENDING":          return { label: "Pending",  color: "#a5b4fc", bg: "rgba(99,102,241,0.12)"  };
+      case "CLOSED":           return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
+      case "PENDING_APPROVAL": return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
+      case "DISPUTED":         return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
+      case "SETTLED":          return { label: "Settled",  color: "#fcd34d", bg: "rgba(252,211,77,0.12)"  };
+      case "CANCELLED":        return { label: "Passed",   color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
+      default:                 return { label: "Pending",  color: "#a5b4fc", bg: "rgba(99,102,241,0.12)"  };
     }
   };
 
@@ -286,28 +303,37 @@ export default function ProfileScreen() {
         {/* Filter chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {(["all", "circle", "current", "past"] as const).map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                onPress={() => setBetFilter(filter)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  borderRadius: 20,
-                  backgroundColor: betFilter === filter ? theme.colors.primary : "#1a2035",
-                  borderWidth: 1,
-                  borderColor: betFilter === filter ? theme.colors.primary : "#2a3550",
-                }}
-              >
-                <Text style={{
-                  fontSize: 12,
-                  fontWeight: "500",
-                  color: betFilter === filter ? "#fff" : "#94a3b8",
-                }}>
-                  {filter === "all" ? "All" : filter === "circle" ? "Circle Bets" : filter === "current" ? "Current" : "Past"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {(["all", "pending", "current", "past", "created", "circle"] as const).map((filter) => {
+              const label =
+                filter === "all"     ? "All" :
+                filter === "created" ? "Created" :
+                filter === "pending" ? "Pending" :
+                filter === "current" ? "Current" :
+                filter === "past"    ? "Past" :
+                "Circle Bets";
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  onPress={() => setBetFilter(filter)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    backgroundColor: betFilter === filter ? theme.colors.primary : "#1a2035",
+                    borderWidth: 1,
+                    borderColor: betFilter === filter ? theme.colors.primary : "#2a3550",
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 12,
+                    fontWeight: "500",
+                    color: betFilter === filter ? "#fff" : "#94a3b8",
+                  }}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
 
@@ -315,9 +341,11 @@ export default function ProfileScreen() {
           <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
         ) : bets.filter(bet => {
             if (betFilter === "all") return true;
+            if (betFilter === "created") return !!bet.is_creator;
+            if (betFilter === "pending") return bet.status.toUpperCase() === "PENDING" && !bet.response_status;
+            if (betFilter === "current") return bet.response_status?.toLowerCase() === "accepted" && ["PENDING", "CLOSED", "PENDING_APPROVAL", "DISPUTED"].includes(bet.status.toUpperCase());
+            if (betFilter === "past") return bet.response_status?.toLowerCase() === "declined" || ["SETTLED", "CANCELLED"].includes(bet.status.toUpperCase());
             if (betFilter === "circle") return !!bet.circle_name;
-            if (betFilter === "current") return bet.status.toUpperCase() === "PENDING";
-            if (betFilter === "past") return bet.status.toUpperCase() !== "PENDING";
             return true;
           }).length === 0 ? (
           <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
@@ -326,19 +354,24 @@ export default function ProfileScreen() {
         ) : (
           bets.filter(bet => {
             if (betFilter === "all") return true;
+            if (betFilter === "created") return !!bet.is_creator;
+            if (betFilter === "pending") return bet.status.toUpperCase() === "PENDING" && !bet.response_status;
+            if (betFilter === "current") return bet.response_status?.toLowerCase() === "accepted" && ["PENDING", "CLOSED", "PENDING_APPROVAL", "DISPUTED"].includes(bet.status.toUpperCase());
+            if (betFilter === "past") return bet.response_status?.toLowerCase() === "declined" || ["SETTLED", "CANCELLED"].includes(bet.status.toUpperCase());
             if (betFilter === "circle") return !!bet.circle_name;
-            if (betFilter === "current") return bet.status.toUpperCase() === "PENDING";
-            if (betFilter === "past") return bet.status.toUpperCase() !== "PENDING";
             return true;
           }).map((bet) => (
             <Surface key={bet.id} elevation={1} style={s.betCard}>
               <View style={s.betHeader}>
                 <Text variant="titleSmall" style={s.betTitle} numberOfLines={1}>{bet.title}</Text>
-                <View style={[s.statusBadge, { backgroundColor: statusBg(bet.status) }]}>
-                  <Text style={[s.statusText, { color: statusColor(bet.status) }]}>
-                    {bet.status.toUpperCase()}
-                  </Text>
-                </View>
+                {(() => {
+                  const badge = badgeConfig(bet);
+                  return (
+                    <View style={[s.statusBadge, { backgroundColor: badge.bg }]}>
+                      <Text style={[s.statusText, { color: badge.color }]}>{badge.label}</Text>
+                    </View>
+                  );
+                })()}
               </View>
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
