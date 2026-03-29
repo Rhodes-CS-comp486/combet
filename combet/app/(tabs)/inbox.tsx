@@ -1,20 +1,21 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, Surface, Button, Chip, ActivityIndicator } from "react-native-paper";
+import { Text, Surface, Button, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
-import {router} from "expo-router";
+import { router } from "expo-router";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
-
-
+import UserAvatar from "@/components/UserAvatar"; // ← import UserAvatar
 
 type Notification = {
   notification_id: string;
   type: string;
   entity_id: string;
   actor_username: string | null;
+  actor_avatar_color: string | null; // ← added
+  actor_avatar_icon: string | null;  // ← added
   circle_name: string | null;
   invite_id: string | null;
   status: string | null;
@@ -23,14 +24,11 @@ type Notification = {
   icon?: string;
 };
 
-// ── Filter config ────────────────────────────────────────────────────────────
-// Add new filters here as you add new notification types
+// ── Filter config ─────────────────────────────────────────────────────────────
 const FILTERS = [
-  { key: "all",           label: "All",      icon: "notifications-outline" },
-  { key: "circle_invite", label: "Invites",  icon: "people-outline"        },
-  { key: "pending",       label: "Pending",  icon: "time-outline"          },
-  // future: { key: "bet_result", label: "Results", icon: "trophy-outline" },
-  // future: { key: "follow",     label: "Follows",  icon: "person-add-outline" },
+  { key: "all",           label: "All",     icon: "notifications-outline" },
+  { key: "circle_invite", label: "Invites", icon: "people-outline"        },
+  { key: "pending",       label: "Pending", icon: "time-outline"          },
 ] as const;
 
 type FilterKey = typeof FILTERS[number]["key"];
@@ -88,41 +86,33 @@ export default function InboxScreen() {
     }
   };
 
-  // ── Filtered list ─────────────────────────────────────────────────────────
+  // ── Filtered list ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     if (activeFilter === "all")     return notifications;
     if (activeFilter === "pending") return notifications.filter((n) => n.status === "pending");
     return notifications.filter((n) => n.type === activeFilter);
   }, [notifications, activeFilter]);
 
-  // ── Badge counts ──────────────────────────────────────────────────────────
+  // ── Badge counts ───────────────────────────────────────────────────────────
   const pendingCount = notifications.filter((n) => n.status === "pending").length;
-  const inviteCount  = notifications.filter((n) => n.type === "circle_invite").length;
-
-  const getBadge = (key: FilterKey) => {
-    if (key === "pending")       return pendingCount;
-    if (key === "circle_invite") return inviteCount;
-    if (key === "all")           return notifications.length;
-    return 0;
-  };
 
   const cardBg = "rgba(255,255,255,0.09)";
 
-  // ── Notification card ─────────────────────────────────────────────────────
+  const timeAgo = (dateStr: string) => {
+    const diff  = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 1)   return "just now";
+    if (mins < 60)  return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  // ── Notification card ──────────────────────────────────────────────────────
   const renderItem = ({ item }: { item: Notification }) => {
     const isPending  = item.status === "pending";
     const isAccepted = item.status === "accepted";
-
-    const timeAgo = (dateStr: string) => {
-      const diff = Date.now() - new Date(dateStr).getTime();
-      const mins  = Math.floor(diff / 60000);
-      const hours = Math.floor(diff / 3600000);
-      const days  = Math.floor(diff / 86400000);
-      if (mins < 1)   return "just now";
-      if (mins < 60)  return `${mins}m ago`;
-      if (hours < 24) return `${hours}h ago`;
-      return `${days}d ago`;
-    };
 
     if (item.type === "circle_invite") {
       return (
@@ -135,24 +125,21 @@ export default function InboxScreen() {
             overflow:        "hidden",
           }}
         >
-
-
           <View style={{ padding: 16 }}>
-            {/* ── Top row: icon + text + time ── */}
+            {/* ── Top row: actor avatar + text + status ── */}
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-              <View style={{
-                  width: 40, height: 40, borderRadius: 20,
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                  alignItems: "center", justifyContent: "center",
-                  marginRight: 12,
-                }}>
-                  <Ionicons
-                    name={((item as any).icon as any) || "people"}
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
+
+              {/* ← UserAvatar replaces the hardcoded icon circle */}
+              <View style={{ marginRight: 12 }}>
+                <UserAvatar
+                  user={{
+                    username:     item.actor_username ?? undefined,
+                    avatar_color: item.actor_avatar_color ?? undefined,
+                    avatar_icon:  item.actor_avatar_icon ?? undefined,
+                  }}
+                  size={40}
+                />
+              </View>
 
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -215,13 +202,15 @@ export default function InboxScreen() {
         borderRadius: 16, marginBottom: 12, backgroundColor: cardBg, padding: 16,
       }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <View style={{
-            width: 40, height: 40, borderRadius: 20,
-            backgroundColor: "rgba(46,108,246,0.15)",
-            borderWidth: 1.5, borderColor: "rgba(46,108,246,0.4)",
-            alignItems: "center", justifyContent: "center", marginRight: 12,
-          }}>
-            <Ionicons name="notifications" size={18} color={theme.colors.primary} />
+          <View style={{ marginRight: 12 }}>
+            <UserAvatar
+              user={{
+                username:     item.actor_username ?? undefined,
+                avatar_color: item.actor_avatar_color ?? undefined,
+                avatar_icon:  item.actor_avatar_icon ?? undefined,
+              }}
+              size={40}
+            />
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
@@ -234,12 +223,10 @@ export default function InboxScreen() {
         </View>
       </Surface>
     );
-
-
   };
 
   return (
-      <GradientBackground>
+    <GradientBackground>
 
       {/* ── Header ── */}
       <View style={{
@@ -249,26 +236,25 @@ export default function InboxScreen() {
         borderBottomWidth: 1,
         borderColor:       isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
       }}>
-
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-      <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
-  Inbox
-</Text>
-      {pendingCount > 0 && (
-        <View style={{
-          backgroundColor: theme.colors.primary,
-          borderRadius:    12,
-          paddingHorizontal: 10,
-          paddingVertical:   3,
-        }}>
-          <Text style={{ color: "white", fontWeight: "700", fontSize: 12 }}>
-            {pendingCount} pending
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
+            Inbox
           </Text>
-        </View>
+          {pendingCount > 0 && (
+            <View style={{
+              backgroundColor:   theme.colors.primary,
+              borderRadius:      12,
+              paddingHorizontal: 10,
+              paddingVertical:   3,
+            }}>
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 12 }}>
+                {pendingCount} pending
+              </Text>
+            </View>
           )}
         </View>
 
-        {/* ── Filter chips ── */}
+        {/* ── Filter tabs ── */}
         <View style={{ flexDirection: "row" }}>
           {FILTERS.map(({ key, label }) => {
             const active = activeFilter === key;
@@ -285,16 +271,16 @@ export default function InboxScreen() {
                 }}
               >
                 <Text style={{
-                  fontSize: 13,
+                  fontSize:   13,
                   fontWeight: active ? "600" : "400",
-                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                  color:      active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                 }}>
                   {label}
                 </Text>
               </TouchableOpacity>
             );
           })}
-      </View>
+        </View>
       </View>
 
       {/* ── Content ── */}
@@ -321,6 +307,6 @@ export default function InboxScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-      </GradientBackground>
+    </GradientBackground>
   );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+/* import React from "react";
 import { View, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -61,3 +61,4 @@ export default function SearchBar({ value, onChangeText, placeholder }: Props) {
     </View>
   );
 }
+*/
