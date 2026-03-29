@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, View, StyleSheet, TouchableOpacity } from "react-native";
 import {
-  Surface,
   Text,
   Button,
-  Divider,
   ActivityIndicator,
   Portal,
   Modal,
   TextInput,
+  Divider,
 } from "react-native-paper";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,9 +15,8 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import UserAvatar, { AVATAR_ICONS, AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
+import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
-
-
 
 type UserProfile = {
   id: number;
@@ -47,35 +45,32 @@ type Bet = {
   created_at: string;
   closes_at: string;
   creator_name: string;
+  creator_avatar_color?: string;
+  creator_avatar_icon?: string;
   is_creator?: boolean;
   circle_name?: string;
   options: { id: number; label: string; option_text: string }[];
+  total_joined?: number;
 };
 
 export default function ProfileScreen() {
   const { theme } = useAppTheme();
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [bets, setBets] = useState<Bet[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile]       = useState<UserProfile | null>(null);
+  const [bets, setBets]             = useState<Bet[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [betsLoading, setBetsLoading] = useState(true);
-
-  // Edit profile modal
   const [editVisible, setEditVisible] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editBio, setEditBio] = useState("");
+  const [editName, setEditName]     = useState("");
+  const [editBio, setEditBio]       = useState("");
   const [editSaving, setEditSaving] = useState(false);
-
-  // Avatar picker modal
   const [avatarVisible, setAvatarVisible] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#2563eb");
-  const [selectedIcon, setSelectedIcon] = useState("initials");
-  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [selectedIcon, setSelectedIcon]   = useState("initials");
+  const [avatarSaving, setAvatarSaving]   = useState(false);
+  const [betFilter, setBetFilter] = useState<"all" | "pending" | "current" | "past" | "created" | "circle">("all");
 
-  // Section Label
-  const [betFilter, setBetFilter] = useState<"all" | "created" | "pending" | "current" | "past" | "circle">("all");
-
-  // ── Fetch profile ───────────────────────────────────────────────────────────
+  // ── Fetch profile ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -100,28 +95,28 @@ export default function ProfileScreen() {
     fetchProfile();
   }, []);
 
-  // ── Fetch my bets ───────────────────────────────────────────────────────────
+  // ── Fetch my bets ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchBets = async () => {
-      try {
-        const sessionId = await getSessionId();
-        if (!sessionId) return;
-        const res = await fetch(`${API_BASE}/bets/my-bets`, {
-          headers: { "x-session-id": sessionId },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        setBets(data);
-      } catch (e) {
-        console.error("Bets fetch error:", e);
-      } finally {
-        setBetsLoading(false);
-      }
-    };
     fetchBets();
   }, []);
 
-  // ── Save profile edits ──────────────────────────────────────────────────────
+  const fetchBets = async () => {
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      const res = await fetch(`${API_BASE}/bets/my-bets`, {
+        headers: { "x-session-id": sessionId },
+      });
+      if (!res.ok) return;
+      setBets(await res.json());
+    } catch (e) {
+      console.error("Bets fetch error:", e);
+    } finally {
+      setBetsLoading(false);
+    }
+  };
+
+  // ── Save profile ───────────────────────────────────────────────────────────
   const saveProfile = async () => {
     setEditSaving(true);
     try {
@@ -133,9 +128,7 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();
-      setProfile(prev =>
-        prev ? { ...prev, display_name: updated.display_name, bio: updated.bio } : prev
-      );
+      setProfile(prev => prev ? { ...prev, display_name: updated.display_name, bio: updated.bio } : prev);
       setEditVisible(false);
     } catch (e) {
       Alert.alert("Error", "Could not save profile. Please try again.");
@@ -144,7 +137,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // ── Save avatar ─────────────────────────────────────────────────────────────
+  // ── Save avatar ────────────────────────────────────────────────────────────
   const saveAvatar = async () => {
     setAvatarSaving(true);
     try {
@@ -161,9 +154,7 @@ export default function ProfileScreen() {
       });
       if (!res.ok) throw new Error("Failed to save avatar");
       const updated = await res.json();
-      setProfile(prev =>
-        prev ? { ...prev, avatar_color: updated.avatar_color, avatar_icon: updated.avatar_icon } : prev
-      );
+      setProfile(prev => prev ? { ...prev, avatar_color: updated.avatar_color, avatar_icon: updated.avatar_icon } : prev);
       setAvatarVisible(false);
     } catch (e) {
       Alert.alert("Error", "Could not save avatar. Please try again.");
@@ -172,55 +163,40 @@ export default function ProfileScreen() {
     }
   };
 
+  // ── Filter logic ───────────────────────────────────────────────────────────
+  const filterBets = (bet: Bet) => {
+    if (betFilter === "all")     return true;
+    if (betFilter === "pending") return bet.status.toUpperCase() === "PENDING" && !bet.response_status;
+    if (betFilter === "current") return bet.response_status?.toLowerCase() === "accepted" && ["PENDING", "CLOSED", "PENDING_APPROVAL", "DISPUTED"].includes(bet.status.toUpperCase());
+    if (betFilter === "past")    return bet.response_status?.toLowerCase() === "declined" || ["SETTLED", "CANCELLED"].includes(bet.status.toUpperCase());
+    if (betFilter === "created") return !!bet.is_creator;
+    if (betFilter === "circle")  return !!bet.circle_name;
+    return true;
+  };
+
   const s = styles(theme);
 
   if (loading) {
     return (
-        <GradientBackground style={s.center}>
+      <GradientBackground style={s.center}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        </GradientBackground>
+      </GradientBackground>
     );
   }
 
-  const badgeConfig = (bet: Bet): { label: string; color: string; bg: string } => {
-    const r = bet.response_status?.toLowerCase();
+  const filteredBets = bets.filter(filterBets);
 
-    // Passed — user declined or bet was cancelled
-    if (r === "declined") return { label: "Passed",  color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
-
-    // Accepted — show the bet's current lifecycle state
-    if (r === "accepted") {
-      switch (bet.status.toUpperCase()) {
-        case "PENDING":
-        case "CLOSED":
-        case "PENDING_APPROVAL":
-        case "DISPUTED":         return { label: "Open",    color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
-        case "SETTLED":          return { label: "Settled", color: "#fcd34d", bg: "rgba(252,211,77,0.12)"  };
-        case "CANCELLED":        return { label: "Passed",  color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
-        default:                 return { label: "Open",    color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
-      }
-    }
-
-    // Creator (no response_status) — show lifecycle state
-    switch (bet.status.toUpperCase()) {
-      case "PENDING":          return { label: "Pending",  color: "#a5b4fc", bg: "rgba(99,102,241,0.12)"  };
-      case "CLOSED":           return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
-      case "PENDING_APPROVAL": return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
-      case "DISPUTED":         return { label: "Open",     color: "#9dd4be", bg: "rgba(157,212,190,0.12)" };
-      case "SETTLED":          return { label: "Settled",  color: "#fcd34d", bg: "rgba(252,211,77,0.12)"  };
-      case "CANCELLED":        return { label: "Passed",   color: "#e87060", bg: "rgba(232,112,96,0.12)"  };
-      default:                 return { label: "Pending",  color: "#a5b4fc", bg: "rgba(99,102,241,0.12)"  };
-    }
-  };
-
-  const stakeLabel = (bet: Bet) => {
-    if (bet.custom_stake) return bet.custom_stake;
-    if (bet.stake_amount > 0) return `${bet.stake_amount} coins`;
-    return "No stake";
-  };
+  const TABS: { key: typeof betFilter; label: string }[] = [
+    { key: "all",     label: "All"          },
+    { key: "pending", label: "Pending"      },
+    { key: "current", label: "Current"      },
+    { key: "past",    label: "Past"         },
+    { key: "created", label: "Created"      },
+    { key: "circle",  label: "Circle Bets"  },
+  ];
 
   return (
-      <GradientBackground>
+    <GradientBackground>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* ── Top bar ── */}
@@ -296,127 +272,63 @@ export default function ProfileScreen() {
         <Divider style={s.divider} />
 
         {/* ── My Bets ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <Text variant="titleMedium" style={s.sectionLabel}>My Bets</Text>
-        </View>
+        <Text variant="titleMedium" style={[s.sectionLabel, { marginBottom: 12 }]}>My Bets</Text>
 
-        {/* Filter chips */}
+        {/* ── Filter tabs ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {(["all", "pending", "current", "past", "created", "circle"] as const).map((filter) => {
-              const label =
-                filter === "all"     ? "All" :
-                filter === "created" ? "Created" :
-                filter === "pending" ? "Pending" :
-                filter === "current" ? "Current" :
-                filter === "past"    ? "Past" :
-                "Circle Bets";
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  onPress={() => setBetFilter(filter)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderRadius: 20,
-                    backgroundColor: betFilter === filter ? theme.colors.primary : "#1a2035",
-                    borderWidth: 1,
-                    borderColor: betFilter === filter ? theme.colors.primary : "#2a3550",
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: "500",
-                    color: betFilter === filter ? "#fff" : "#94a3b8",
-                  }}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {TABS.map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setBetFilter(key)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  backgroundColor: betFilter === key ? theme.colors.primary : "#1a2035",
+                  borderWidth: 1,
+                  borderColor: betFilter === key ? theme.colors.primary : "#2a3550",
+                }}
+              >
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: "500",
+                  color: betFilter === key ? "#fff" : "#94a3b8",
+                }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </ScrollView>
 
+        {/* ── Bet list ── */}
         {betsLoading ? (
           <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
-        ) : bets.filter(bet => {
-            if (betFilter === "all") return true;
-            if (betFilter === "created") return !!bet.is_creator;
-            if (betFilter === "pending") return bet.status.toUpperCase() === "PENDING" && !bet.response_status;
-            if (betFilter === "current") return bet.response_status?.toLowerCase() === "accepted" && ["PENDING", "CLOSED", "PENDING_APPROVAL", "DISPUTED"].includes(bet.status.toUpperCase());
-            if (betFilter === "past") return bet.response_status?.toLowerCase() === "declined" || ["SETTLED", "CANCELLED"].includes(bet.status.toUpperCase());
-            if (betFilter === "circle") return !!bet.circle_name;
-            return true;
-          }).length === 0 ? (
+        ) : filteredBets.length === 0 ? (
           <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
             No bets found.
           </Text>
         ) : (
-          bets.filter(bet => {
-            if (betFilter === "all") return true;
-            if (betFilter === "created") return !!bet.is_creator;
-            if (betFilter === "pending") return bet.status.toUpperCase() === "PENDING" && !bet.response_status;
-            if (betFilter === "current") return bet.response_status?.toLowerCase() === "accepted" && ["PENDING", "CLOSED", "PENDING_APPROVAL", "DISPUTED"].includes(bet.status.toUpperCase());
-            if (betFilter === "past") return bet.response_status?.toLowerCase() === "declined" || ["SETTLED", "CANCELLED"].includes(bet.status.toUpperCase());
-            if (betFilter === "circle") return !!bet.circle_name;
-            return true;
-          }).map((bet) => (
-            <Surface key={bet.id} elevation={1} style={s.betCard}>
-              <View style={s.betHeader}>
-                <Text variant="titleSmall" style={s.betTitle} numberOfLines={1}>{bet.title}</Text>
-                {(() => {
-                  const badge = badgeConfig(bet);
-                  return (
-                    <View style={[s.statusBadge, { backgroundColor: badge.bg }]}>
-                      <Text style={[s.statusText, { color: badge.color }]}>{badge.label}</Text>
-                    </View>
-                  );
-                })()}
-              </View>
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  From <Text style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{bet.creator_name}</Text>
-                </Text>
-                {bet.circle_name ? (
-                  <Text variant="labelSmall" style={{ color: theme.colors.primary }}>· {bet.circle_name}</Text>
-                ) : null}
-              </View>
-
-              {bet.description ? (
-                <Text variant="bodySmall" style={s.betDesc} numberOfLines={2}>{bet.description}</Text>
-              ) : null}
-
-              <View style={s.betMeta}>
-                <View style={s.betMetaItem}>
-                  <Ionicons name="cash-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                  <Text variant="labelSmall" style={s.betMetaText}>{stakeLabel(bet)}</Text>
-                </View>
-                <View style={s.betMetaItem}>
-                  <Ionicons name="time-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                  <Text variant="labelSmall" style={s.betMetaText}>
-                    {new Date(bet.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-
-              {bet.options.length > 0 && (
-                <View style={s.optionsRow}>
-                  {bet.options.map((opt) => (
-                    <View key={opt.id} style={[s.optionChip, { backgroundColor: theme.colors.surfaceVariant }]}>
-                      <Text style={[s.optionLabel, { color: theme.colors.primary }]}>{opt.label}</Text>
-                      <Text style={[s.optionText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
-                        {opt.option_text}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </Surface>
+          filteredBets.map((bet) => (
+            <BetCard
+              key={bet.id}
+              mode="active"
+              item={{
+                ...bet,
+                target_name: bet.circle_name ?? bet.creator_name,
+                target_type: bet.circle_name ? "circle" : "user",
+                total_joined: bet.total_joined ?? 0,
+              }}
+              onRefresh={() => {
+                setBetsLoading(true);
+                fetchBets();
+              }}
+            />
           ))
         )}
 
-    <View style={{ height: 40 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       <Portal>
@@ -425,7 +337,7 @@ export default function ProfileScreen() {
           visible={editVisible}
           onDismiss={() => setEditVisible(false)}
           contentContainerStyle={s.modal}
-            style={s.modalBackdrop}
+          style={s.modalBackdrop}
         >
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Profile
@@ -463,13 +375,12 @@ export default function ProfileScreen() {
           visible={avatarVisible}
           onDismiss={() => setAvatarVisible(false)}
           contentContainerStyle={s.modal}
-            style={s.modalBackdrop}
+          style={s.modalBackdrop}
         >
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Avatar
           </Text>
 
-          {/* Preview */}
           <View style={{ alignItems: "center", marginBottom: 20 }}>
             <UserAvatar
               user={{ ...profile, avatar_color: selectedColor, avatar_icon: selectedIcon }}
@@ -477,7 +388,6 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* Color picker */}
           <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
             Color
           </Text>
@@ -487,9 +397,7 @@ export default function ProfileScreen() {
                 key={color}
                 onPress={() => setSelectedColor(color)}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
+                  width: 36, height: 36, borderRadius: 18,
                   backgroundColor: color,
                   borderWidth: selectedColor === color ? 3 : 0,
                   borderColor: "#fff",
@@ -498,7 +406,6 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          {/* Icon picker */}
           <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
             Icon
           </Text>
@@ -509,14 +416,9 @@ export default function ProfileScreen() {
                   key={item.key}
                   onPress={() => setSelectedIcon(item.key)}
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: selectedIcon === item.key
-                      ? selectedColor
-                      : "rgba(255, 255, 255, 0.08)",
-                    justifyContent: "center",
-                    alignItems: "center",
+                    width: 48, height: 48, borderRadius: 12,
+                    backgroundColor: selectedIcon === item.key ? selectedColor : "rgba(255,255,255,0.08)",
+                    justifyContent: "center", alignItems: "center",
                     borderWidth: selectedIcon === item.key ? 2 : 0,
                     borderColor: selectedColor,
                   }}
@@ -524,8 +426,7 @@ export default function ProfileScreen() {
                   {item.key === "initials" ? (
                     <Text style={{
                       color: selectedIcon === item.key ? "#fff" : theme.colors.onSurfaceVariant,
-                      fontSize: 13,
-                      fontWeight: "700",
+                      fontSize: 13, fontWeight: "700",
                     }}>AB</Text>
                   ) : (
                     <Ionicons
@@ -549,65 +450,50 @@ export default function ProfileScreen() {
           </View>
         </Modal>
       </Portal>
-      </GradientBackground>
+    </GradientBackground>
   );
 }
 
 const styles = (theme: any) =>
   StyleSheet.create({
-    root: { flex: 1},
-    center: { justifyContent: "center", alignItems: "center" },
-    scroll: { padding: 20 },
-    topBar: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+    root:        { flex: 1 },
+    center:      { justifyContent: "center", alignItems: "center" },
+    scroll:      { padding: 20 },
+    topBar:      { flexDirection: "row", alignItems: "center", marginBottom: 4 },
     settingsBtn: {
       width: 36, height: 36, borderRadius: 10,
       backgroundColor: theme.colors.surface,
       borderWidth: 1, borderColor: theme.colors.outline,
       justifyContent: "center", alignItems: "center",
     },
-    header: { alignItems: "center", paddingBottom: 24 },
+    header:      { alignItems: "center", paddingBottom: 24 },
     displayName: { color: theme.colors.onSurface, fontWeight: "700", marginTop: 12 },
-    username: { color: theme.colors.onSurfaceVariant, marginTop: 2 },
-    followRow: { flexDirection: "row", alignItems: "center", marginTop: 8, marginBottom: 4, gap: 8 },
-    followItem: { flexDirection: "row", alignItems: "baseline" },
+    username:    { color: theme.colors.onSurfaceVariant, marginTop: 2 },
+    followRow:   { flexDirection: "row", alignItems: "center", marginTop: 8, marginBottom: 4, gap: 8 },
+    followItem:  { flexDirection: "row", alignItems: "baseline" },
     followCount: { color: theme.colors.onSurface, fontWeight: "600" },
     followLabel: { color: theme.colors.onSurfaceVariant },
-    followDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: theme.colors.onSurfaceVariant, marginHorizontal: 2 },
-    bio: { color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 8, paddingHorizontal: 24 },
+    followDot:   { width: 3, height: 3, borderRadius: 2, backgroundColor: theme.colors.onSurfaceVariant, marginHorizontal: 2 },
+    bio:         { color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 8, paddingHorizontal: 24 },
     statsRow: {
       flexDirection: "row", marginTop: 20,
       backgroundColor: theme.colors.surface,
       borderRadius: 16, paddingVertical: 16, paddingHorizontal: 32, gap: 16,
     },
-    stat: { alignItems: "center", flex: 1 },
-    statNum: { color: theme.colors.onSurface, fontWeight: "700" },
-    statLabel: { color: theme.colors.onSurfaceVariant, marginTop: 2 },
+    stat:        { alignItems: "center", flex: 1 },
+    statNum:     { color: theme.colors.onSurface, fontWeight: "700" },
+    statLabel:   { color: theme.colors.onSurfaceVariant, marginTop: 2 },
     statDivider: { width: 1, backgroundColor: theme.colors.outline },
-    editBtn: { marginTop: 16, borderColor: theme.colors.primary, borderRadius: 20, paddingHorizontal: 8 },
-    divider: { backgroundColor: theme.colors.outline, marginVertical: 20 },
-    sectionLabel: { color: theme.colors.onSurface, marginBottom: 0 },
-    betCard: { borderRadius: 16, backgroundColor: theme.colors.surface, padding: 16, marginBottom: 12 },
-    betHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
-    betTitle: { color: theme.colors.onSurface, fontWeight: "600", flex: 1, marginRight: 8 },
-    statusBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-    statusText: { fontSize: 11, fontWeight: "600" },
-    betDesc: { color: theme.colors.onSurfaceVariant, marginBottom: 10, lineHeight: 18 },
-    betMeta: { flexDirection: "row", gap: 16, marginBottom: 10 },
-    betMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-    betMetaText: { color: theme.colors.onSurfaceVariant },
-    optionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    optionChip: { flexDirection: "row", alignItems: "center", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, gap: 6, maxWidth: "48%" },
-    optionLabel: { fontWeight: "700", fontSize: 12 },
-    optionText: { fontSize: 12, flex: 1 },
+    editBtn:     { marginTop: 16, borderColor: theme.colors.primary, borderRadius: 20, paddingHorizontal: 8 },
+    divider:     { backgroundColor: theme.colors.outline, marginVertical: 20 },
+    sectionLabel: { color: theme.colors.onSurface },
     modal: {
-      margin: 24,
-      borderRadius: 20,
-      padding: 24,
+      margin: 24, borderRadius: 20, padding: 24,
       backgroundColor: "#1f3347",
-      borderWidth: 1,
-      borderColor: "rgba(157, 212, 190, 0.2)",
-    },    modalBackdrop: { backgroundColor: "rgba(10, 20, 30, 0.85)" },
-    modalTitle: { fontWeight: "700", marginBottom: 16 },
-    input: { marginBottom: 12, backgroundColor: "transparent" },
-    modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },
+      borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+    },
+    modalBackdrop: { backgroundColor: "rgba(10,20,30,0.85)" },
+    modalTitle:    { fontWeight: "700", marginBottom: 16 },
+    input:         { marginBottom: 12, backgroundColor: "transparent" },
+    modalActions:  { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },
   });
