@@ -272,12 +272,12 @@ export default function CircleInboxScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 140 : 0}
       >
         {/* ── Header ── */}
         <View style={[styles.header, { borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace(`/circle-profile/${circleId}`)}
             style={styles.backBtn}
           >
             <Ionicons name="arrow-back" size={22} color={theme.colors.onSurface} />
@@ -327,54 +327,65 @@ export default function CircleInboxScreen() {
         )}
 
         {/* ── Input bar ── */}
-        <View style={[
-          styles.inputBar,
-          {
-            backgroundColor: isDark ? "rgba(15,34,58,0.95)" : "rgba(255,255,255,0.95)",
-            borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-          },
-        ]}>
+        <View style={{
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          paddingBottom: Platform.OS === "ios" ? 28 : 14,
+        }}>
           {overLimit && (
             <Text style={{ color: "#ef4444", fontSize: 11, marginBottom: 4, textAlign: "right" }}>
               {charCount}/{CHAR_LIMIT}
             </Text>
           )}
-          <View style={styles.inputRow}>
+          <View style={{
+            flexDirection: "row", alignItems: "flex-end", gap: 10,
+            backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.85)",
+            borderRadius: 30,
+            borderWidth: 1,
+            borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+            paddingHorizontal: 16, paddingVertical: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 6,
+          }}>
             <TextInput
               value={inputText}
               onChangeText={setInputText}
               placeholder="Message the circle..."
               placeholderTextColor={theme.colors.onSurfaceVariant}
               multiline
-              maxLength={CHAR_LIMIT + 10} // show they're over, but block send
-              style={[
-                styles.textInput,
-                {
-                  color: theme.colors.onSurface,
-                  backgroundColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)",
-                  borderColor: overLimit ? "#ef4444" : "rgba(255,255,255,0.1)",
-                },
-              ]}
+              maxLength={CHAR_LIMIT + 10}
+              style={{
+                flex: 1,
+                color: theme.colors.onSurface,
+                fontSize: 14,
+                maxHeight: 100,
+                lineHeight: 20,
+                paddingTop: 4,
+                paddingBottom: 4,
+              }}
             />
             <TouchableOpacity
               onPress={sendMessage}
               disabled={!inputText.trim() || sending || overLimit}
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor:
-                    !inputText.trim() || overLimit
-                      ? isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"
-                      : theme.colors.primary,
-                },
-              ]}
+              style={{
+                width: 34, height: 34, borderRadius: 17,
+                alignItems: "center", justifyContent: "center",
+                backgroundColor: !inputText.trim() || overLimit
+                  ? "transparent"
+                  : theme.colors.primary,
+              }}
             >
               {sending
-                ? <ActivityIndicator size="small" color="#fff" />
+                ? <ActivityIndicator size="small" color={theme.colors.primary} />
                 : <Ionicons
                     name="send"
-                    size={18}
-                    color={!inputText.trim() || overLimit ? theme.colors.onSurfaceVariant : "#fff"}
+                    size={16}
+                    color={!inputText.trim() || overLimit
+                      ? theme.colors.onSurfaceVariant
+                      : "#fff"}
                   />
               }
             </TouchableOpacity>
