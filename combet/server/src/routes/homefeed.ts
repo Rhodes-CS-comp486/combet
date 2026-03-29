@@ -119,6 +119,11 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
           ELSE 'ellipse-outline'
         END AS icon,
         creator.username AS creator_username,
+        creator.avatar_color AS creator_avatar_color,
+        creator.avatar_icon AS creator_avatar_icon,
+        target_user.avatar_color AS target_avatar_color,
+        target_user.avatar_icon AS target_avatar_icon,
+        c.icon_color AS circle_icon_color,
         bt.target_type,
         CASE
           WHEN bt.target_type = 'circle' THEN c.name
@@ -175,6 +180,9 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
         bt.target_type,
         c.name,
         c.icon,
+        c.icon_color,
+        target_user.avatar_color,
+        target_user.avatar_icon,
         target_user.username,
         my_response.selected_option_id
       ORDER BY b.created_at DESC
@@ -206,7 +214,15 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
         COUNT(DISTINCT br_all.user_id) AS total_joined,
         (SELECT COUNT(*) FROM bet_responses 
          WHERE bet_id = b.id AND selected_option_id = b.winning_option_id AND status = 'accepted') AS winner_count,
+        b.creator_user_id = $1 AS is_creator,
+        bt.target_type,
         creator.username AS creator_username,
+        creator.avatar_color AS creator_avatar_color,
+        creator.avatar_icon AS creator_avatar_icon,
+        target_user.avatar_color AS target_avatar_color,
+        target_user.avatar_icon AS target_avatar_icon,
+        COALESCE(c.icon, 'people') AS circle_icon,
+        c.icon_color AS circle_icon_color,
         CASE
           WHEN bt.target_type = 'circle' THEN c.name
           WHEN bt.target_type = 'user' THEN target_user.username
@@ -227,7 +243,7 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
       WHERE
         (b.creator_user_id = $1 OR my_response.user_id = $1)
         AND b.status = 'SETTLED'
-      GROUP BY b.id, my_response.selected_option_id, creator.username, bt.target_type, c.name, target_user.username
+      GROUP BY b.id, b.creator_user_id, my_response.selected_option_id, creator.username, creator.avatar_color, creator.avatar_icon, bt.target_type, c.name, c.icon, c.icon_color, target_user.username, target_user.avatar_color, target_user.avatar_icon
       ORDER BY b.updated_at DESC
       LIMIT 5
       `,

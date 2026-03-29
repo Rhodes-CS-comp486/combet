@@ -176,12 +176,15 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
 // ─── Get My Friends ───────────────────────────────────────────────────────────
 usersRouter.get("/friends", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const result = await pool.query(
-      `SELECT u.id, u.username AS name
-       FROM follows f
-       JOIN users u ON u.id = f.following_id
-       WHERE f.follower_id = $1`,
-      [req.userId]
+    // @ts-ignore
+      const result = await pool.query(
+      `SELECT u.id, u.username, u.username AS name, u.avatar_color, u.avatar_icon,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name
+        FROM follows f
+        JOIN users u ON u.id = f.following_id
+        WHERE f.follower_id = $1`,
+
+        [req.userId as string]
     );
     res.json(result.rows);
   } catch (err) {
