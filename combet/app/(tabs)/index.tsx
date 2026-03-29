@@ -596,7 +596,7 @@ export default function HomeScreen() {
             return renderActiveBetItem({ item });
           }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
           ListEmptyComponent={
             <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
               No active bets yet!

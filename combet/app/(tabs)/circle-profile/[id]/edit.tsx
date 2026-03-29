@@ -79,14 +79,13 @@ export default function EditCircle() {
 
   if (!ready) return null;
 
-  const inputBg = isDark ? "rgba(13,31,53,0.8)" : "#f0f4ff";
-
   return (
-    <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-      <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
+      <GradientBackground style={{ paddingHorizontal: 20 }}>
+  <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 120 }}
+  <ScrollView
+      contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 20, paddingTop: 12 }}
+
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -142,43 +141,58 @@ export default function EditCircle() {
         </View>
 
         <View style={{ marginTop: 28 }}>
-          <TextInput
-            label="Circle name"
-            value={name}
-            onChangeText={(t) => { setName(t); setNameError(null); }}
-            onBlur={() => checkNameUnique(name)}
-            mode="outlined"
-            maxLength={15}
-            outlineStyle={{ borderRadius: 14, borderColor: "rgba(255,255,255,0.1)" }}
-            style={{ backgroundColor: inputBg, marginBottom: 2 }}
-            right={
-              <TextInput.Affix
-                text={`${name.length}/15`}
-                textStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}
+            <View style={{
+              backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 2,
+            }}>
+              <TextInput
+                label="Circle name"
+                value={name}
+                onChangeText={(t) => { setName(t); setNameError(null); }}
+                onBlur={() => checkNameUnique(name)}
+                mode="flat"
+                maxLength={15}
+                style={{ backgroundColor: "transparent" }}
+                underlineColor="transparent"
+                activeUnderlineColor={theme.colors.primary}
+                theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                right={
+                  <TextInput.Affix
+                    text={`${name.length}/15`}
+                    textStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}
+                  />
+                }
               />
-            }
-          />
+            </View>
+
           <HelperText type="error" visible={!!nameError} style={{ marginBottom: 8 }}>
             {nameError ?? " "}
           </HelperText>
 
-          <TextInput
-            label="Description (optional)"
-            value={description}
-            onChangeText={(t) => { setDescription(t); setDescError(null); }}
-            mode="outlined"
-            multiline
-            numberOfLines={3}
-            maxLength={100}
-            outlineStyle={{ borderRadius: 14, borderColor: "rgba(255,255,255,0.1)" }}
-            style={{ backgroundColor: inputBg, marginBottom: 2 }}
-            right={
-              <TextInput.Affix
-                text={`${description.length}/100`}
-                textStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}
+          <View style={{
+              backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 2,
+            }}>
+              <TextInput
+                label="Description (optional)"
+                value={description}
+                onChangeText={(t) => { setDescription(t); setDescError(null); }}
+                mode="flat"
+                multiline
+                numberOfLines={3}
+                maxLength={100}
+                style={{ backgroundColor: "transparent" }}
+                underlineColor="transparent"
+                activeUnderlineColor={theme.colors.primary}
+                theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                right={
+                  <TextInput.Affix
+                    text={`${description.length}/100`}
+                    textStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}
+                  />
+                }
               />
-            }
-          />
+            </View>
           <HelperText type="error" visible={!!descError} style={{ marginBottom: 16 }}>
             {descError ?? " "}
           </HelperText>
@@ -187,12 +201,12 @@ export default function EditCircle() {
             flexDirection:     "row",
             alignItems:        "center",
             justifyContent:    "space-between",
-            backgroundColor:   inputBg,
             borderRadius:      14,
             paddingHorizontal: 16,
             paddingVertical:   14,
             marginBottom:      32,
             borderWidth:       1,
+              backgroundColor:   "rgba(255,255,255,0.07)",
             borderColor:       "rgba(255,255,255,0.12)",
           }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -219,16 +233,16 @@ export default function EditCircle() {
           </View>
 
           <Button
-            mode="contained"
-            onPress={handleSave}
-            loading={loading}
-            disabled={loading || !!nameError}
-            contentStyle={{ paddingVertical: 8 }}
-            labelStyle={{ fontWeight: "700", fontSize: 15 }}
-            style={{ borderRadius: 14, marginBottom: 8 }}
-          >
-            Save Changes
-          </Button>
+              mode="contained"
+              onPress={handleSave}
+              loading={loading}
+              disabled={loading || !!nameError}
+              contentStyle={{ paddingVertical: 8 }}
+              labelStyle={{ fontWeight: "400", fontSize: 15 }}
+              style={{ borderRadius: 14, marginBottom: 8, }}
+            >
+              Save Changes
+            </Button>
 
           <Button
             mode="text"

@@ -154,7 +154,7 @@ export default function MembersScreen() {
   );
 
   return (
-    <GradientBackground style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <GradientBackground style={{ paddingHorizontal: 40, paddingTop: 12 }}>
       <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
       <Text style={{
