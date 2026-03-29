@@ -31,7 +31,7 @@ export default function CircleProfile() {
 
   const [circle, setCircle]         = useState<Circle | null>(null);
   const [history, setHistory]       = useState<HistoryData | null>(null);
-  const [activeTab, setActiveTab]   = useState<"history" | "live">("live");
+  const [activeTab, setActiveTab]   = useState<"live" | "history">("live");
   const [responding, setResponding] = useState<string | null>(null);
   const [requestCount, setRequestCount] = useState(0);
 
@@ -51,7 +51,6 @@ export default function CircleProfile() {
       });
       if (histRes.ok) setHistory(await histRes.json());
 
-      // Fetch request count for badge on Members button
       const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
@@ -126,18 +125,38 @@ export default function CircleProfile() {
     );
   };
 
+  const tabs: { key: "live" | "history"; label: string }[] = [
+    { key: "live",    label: "Live Bets"      },
+    { key: "history", label: "Circle History" },
+  ];
+
   return (
     <GradientBackground>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
-        {/* ── Back ── */}
-        <View style={{ paddingHorizontal: 8, paddingTop: 12 }}>
+        {/* ── Header row: Back + Chat button ── */}
+        <View style={{
+          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          paddingHorizontal: 8, paddingTop: 12,
+        }}>
           <Button icon="arrow-left" mode="text" compact
             onPress={() => router.replace("/(tabs)/circles")}
-            style={{ alignSelf: "flex-start" }}
             labelStyle={{ color: theme.colors.onSurfaceVariant }}>
             Back
           </Button>
+          <TouchableOpacity
+            onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 5,
+              backgroundColor: "rgba(255,255,255,0.08)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+              marginRight: 8,
+            }}
+          >
+            <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
+            <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>Chat</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ── Hero ── */}
@@ -147,7 +166,7 @@ export default function CircleProfile() {
             backgroundColor: circle.icon_color ?? theme.colors.surface,
             justifyContent: "center", alignItems: "center", marginBottom: 16,
           }}>
-            <Ionicons name={(circle.icon as any) || "people"} size={70} color= "#fff" />
+            <Ionicons name={(circle.icon as any) || "people"} size={70} color="#fff" />
           </Surface>
 
           <Text variant="headlineSmall" style={{
@@ -218,12 +237,12 @@ export default function CircleProfile() {
 
         {/* ── Tabs ── */}
         <View style={{ flexDirection: "row", marginHorizontal: 20, marginBottom: 20 }}>
-          {(["live", "history"] as const).map((tab) => {
-            const active = activeTab === tab;
+          {tabs.map(({ key, label }) => {
+            const active = activeTab === key;
             return (
               <TouchableOpacity
-                key={tab}
-                onPress={() => setActiveTab(tab)}
+                key={key}
+                onPress={() => setActiveTab(key)}
                 style={{
                   flex: 1, paddingVertical: 12, alignItems: "center",
                   borderBottomWidth: 2,
@@ -234,7 +253,7 @@ export default function CircleProfile() {
                   fontSize: 13, fontWeight: active ? "600" : "400",
                   color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                 }}>
-                  {tab === "history" ? "Circle History" : "Live Bets"}
+                  {label}
                 </Text>
               </TouchableOpacity>
             );
