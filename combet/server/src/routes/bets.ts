@@ -57,7 +57,7 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
 
   try {
-    const { title, description, stake, customStake, closesAt, options, targetType, targetId } = req.body;
+    const { title, description, stake, customStake, closesAt, options, targetType, targetId, creatorOptionIndex } = req.body;
     const creatorUserId = req.userId;
 
     if (!targetType || !targetId) return res.status(400).json({ error: "Target required" });
@@ -86,8 +86,27 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
       );
     }
 
+        if (creatorOptionIndex !== null && creatorOptionIndex !== undefined) {
+      const optionResult = await client.query(
+        `SELECT id FROM bet_options WHERE bet_id = $1 ORDER BY id LIMIT 1 OFFSET $2`,
+        [betId, creatorOptionIndex]
+      );
+      const optionId = optionResult.rows[0]?.id;
+      if (optionId) {
+        if (stake > 0) {
+          await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, creatorUserId]);
+        }
+        await client.query(
+          `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
+           VALUES ($1, $2, 'accepted', $3)`,
+          [betId, creatorUserId, optionId]
+        );
+      }
+    }
+
     await client.query("COMMIT");
     res.status(201).json({ success: true, betId });
+
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("CREATE BET ERROR:", error);
@@ -280,5 +299,51 @@ betsRouter.post("/:betId/dispute", requireAuth, async (req: AuthRequest, res) =>
   } catch (err) {
     console.error("DISPUTE BET ERROR:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Cancel Bet ───────────────────────────────────────────────────────────────
+betsRouter.post("/:betId/cancel", requireAuth, async (req: AuthRequest, res) => {
+  const { betId } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const betResult = await client.query(
+      `SELECT creator_user_id, status, stake_amount, custom_stake FROM bets WHERE id = $1`,
+      [betId]
+    );
+    if (!betResult.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Bet not found" });
+    }
+    if (betResult.rows[0].creator_user_id !== req.userId) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ error: "Only the creator can cancel this bet" });
+    }
+
+    const { stake_amount, custom_stake } = betResult.rows[0];
+
+    if (!custom_stake && stake_amount > 0) {
+      await client.query(
+        `UPDATE users SET coins = coins + $1
+         WHERE id IN (
+           SELECT user_id FROM bet_responses
+           WHERE bet_id = $2 AND status = 'accepted'
+         )`,
+        [stake_amount, betId]
+      );
+    }
+
+    await client.query(`UPDATE bets SET status = 'CANCELLED' WHERE id = $1`, [betId]);
+    await client.query("COMMIT");
+    res.json({ success: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("CANCEL BET ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
   }
 });
