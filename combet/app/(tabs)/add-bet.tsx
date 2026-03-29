@@ -93,7 +93,8 @@ export default function AddBet() {
 
       const cleanedOptions = options.filter((o) => o.trim() !== "");
 
-      const response = await fetch('${API_BASE}/bets', {
+      const response = await fetch(`${API_BASE}/bets`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body: JSON.stringify({

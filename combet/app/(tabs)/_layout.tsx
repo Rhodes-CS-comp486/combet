@@ -70,24 +70,24 @@ export default function TabLayout() {
         />
 
         <Tabs.Screen
-          name="community"
+          name="circles"
           options={{
-            title: "Community",
+            title: "Circles",
             tabBarItemStyle: { marginRight: 30 },
             tabBarIcon: ({ color }) => (
-              <Ionicons name="globe-outline" size={24} color={color} />
+              <Ionicons name="people-circle" size={28} color={color} />
             ),
           }}
         />
 
         {/* Centre gap for FAB */}
         <Tabs.Screen
-          name="circles"
+          name="leaderboard"
           options={{
-            title: "Circles",
+            title: "Leaderboard",
             tabBarItemStyle: { marginLeft: 30 },
             tabBarIcon: ({ color }) => (
-              <Ionicons name="people-circle" size={28} color={color} />
+              <Ionicons name="trophy-outline" size={24} color={color} />
             ),
           }}
         />
