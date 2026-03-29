@@ -7,10 +7,11 @@ import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
+import { API_BASE } from "@/constants/api";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; icon?: string; icon_color?: string; };type SearchResult = UserResult | CircleResult;
-import { API_BASE } from "@/constants/api";
+
 
 
 

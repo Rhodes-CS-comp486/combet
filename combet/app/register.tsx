@@ -4,8 +4,9 @@ import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { API_BASE } from "@/constants/api";
 
-const API_URL = "http://localhost:3001"; // change to LAN IP if using Expo Go on phone
+
 
 export default function Register() {
   const { theme } = useAppTheme();
@@ -29,7 +30,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/auth/register`, {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

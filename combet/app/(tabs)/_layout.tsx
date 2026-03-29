@@ -2,7 +2,6 @@ import { Tabs, Redirect, router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
 import { HapticTab } from "@/components/haptic-tab";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
