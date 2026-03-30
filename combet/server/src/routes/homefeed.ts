@@ -22,6 +22,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
           WHEN bt.target_type = 'user'   THEN 'people-outline'
           ELSE 'ellipse-outline'
         END AS icon,
+        c.icon_color,
         creator.username          AS creator_username,
         creator.avatar_color      AS creator_avatar_color,
         creator.avatar_icon       AS creator_avatar_icon,
@@ -83,6 +84,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         bt.target_type,
         c.name,
         c.icon,
+        c.icon_color,
         target_user.username
       ORDER BY b.created_at DESC
       `,
@@ -118,6 +120,7 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
           WHEN bt.target_type = 'user'   THEN 'people-outline'
           ELSE 'ellipse-outline'
         END AS icon,
+        c.icon_color,
         creator.username AS creator_username,
         creator.avatar_color AS creator_avatar_color,
         creator.avatar_icon AS creator_avatar_icon,

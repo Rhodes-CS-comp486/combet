@@ -15,8 +15,12 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         n.entity_id,
         n.is_read,
         n.created_at,
-        u.username   AS actor_username,
-        c.name       AS circle_name,
+        u.username        AS actor_username,
+        u.avatar_color    AS actor_avatar_color,
+        u.avatar_icon     AS actor_avatar_icon,
+        c.name            AS circle_name,
+        c.icon            AS circle_icon,
+        c.icon_color      AS circle_icon_color,
         ci.invite_id,
         ci.status
       FROM notifications n
@@ -98,8 +102,8 @@ inboxRouter.post("/invites/:inviteId/accept", requireAuth, async (req: AuthReque
 
 // ─── Decline Invite ───────────────────────────────────────────────────────────
 inboxRouter.post("/invites/:inviteId/decline", requireAuth, async (req: AuthRequest, res) => {
-  const { inviteId }    = req.params;
-  const currentUserId   = req.userId;
+  const { inviteId }  = req.params;
+  const currentUserId = req.userId;
 
   try {
     await pool.query(

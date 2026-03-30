@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList } from "react-native";
 import { Text, Searchbar, Surface, Button, Chip } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import { API_BASE } from "@/constants/api";
+import UserAvatar from "@/components/UserAvatar"; // ← import UserAvatar
 
 type FriendResult = {
   id: string;
   username: string;
+  avatar_color?: string; // ← added
+  avatar_icon?: string;  // ← added
   status: "pending" | "accepted" | null;
   invitedByMe?: boolean;
 };
@@ -157,15 +159,17 @@ export default function AddFriendToCircle() {
               backgroundColor: cardBg, borderRadius: 14,
               padding: 14, marginBottom: 10,
             }}>
-              <View style={{
-                width: 44, height: 44, borderRadius: 22,
-                backgroundColor: "rgba(46,108,246,0.15)",
-                borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
-                alignItems: "center", justifyContent: "center", marginRight: 14,
-              }}>
-                <Ionicons name="person" size={20} color={theme.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
+              <UserAvatar
+                user={{
+                  display_name: item.username,
+                  username: item.username,
+                  avatar_color: item.avatar_color,
+                  avatar_icon: item.avatar_icon,
+                }}
+                size={44}
+                borderColor={cardBg}
+              />
+              <View style={{ flex: 1, marginLeft: 14 }}>
                 <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
                   {item.username}
                 </Text>
