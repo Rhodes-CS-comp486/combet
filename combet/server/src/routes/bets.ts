@@ -22,12 +22,31 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
         b.closes_at,
         CASE WHEN b.creator_user_id = $1 THEN true ELSE false END AS is_creator,
         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS creator_name,
+        u.username     AS creator_username,
         u.avatar_color AS creator_avatar_color,
         u.avatar_icon  AS creator_avatar_icon,
-        c.name AS circle_name,
+        (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted') AS total_joined,
+        c.name         AS circle_name,
+        c.icon         AS icon,
+        c.icon_color   AS icon_color,
+        CASE WHEN b.post_to = 'circle' THEN 'circle' ELSE 'user' END AS target_type,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', tu.first_name, tu.last_name)), ''), tu.username) AS target_name,
+        tu.avatar_color AS target_avatar_color,
+        tu.avatar_icon  AS target_avatar_icon,
         COALESCE(
           json_agg(
-            json_build_object('id', bo.id, 'label', bo.label, 'option_text', bo.option_text)
+            json_build_object(
+              'id',    bo.id,
+              'label', bo.label,
+              'text',  bo.option_text,
+              'option_text', bo.option_text,
+              'count', (
+                SELECT COUNT(*) FROM bet_responses
+                WHERE bet_id = b.id
+                AND selected_option_id = bo.id
+                AND status = 'accepted'
+              )
+            )
           ) FILTER (WHERE bo.id IS NOT NULL),
           '[]'
         ) AS options
@@ -36,12 +55,15 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
       LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
       LEFT JOIN users u ON u.id = b.creator_user_id
       LEFT JOIN circles c ON c.circle_id = b.target_id::uuid AND b.post_to = 'circle'
+      LEFT JOIN users tu ON tu.id = b.target_id::uuid AND b.post_to = 'user'
       WHERE b.creator_user_id = $1
          OR EXISTS (
            SELECT 1 FROM bet_responses
            WHERE bet_id = b.id AND user_id = $1
          )
-      GROUP BY b.id, br.status, u.first_name, u.last_name, u.username, u.avatar_color, u.avatar_icon, c.name
+      GROUP BY b.id, br.status, u.first_name, u.last_name, u.username,
+               u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, b.post_to,
+               tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
       ORDER BY b.created_at DESC
       `,
       [req.userId]
