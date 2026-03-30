@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, View, StyleSheet, TouchableOpacity } from "react-native";
+import BetCard from "@/components/BetCard";
 import {
   Surface,
   Text,
@@ -209,7 +210,7 @@ export default function ProfileScreen() {
         {/* ── Top bar ── */}
         <View style={s.topBar}>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity style={s.settingsBtn} onPress={() => router.push("/settings")}>
+          <TouchableOpacity style={s.settingsBtn} onPress={() => router.push("/(tabs)/settings")}>
             <Ionicons name="settings-outline" size={22} color={theme.colors.onSurface} />
           </TouchableOpacity>
         </View>
@@ -256,12 +257,12 @@ export default function ProfileScreen() {
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: "#4CAF50" }]}>{profile?.wins ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.primary }]}>{profile?.wins ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Wins</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.error }]}>{profile?.losses ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: "#e87060" }]}>{profile?.losses ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Losses</Text>
             </View>
           </View>
@@ -279,8 +280,8 @@ export default function ProfileScreen() {
         <Divider style={s.divider} />
 
         {/* ── My Bets ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <Text variant="titleMedium" style={s.sectionLabel}>My Bets</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
+            <Text style={[s.sectionLabel, { fontSize: 24, fontWeight: "300", letterSpacing: 0.5 }]}>My Bets</Text>
         </View>
 
         {/* Filter chips */}
@@ -294,15 +295,16 @@ export default function ProfileScreen() {
                   paddingHorizontal: 14,
                   paddingVertical: 6,
                   borderRadius: 20,
-                  backgroundColor: betFilter === filter ? theme.colors.primary : "#1a2035",
                   borderWidth: 1,
-                  borderColor: betFilter === filter ? theme.colors.primary : "#2a3550",
+                    backgroundColor: betFilter === filter ? "rgba(157,212,190,0.15)" : "transparent",
+                    borderColor: betFilter === filter ? "rgba(157,212,190,0.3)" : "rgba(255,255,255,0.1)",
+
                 }}
               >
                 <Text style={{
                   fontSize: 12,
                   fontWeight: "500",
-                  color: betFilter === filter ? "#fff" : "#94a3b8",
+                    color: betFilter === filter ? theme.colors.primary : theme.colors.onSurfaceVariant,
                 }}>
                   {filter === "all" ? "All" : filter === "circle" ? "Circle Bets" : filter === "current" ? "Current" : "Past"}
                 </Text>
@@ -330,58 +332,11 @@ export default function ProfileScreen() {
             if (betFilter === "current") return bet.status.toUpperCase() === "PENDING";
             if (betFilter === "past") return bet.status.toUpperCase() !== "PENDING";
             return true;
-          }).map((bet) => (
-            <Surface key={bet.id} elevation={1} style={s.betCard}>
-              <View style={s.betHeader}>
-                <Text variant="titleSmall" style={s.betTitle} numberOfLines={1}>{bet.title}</Text>
-                <View style={[s.statusBadge, { backgroundColor: statusBg(bet.status) }]}>
-                  <Text style={[s.statusText, { color: statusColor(bet.status) }]}>
-                    {bet.status.toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                  From <Text style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{bet.creator_name}</Text>
-                </Text>
-                {bet.circle_name ? (
-                  <Text variant="labelSmall" style={{ color: theme.colors.primary }}>· {bet.circle_name}</Text>
-                ) : null}
-              </View>
-
-              {bet.description ? (
-                <Text variant="bodySmall" style={s.betDesc} numberOfLines={2}>{bet.description}</Text>
-              ) : null}
-
-              <View style={s.betMeta}>
-                <View style={s.betMetaItem}>
-                  <Ionicons name="cash-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                  <Text variant="labelSmall" style={s.betMetaText}>{stakeLabel(bet)}</Text>
-                </View>
-                <View style={s.betMetaItem}>
-                  <Ionicons name="time-outline" size={13} color={theme.colors.onSurfaceVariant} />
-                  <Text variant="labelSmall" style={s.betMetaText}>
-                    {new Date(bet.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-
-              {bet.options.length > 0 && (
-                <View style={s.optionsRow}>
-                  {bet.options.map((opt) => (
-                    <View key={opt.id} style={[s.optionChip, { backgroundColor: theme.colors.surfaceVariant }]}>
-                      <Text style={[s.optionLabel, { color: theme.colors.primary }]}>{opt.label}</Text>
-                      <Text style={[s.optionText, { color: theme.colors.onSurfaceVariant }]} numberOfLines={1}>
-                        {opt.option_text}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </Surface>
-          ))
-        )}
+          })
+            .map((bet) => (
+             <BetCard key={bet.id} item={bet} mode="active" />
+                ))
+            )}
 
     <View style={{ height: 40 }} />
       </ScrollView>
@@ -397,24 +352,32 @@ export default function ProfileScreen() {
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Profile
           </Text>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
           <TextInput
             label="Display Name"
             value={editName}
             onChangeText={setEditName}
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
+            mode="flat"
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
           <TextInput
             label="Bio"
             value={editBio}
             onChangeText={setEditBio}
-            mode="outlined"
+            mode="flat"
             multiline
             numberOfLines={3}
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
           <View style={s.modalActions}>
             <Button onPress={() => setEditVisible(false)} textColor={theme.colors.onSurfaceVariant}>
               Cancel
@@ -528,8 +491,7 @@ const styles = (theme: any) =>
     topBar: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
     settingsBtn: {
       width: 36, height: 36, borderRadius: 10,
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1, borderColor: theme.colors.outline,
+        backgroundColor: "rgba(255,255,255,0.07)",      borderWidth: 1, borderColor: theme.colors.outline,
       justifyContent: "center", alignItems: "center",
     },
     header: { alignItems: "center", paddingBottom: 24 },
@@ -566,14 +528,15 @@ const styles = (theme: any) =>
     optionChip: { flexDirection: "row", alignItems: "center", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, gap: 6, maxWidth: "48%" },
     optionLabel: { fontWeight: "700", fontSize: 12 },
     optionText: { fontSize: 12, flex: 1 },
-    modal: {
-      margin: 24,
-      borderRadius: 20,
-      padding: 24,
-      backgroundColor: "#1f3347",
-      borderWidth: 1,
-      borderColor: "rgba(157, 212, 190, 0.2)",
-    },    modalBackdrop: { backgroundColor: "rgba(10, 20, 30, 0.85)" },
+      modal: {
+  margin: 24,
+  borderRadius: 20,
+  padding: 24,
+  backgroundColor: "#314554",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.13)",
+},
+      modalBackdrop: { backgroundColor: "rgba(10, 20, 30, 0.85)" },
     modalTitle: { fontWeight: "700", marginBottom: 16 },
     input: { marginBottom: 12, backgroundColor: "transparent" },
     modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },

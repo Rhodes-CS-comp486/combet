@@ -69,16 +69,7 @@ function AppLayout(): JSX.Element {
               }}
             />
 
-            <Stack.Screen
-            name="settings"
-            options={{
-            headerShown: true,
-            title: "Settings",
-            headerStyle: { backgroundColor: theme.colors.surface },
-            headerTintColor: theme.colors.onSurface,
-            headerTitleStyle: { fontWeight: "600" },
-            }}
-            />
+
           </Stack>
         </View>
         </LinearGradient>

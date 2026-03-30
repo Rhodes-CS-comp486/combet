@@ -7,6 +7,7 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BackHeader from "@/components/Backheader";
 import { API_BASE } from "@/constants/api";
+import GradientBackground from "@/components/GradientBackground";
 
 type FriendResult = {
   id: string;
@@ -116,68 +117,73 @@ export default function AddFriendToCircle() {
   const cardBg = isDark ? "#0F2A44" : "#ffffff";
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
+      <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+        <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text variant="headlineSmall" style={{
-          color: theme.colors.onSurface, fontWeight: "800",
-          textAlign: "center", marginBottom: 24,
+        <Text style={{
+          color: theme.colors.onSurface,
+          fontSize: 28,
+          fontWeight: "300",
+          letterSpacing: 0.5,
+          marginBottom: 20,
+          marginTop: 8,
         }}>
           Add Friends
         </Text>
 
-        <Searchbar
-          placeholder="Search your friends..."
-          value={query}
-          onChangeText={setQuery}
-          style={{
-            borderRadius: 12, marginBottom: 20,
-            backgroundColor: isDark ? "#0F223A" : "#ffffff",
-          }}
-          inputStyle={{ color: theme.colors.onSurface }}
-          iconColor={theme.colors.onSurfaceVariant}
-          placeholderTextColor={theme.colors.onSurfaceVariant}
-        />
+        <View style={{
+          backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 16,
+        }}>
+          <Searchbar
+            placeholder="Search your friends..."
+            value={query}
+            onChangeText={setQuery}
+            style={{ borderRadius: 12, backgroundColor: "transparent", elevation: 0 }}
+            inputStyle={{ color: theme.colors.onSurface }}
+            iconColor={theme.colors.onSurfaceVariant}
+            placeholderTextColor={theme.colors.onSurfaceVariant}
+          />
+        </View>
 
         <FlatList
           data={results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 120 }}
           ListEmptyComponent={
-            <Text variant="bodyMedium" style={{
-              color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 32,
+            <Text style={{
+              color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 32, fontSize: 14,
             }}>
               {query.length > 0 ? "No friends found" : "Search to find friends to add"}
             </Text>
           }
           renderItem={({ item }) => (
-            <Surface elevation={1} style={{
+            <View style={{
               flexDirection: "row", alignItems: "center",
-              backgroundColor: cardBg, borderRadius: 14,
-              padding: 14, marginBottom: 10,
+              backgroundColor: "rgba(255,255,255,0.09)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              borderRadius: 14, padding: 14, marginBottom: 10,
             }}>
               <View style={{
                 width: 44, height: 44, borderRadius: 22,
-                backgroundColor: "rgba(46,108,246,0.15)",
-                borderWidth: 1.5, borderColor: "rgba(46,108,246,0.35)",
+                backgroundColor: "rgba(157,212,190,0.12)",
+                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
                 alignItems: "center", justifyContent: "center", marginRight: 14,
               }}>
                 <Ionicons name="person" size={20} color={theme.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+                <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 15 }}>
                   {item.username}
                 </Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
                   @{item.username}
                 </Text>
               </View>
               {renderAction(item)}
-            </Surface>
+            </View>
           )}
         />
-      </View>
-    </View>
-  );
+      </GradientBackground>
+    );
 }

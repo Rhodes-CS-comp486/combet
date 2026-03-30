@@ -84,7 +84,7 @@ export default function EditCircle() {
   <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
 
   <ScrollView
-      contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 20, paddingTop: 12 }}
+      contentContainerStyle={{ paddingBottom: 120, paddingTop: 12 }}
 
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
