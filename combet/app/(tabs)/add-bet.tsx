@@ -7,9 +7,7 @@ import {
   Text,
   TextInput,
   Button,
-  Surface,
   HelperText,
-  SegmentedButtons,
 } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
