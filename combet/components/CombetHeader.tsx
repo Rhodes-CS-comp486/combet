@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Appbar, Text } from "react-native-paper";
-import {AppState, DeviceEventEmitter} from "react-native";
+import {AppState, DeviceEventEmitter, View} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
@@ -67,17 +67,19 @@ export default function CombetHeader() {
       />
 
       {/* Right */}
-      <Appbar.Action
-        icon="circle"
-        iconColor="#D4AF37"
-
-      />
-      <Text
-        variant="labelLarge"
-        style={{ color: "#FFFFFF", fontWeight: "600", marginRight: 16 }}
-      >
-        {coinBalance}
-      </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", width: 48, justifyContent: "flex-end", marginRight: 16 }}>
+          <Appbar.Action
+            icon="circle"
+            iconColor="#D4AF37"
+            style={{ margin: 0 }}
+          />
+          <Text
+            variant="labelLarge"
+            style={{ color: "#FFFFFF", fontWeight: "600" }}
+          >
+            {coinBalance}
+          </Text>
+        </View>
     </Appbar.Header>
   );
 }

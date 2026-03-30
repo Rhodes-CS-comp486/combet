@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
+import GradientBackground from "@/components/GradientBackground";
 
 
 export default function Login() {
@@ -46,81 +47,54 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-    >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          padding: 20,
-        }}
-      >
-        {/* ── Brand ── */}
-        <Text
-          variant="headlineLarge"
-          style={{
-            textAlign:    "center",
-            color:        theme.colors.primary,
-            fontWeight:   "900",
-            letterSpacing: 3,
-            marginBottom: 24,
-          }}
-        >
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : undefined}
+    style={{ flex: 1 }}
+  >
+    <GradientBackground style={{ paddingHorizontal: 24 }}>
+      <View style={{ flex: 1, justifyContent: "center" }}>
+
+        <Text style={{
+          textAlign: "center",
+          color: "#ffffff",
+          fontWeight: "300",
+          letterSpacing: 6,
+          fontSize: 32,
+          marginBottom: 8,
+        }}>
           COMBET
         </Text>
+        <Text style={{
+          textAlign: "center",
+          color: theme.colors.onSurfaceVariant,
+          marginBottom: 48,
+          fontSize: 14,
+        }}>
+          Log in to continue
+        </Text>
 
-        {/* ── Card ── */}
-        <Surface
-          elevation={2}
-          style={{
-            borderRadius:      18,
-            padding:           24,
-            backgroundColor:   theme.colors.surface,
-          }}
-        >
-          <Text
-            variant="titleLarge"
-            style={{
-              textAlign:    "center",
-              fontWeight:   "800",
-              color:        theme.colors.onSurface,
-              marginBottom: 4,
-            }}
-          >
-            Welcome back!
-          </Text>
-
-          <Text
-            variant="bodyMedium"
-            style={{
-              textAlign:    "center",
-              color:        theme.colors.onSurfaceVariant,
-              marginBottom: 24,
-            }}
-          >
-            Log in to continue
-          </Text>
-
-          {/* ── Email or Username ── */}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
           <TextInput
             label="Email or Username"
             value={emailOrUsername}
             onChangeText={setEmailOrUsername}
             autoCapitalize="none"
-            mode="outlined"
+            mode="flat"
             left={<TextInput.Icon icon="account" />}
-            style={{ marginBottom: 12 }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Password ── */}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 4 }}>
           <TextInput
             label="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!passwordVisible}
-            mode="outlined"
+            mode="flat"
             left={<TextInput.Icon icon="lock" />}
             right={
               <TextInput.Icon
@@ -128,38 +102,39 @@ export default function Login() {
                 onPress={() => setPasswordVisible((v) => !v)}
               />
             }
-            style={{ marginBottom: 4 }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Error ── */}
-          <HelperText type="error" visible={!!errorMsg} style={{ marginBottom: 8 }}>
-            {errorMsg}
-          </HelperText>
+        <HelperText type="error" visible={!!errorMsg} style={{ marginBottom: 8 }}>
+          {errorMsg}
+        </HelperText>
 
-          {/* ── Login Button ── */}
-          <Button
-            mode="contained"
-            onPress={onLogin}
-            loading={loading}
-            disabled={loading}
-            contentStyle={{ paddingVertical: 6 }}
-            labelStyle={{ fontWeight: "900", fontSize: 16 }}
-            style={{ borderRadius: 12, marginTop: 4 }}
-          >
-            {loading ? "Logging in..." : "Log In"}
-          </Button>
+        <Button
+          mode="contained"
+          onPress={onLogin}
+          loading={loading}
+          disabled={loading}
+          contentStyle={{ paddingVertical: 6 }}
+          labelStyle={{ fontWeight: "400", fontSize: 16 }}
+          style={{ borderRadius: 12, marginTop: 4 }}
+        >
+          {loading ? "Logging in..." : "Log In"}
+        </Button>
 
-          {/* ── Register Link ── */}
-          <Button
-            mode="text"
-            onPress={() => router.push("/register")}
-            style={{ marginTop: 8 }}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}
-          >
-            Create an account
-          </Button>
-        </Surface>
+        <Button
+          mode="text"
+          onPress={() => router.push("/register")}
+          style={{ marginTop: 8 }}
+          labelStyle={{ color: theme.colors.onSurfaceVariant }}
+        >
+          Create an account
+        </Button>
       </View>
-    </KeyboardAvoidingView>
-  );
+    </GradientBackground>
+  </KeyboardAvoidingView>
+);
 }

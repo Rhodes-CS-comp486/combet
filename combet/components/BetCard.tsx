@@ -51,52 +51,45 @@ export default function BetCard({
       borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
     }}>
 
-      {/* ── HEADER ── */}
-      <View style={{ padding: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 5, marginTop: 5 }}>
+        {/* ── HEADER ── */}
+        <View style={{ padding: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 5, marginTop: 5 }}>
+            {item.target_type === "circle" ? (
+              <View style={{
+                width: 60, height: 60, borderRadius: 30,
+                backgroundColor: item.circle_icon_color ?? item.icon_color ?? "rgba(255,255,255,0.08)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name={(item.icon as any) || "people"} size={26} color="#fff" />
+              </View>
+        ) : (
+          <UserAvatar
+            user={{
+              display_name: isCreator ? item.target_name : (item.creator_name || item.creator_username),
+              username: isCreator ? item.target_name : item.creator_username,
+              avatar_color: isCreator ? item.target_avatar_color : item.creator_avatar_color,
+              avatar_icon: isCreator ? item.target_avatar_icon : item.creator_avatar_icon,
+            }}
+            size={60}
+          />
+        )}
 
-          {item.target_type === "circle" ? (
-            // Uses the circle's actual icon and icon_color from the DB
-            <View style={{
-              width: 60, height: 60, borderRadius: 30,
-              backgroundColor: circleIconColor,
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name={circleIconName as any} size={26} color="#fff" />
-            </View>
-          ) : (
-            <UserAvatar
-              user={{
-                display_name: item.creator_name || item.creator_username,
-                username:     item.creator_username,
-                avatar_color: item.creator_avatar_color,
-                avatar_icon:  item.creator_avatar_icon,
-              }}
-              size={60}
-            />
-          )}
-
-          <View style={{ flex: 1, marginTop: 6 }}>
-            <Text style={{ fontSize: 20, fontWeight: "600", color: theme.colors.onSurface, lineHeight: 22 }}>
-              {item.title}
-            </Text>
-            <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
-              {mode === "feed"
-                ? `${item.creator_name || item.creator_username} - ${item.target_name}`
-                : item.target_name}
-            </Text>
-          </View>
-
-          <View style={{ alignItems: "flex-end", gap: 6 }}>
-            <View style={{
-              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(240,192,112,0.12)",
-              borderColor:     item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(240,192,112,0.2)",
-              borderWidth: 1, borderRadius: 20,
-              paddingHorizontal: 12, paddingVertical: 5,
-            }}>
-              <Text style={{ color: item.custom_stake ? "#a5b4fc" : DesignTokens.gold, fontWeight: "600", fontSize: 12 }}>
-                {item.custom_stake ?? `${stake} coins`}
+            <View style={{ flex: 1, marginTop: 6 }}>
+              <Text style={{ fontSize: 20, fontWeight: "600", color: theme.colors.onSurface, lineHeight: 22 }}>
+                {item.title}
               </Text>
+
+                <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
+                  {mode === "feed"
+                    ? `${item.creator_name || item.creator_username} · ${item.target_name}`
+                    : item.target_type === "user"
+                      ? isCreator
+                        ? item.target_name
+                        : item.creator_username
+                      : item.target_name}
+                </Text>
+
             </View>
             {mode === "active" && (
               <View style={{
@@ -134,23 +127,24 @@ export default function BetCard({
         <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.07)", marginVertical: 4 }} />
         <View style={{ flex: 1, alignItems: "center" }}>
           {mode === "active" ? (
-            <View style={{
-              backgroundColor: isClosed ? "rgba(239,68,68,0.1)" : "rgba(157,212,190,0.1)",
-              borderColor:     isClosed ? "rgba(239,68,68,0.25)" : "rgba(157,212,190,0.25)",
-              borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-              borderWidth: 1,
-            }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: isClosed ? "#e87060" : theme.colors.primary }}>
-                {isClosed ? "Closed" : "Open"}
-              </Text>
-            </View>
+
+              <View style={{
+                  backgroundColor: isClosed ? "rgba(232,112,96,0.1)" : "rgba(157,212,190,0.1)",
+                  borderColor: isClosed ? "rgba(232,112,96,0.25)" : "rgba(157,212,190,0.25)",
+                  borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+                  borderWidth: 1,
+                }}>
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: isClosed ? "#e87060" : theme.colors.primary }}>
+                    {isClosed ? "Closed" : item.closes_at ? fmtDate(item.closes_at) : "Open"}
+                  </Text>
+                </View>
           ) : (
             <Text style={{ fontSize: 13, fontWeight: "300", color: theme.colors.onSurface }}>
               {item.closes_at ? fmtDate(item.closes_at) : "-"}
             </Text>
           )}
           <Text style={{ fontSize: 9, fontWeight: "500", color: theme.colors.onSurfaceVariant, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
-            {mode === "active" ? "Status" : "Closes"}
+              {mode === "active" ? (isClosed ? "Status" : "Closes") : "Closes"}
           </Text>
         </View>
       </View>
@@ -323,32 +317,58 @@ export default function BetCard({
           </View>
         );
 
-        if (isCreator) return (
-          <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
-            <TouchableOpacity
-              onPress={async () => {
-                if (isClosed) {
-                  onSettle?.(item);
-                  return;
-                }
-                const sessionId = await getSessionId();
-                const res = await fetch(`${API_BASE}/bets/${item.id}/close`, {
-                  method: "POST", headers: { "x-session-id": sessionId ?? "" },
-                });
-                if (res.ok) onRefresh?.();
-              }}
-              style={{
-                backgroundColor: isClosed ? "rgba(157,212,190,0.1)" : "rgba(232,112,96,0.1)",
-                borderWidth: 1, borderColor: isClosed ? "rgba(157,212,190,0.25)" : "rgba(232,112,96,0.25)",
-                borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
-              }}
-            >
-              <Text style={{ fontSize: 12, color: isClosed ? theme.colors.primary : "#e87060", fontWeight: "500" }}>
-                {isClosed ? "Declare Winner" : "Close Bet"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        );
+        if (isCreator) {
+          const participantCount = Number(item.total_joined ?? 0);
+          const tooFewToSettle = participantCount < 2;
+
+          if (tooFewToSettle && isClosed) return (
+            <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  const sessionId = await getSessionId();
+                  const res = await fetch(`${API_BASE}/bets/${item.id}/cancel`, {
+                    method: "POST", headers: { "x-session-id": sessionId ?? "" },
+                  });
+                  if (res.ok) { onRefresh?.(); DeviceEventEmitter.emit("coinsUpdated"); }
+                }}
+                style={{
+                  backgroundColor: "rgba(232,112,96,0.1)",
+                  borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
+                  borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#e87060", fontWeight: "500" }}>Cancel Bet</Text>
+              </TouchableOpacity>
+            </View>
+          );
+
+          return (
+            <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (isClosed) {
+                    onSettle?.(item);
+                    return;
+                  }
+                  const sessionId = await getSessionId();
+                  const res = await fetch(`${API_BASE}/bets/${item.id}/close`, {
+                    method: "POST", headers: { "x-session-id": sessionId ?? "" },
+                  });
+                  if (res.ok) onRefresh?.();
+                }}
+                style={{
+                  backgroundColor: isClosed ? "rgba(157,212,190,0.1)" : "rgba(232,112,96,0.1)",
+                  borderWidth: 1, borderColor: isClosed ? "rgba(157,212,190,0.25)" : "rgba(232,112,96,0.25)",
+                  borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: isClosed ? theme.colors.primary : "#e87060", fontWeight: "500" }}>
+                  {isClosed ? "Declare Winner →" : "Close Bet"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
 
         return null;
       })()}

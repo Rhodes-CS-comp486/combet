@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, ScrollView, Alert, Pressable} from "react-native";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
+import { View, ScrollView, Alert, Pressable, Platform, DeviceEventEmitter } from "react-native";
 import GradientBackground from "@/components/GradientBackground";
 import {
   Text,
@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import {DesignTokens, useAppTheme} from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
+import UserAvatar from "@/components/UserAvatar";
 
 
 export default function AddBet() {
@@ -37,6 +38,11 @@ export default function AddBet() {
   const [searchQuery, setSearchQuery]               = useState("");
   const [loading, setLoading]                       = useState(false);
   const [step, setStep]                             = useState<1 | 2 | 3>(1);
+
+  const [creatorOptionIndex, setCreatorOptionIndex] = useState<number | null>(null);
+
+  const [selectedTargetColor, setSelectedTargetColor] = useState<string | null>(null);
+    const [selectedTargetIcon, setSelectedTargetIcon] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTargets = async () => {
@@ -77,10 +83,12 @@ export default function AddBet() {
   };
 
   const canProceedStep1 = title.trim().length > 0 && description.trim().length > 0;
-  const canProceedStep2 = options.filter((o) => o.trim()).length >= 2;
+    const canProceedStep2 = options.filter((o) => o.trim()).length >= 2;
 
-  const canSubmit = canProceedStep1 && canProceedStep2 && !!selectedTargetId &&
+    const canShowSummary = canProceedStep1 && canProceedStep2 && !!selectedTargetId &&
     (stakeType === "coins" ? !!stake : !!customStake.trim());
+
+    const canSubmit = canShowSummary && creatorOptionIndex !== null;
 
   const handleCreateBet = async () => {
     try {
@@ -103,6 +111,7 @@ export default function AddBet() {
           options:    cleanedOptions,
           targetType: postTo === "circles" ? "circle" : "user",
           targetId:   selectedTargetId,
+            creatorOptionIndex,
         }),
       });
 
@@ -111,7 +120,8 @@ export default function AddBet() {
 
       setTitle(""); setDescription(""); setOptions(["", ""]); setStake("");
       setCloseAt(null); setPostTo("circles"); setSelectedTargetId(null); setStep(1);
-      router.back();
+      DeviceEventEmitter.emit("coinsUpdated");
+    router.back();
     } catch {
       Alert.alert("Network Error", "Could not connect to server");
     } finally {
@@ -376,7 +386,8 @@ export default function AddBet() {
                       {selectedTargetName}
                     </Text>
                   </View>
-                  <Pressable onPress={() => { setSelectedTargetId(null); setSelectedTargetName(null); }}>
+                  <Pressable
+                      onPress={() => { setSelectedTargetId(null); setSelectedTargetName(null); }}>
                     <Ionicons name="close-circle-outline" size={20} color={theme.colors.onSurfaceVariant} />
                   </Pressable>
                 </View>
@@ -401,7 +412,13 @@ export default function AddBet() {
                 const selected = selectedTargetId === id;
                 return (
                   <Pressable key={id}
-                    onPress={() => { setSelectedTargetId(id); setSelectedTargetName(name); setSearchQuery(""); }}
+                             onPress={() => {
+                              setSelectedTargetId(id);
+                              setSelectedTargetName(name);
+                              setSelectedTargetColor(item.icon_color ?? item.avatar_color ?? null);
+                              setSelectedTargetIcon(item.icon ?? item.avatar_icon ?? null);
+                              setSearchQuery("");
+                            }}
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center",
                       padding: 12, borderRadius: 12, marginTop: 8,
@@ -410,8 +427,26 @@ export default function AddBet() {
                       borderWidth: 1, borderColor: selected ? theme.colors.primary : "transparent",
                       opacity: pressed ? 0.8 : 1,
                     })}>
-                    <Ionicons name={postTo === "circles" ? "people" : "person"} size={18}
-                      color={selected ? theme.colors.primary : theme.colors.onSurfaceVariant} />
+                    {postTo === "circles" ? (
+                      <View style={{
+                        width: 36, height: 36, borderRadius: 18,
+                        backgroundColor: item.icon_color ?? "rgba(255,255,255,0.08)",
+                        borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Ionicons name={(item.icon as any) ?? "people"} size={18} color="#fff" />
+                      </View>
+                    ) : (
+                      <UserAvatar
+                        user={{
+                          display_name: item.name ?? item.username,
+                          username: item.username ?? item.name,
+                          avatar_color: item.avatar_color,
+                          avatar_icon: item.avatar_icon,
+                        }}
+                        size={36}
+                      />
+                    )}
                     <Text style={{
                       color: selected ? theme.colors.primary : theme.colors.onSurface,
                       fontWeight: selected ? "700" : "500", marginLeft: 10,
@@ -555,7 +590,7 @@ export default function AddBet() {
 
             </View>
 
-            {canSubmit && (
+            {canShowSummary && (
               <View style={{
                 borderRadius: 20,
                 backgroundColor: "rgba(255,255,255,0.09)",
@@ -566,14 +601,26 @@ export default function AddBet() {
                   Bet Summary
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                  {postTo === "circles" ? (
                   <View style={{
                     width: 44, height: 44, borderRadius: 22,
-                    backgroundColor: "rgba(157,212,190,0.12)",
-                    borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                    backgroundColor: selectedTargetColor ?? "rgba(255,255,255,0.08)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
                     alignItems: "center", justifyContent: "center",
                   }}>
-                    <Ionicons name="people" size={20} color={theme.colors.primary} />
+                    <Ionicons name={(selectedTargetIcon as any) ?? "people"} size={20} color="#fff" />
                   </View>
+                ) : (
+                  <UserAvatar
+                    user={{
+                      display_name: selectedTargetName ?? "",
+                      username: selectedTargetName ?? "",
+                      avatar_color: selectedTargetColor ?? undefined,
+                      avatar_icon: selectedTargetIcon ?? undefined,
+                    }}
+                    size={44}
+                  />
+                )}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
                     <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{selectedTargetName}</Text>
@@ -589,24 +636,33 @@ export default function AddBet() {
                     </Text>
                   </View>
                 </View>
+
+                <Text style={{ fontSize: 12, fontWeight: "400", color: theme.colors.onSurfaceVariant, letterSpacing: 1.2, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>
+                  Pick your side
+                </Text>
                 <View style={{ gap: 6 }}>
-                  {options.filter(Boolean).map((opt, i) => (
-                    <View key={i} style={{
-                      borderRadius: 10, padding: 10,
-                      borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
-                      flexDirection: "row", alignItems: "center", gap: 10,
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                    }}>
-                      <View style={{
-                        width: 24, height: 24, borderRadius: 12,
-                        backgroundColor: optionColors[i],
-                        alignItems: "center", justifyContent: "center",
+                  {options.filter(Boolean).map((opt, i) => {
+                    const selected = creatorOptionIndex === i;
+                    return (
+                      <Pressable key={i} onPress={() => setCreatorOptionIndex(i)} style={{
+                        borderRadius: 10, padding: 10,
+                        borderWidth: 1,
+                        borderColor: selected ? theme.colors.primary : "rgba(255,255,255,0.07)",
+                        flexDirection: "row", alignItems: "center", gap: 10,
+                        backgroundColor: selected ? "rgba(157,212,190,0.1)" : "rgba(255,255,255,0.04)",
                       }}>
-                        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 11 }}>{String.fromCharCode(65 + i)}</Text>
-                      </View>
-                      <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>{opt}</Text>
-                    </View>
-                  ))}
+                        <View style={{
+                          width: 24, height: 24, borderRadius: 12,
+                          backgroundColor: optionColors[i],
+                          alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 11 }}>{String.fromCharCode(65 + i)}</Text>
+                        </View>
+                        <Text style={{ color: selected ? theme.colors.primary : theme.colors.onSurface, fontSize: 13, fontWeight: selected ? "600" : "400" }}>{opt}</Text>
+                        {selected && <Ionicons name="checkmark-circle" size={16} color={theme.colors.primary} style={{ marginLeft: "auto" }} />}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
             )}

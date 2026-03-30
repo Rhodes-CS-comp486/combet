@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Alert, Platform, ScrollView, View, StyleSheet } from "react-native";
 import {
-  Surface,
   Text,
   Switch,
   Divider,
@@ -16,8 +15,8 @@ import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
-
-
+import GradientBackground from "@/components/GradientBackground";
+import BackHeader from "@/components/Backheader";
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme, theme } = useAppTheme();
@@ -91,35 +90,15 @@ export default function SettingsScreen() {
   const s = styles(theme);
 
   return (
-    <Surface style={s.root}>
+    <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        <BackHeader label="Profile" href="/(tabs)/profile" />
+        <Text style={{ color: theme.colors.onSurface, fontSize: 28, fontWeight: "300", letterSpacing: 0.5, marginBottom: 28, marginTop: 8 }}>
+          Settings
+        </Text>
 
-        {/* ── Appearance ── */}
-        <Text variant="titleMedium" style={s.sectionLabel}>Appearance</Text>
-        <Surface elevation={1} style={s.card}>
-          <List.Item
-            title="Dark Mode"
-            titleStyle={{ color: theme.colors.onSurface }}
-            description={isDark ? "On" : "Off"}
-            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
-            left={(props) => (
-              <List.Icon
-                {...props}
-                icon={isDark ? "weather-night" : "weather-sunny"}
-                color={theme.colors.primary}
-              />
-            )}
-            right={() => (
-              <Switch value={isDark} onValueChange={toggleTheme} color={theme.colors.primary} />
-            )}
-          />
-        </Surface>
-
-        <Divider style={s.divider} />
-
-        {/* ── Settings ── */}
-        <Text variant="titleMedium" style={s.sectionLabel}>Settings</Text>
-        <Surface elevation={1} style={s.card}>
+        <Text style={[s.sectionLabel, { fontSize: 13, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" }]}>Settings</Text>
+        <View style={s.card}>
           <List.Item
             title="Change Password"
             titleStyle={{ color: theme.colors.onSurface }}
@@ -143,20 +122,19 @@ export default function SettingsScreen() {
             right={(props) => <List.Icon {...props} icon="chevron-right" color={theme.colors.onSurfaceVariant} />}
             onPress={() => Alert.alert("Coming Soon", "Privacy settings coming soon.")}
           />
-        </Surface>
+        </View>
 
         <Divider style={s.divider} />
 
-        {/* ── Account ── */}
-        <Text variant="titleMedium" style={s.sectionLabel}>Account</Text>
-        <Surface elevation={1} style={s.card}>
+        <Text style={[s.sectionLabel, { fontSize: 13, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" }]}>Account</Text>
+        <View style={s.card}>
           <List.Item
             title="Logout"
             titleStyle={{ color: theme.colors.error }}
             left={(props) => <List.Icon {...props} icon="logout" color={theme.colors.error} />}
             onPress={onLogout}
           />
-        </Surface>
+        </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -165,38 +143,50 @@ export default function SettingsScreen() {
         <Modal
           visible={pwVisible}
           onDismiss={() => { setPwVisible(false); setPwError(""); }}
-          contentContainerStyle={[s.modal, { backgroundColor: theme.colors.surface }]}
+          contentContainerStyle={[s.modal, { backgroundColor: "#1a3040" }]}
         >
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Change Password
           </Text>
-          <TextInput
-            label="Current Password"
-            value={currentPw}
-            onChangeText={setCurrentPw}
-            secureTextEntry
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
-          />
-          <TextInput
-            label="New Password"
-            value={newPw}
-            onChangeText={setNewPw}
-            secureTextEntry
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
-          />
-          <TextInput
-            label="Confirm New Password"
-            value={confirmPw}
-            onChangeText={setConfirmPw}
-            secureTextEntry
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
-          />
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+            <TextInput
+              label="Current Password"
+              value={currentPw}
+              onChangeText={setCurrentPw}
+              secureTextEntry
+              mode="flat"
+              style={{ backgroundColor: "transparent" }}
+              underlineColor="transparent"
+              activeUnderlineColor={theme.colors.primary}
+              theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+            />
+          </View>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+            <TextInput
+              label="New Password"
+              value={newPw}
+              onChangeText={setNewPw}
+              secureTextEntry
+              mode="flat"
+              style={{ backgroundColor: "transparent" }}
+              underlineColor="transparent"
+              activeUnderlineColor={theme.colors.primary}
+              theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+            />
+          </View>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+            <TextInput
+              label="Confirm New Password"
+              value={confirmPw}
+              onChangeText={setConfirmPw}
+              secureTextEntry
+              mode="flat"
+              style={{ backgroundColor: "transparent" }}
+              underlineColor="transparent"
+              activeUnderlineColor={theme.colors.primary}
+              theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+            />
+          </View>
           {pwError ? <HelperText type="error">{pwError}</HelperText> : null}
           <View style={s.modalActions}>
             <Button onPress={() => { setPwVisible(false); setPwError(""); }} textColor={theme.colors.onSurfaceVariant}>
@@ -208,19 +198,19 @@ export default function SettingsScreen() {
           </View>
         </Modal>
       </Portal>
-    </Surface>
+    </GradientBackground>
   );
 }
 
 const styles = (theme: any) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.colors.background },
-    scroll: { padding: 20 },
+    root: { flex: 1 },
     sectionLabel: { color: theme.colors.onSurfaceVariant, marginBottom: 8 },
-    card: { borderRadius: 12, backgroundColor: theme.colors.surface, overflow: "hidden" },
+    scroll: { paddingBottom: 40, paddingTop: 12 },
+    card: { borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden" },
     divider: { backgroundColor: theme.colors.outline, marginVertical: 20 },
     modal: { margin: 24, borderRadius: 16, padding: 24 },
     modalTitle: { fontWeight: "700", marginBottom: 16 },
-    input: { marginBottom: 12, backgroundColor: "transparent" },
+    input: { marginBottom: 0, backgroundColor: "transparent" },
     modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },
   });

@@ -9,6 +9,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import IconCarousel, { ICONS } from "@/components/IconCarousel";
 import { API_BASE } from "@/constants/api";
 import { AVATAR_COLORS } from "@/components/UserAvatar";
+import GradientBackground from "@/components/GradientBackground";
 
 
 
@@ -67,20 +68,20 @@ export default function CreateCircle() {
     finally { setCheckingName(false); }
   };
 
-  const subtleBg = isDark ? "#0F223A" : "#f0f4ff";
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop:    insets.top + 16,
-          paddingBottom: insets.bottom + 60,
-        }}
+  <GradientBackground style={{ paddingHorizontal: 20 }}>
+    <ScrollView
+      contentContainerStyle={{
+        paddingTop:    insets.top + 16,
+        paddingBottom: insets.bottom + 60,
+      }}
+
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* ── Back ── */}
-        <View style={{ paddingHorizontal: 20 }}>
+        <View>
           <Button
             icon="arrow-left" mode="text" compact
             onPress={() => router.back()}
@@ -120,7 +121,7 @@ export default function CreateCircle() {
         }}>
           PICK A COLOR
         </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginBottom: 28, paddingHorizontal: 20 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12, marginBottom: 28 }}>
           {AVATAR_COLORS.map((color) => (
             <TouchableOpacity
               key={color}
@@ -135,16 +136,18 @@ export default function CreateCircle() {
           ))}
         </View>
         {/* ── Inputs ── */}
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 2 }}>
           <TextInput
             label="Circle name"
             value={name}
             onChangeText={(t) => { setName(t); setNameError(null); }}
             onBlur={() => checkNameUnique(name)}
-            mode="outlined"
+            mode="flat"
             maxLength={15}
-            outlineStyle={{ borderRadius: 14 }}
-            style={{ backgroundColor: subtleBg, marginBottom: 2 }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
             right={
               <TextInput.Affix
                 text={`${name.length}/15`}
@@ -152,20 +155,24 @@ export default function CreateCircle() {
               />
             }
           />
-          <HelperText type="error" visible={!!nameError} style={{ marginBottom: 8 }}>
-            {nameError ?? " "}
-          </HelperText>
+        </View>
+        <HelperText type="error" visible={!!nameError} style={{ marginBottom: 8 }}>
+          {nameError ?? " "}
+        </HelperText>
 
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 2 }}>
           <TextInput
             label="Description (optional)"
             value={description}
             onChangeText={(t) => { setDesc(t); setDescError(null); }}
-            mode="outlined"
+            mode="flat"
             multiline
             numberOfLines={3}
             maxLength={100}
-            outlineStyle={{ borderRadius: 14 }}
-            style={{ backgroundColor: subtleBg, marginBottom: 2 }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
             right={
               <TextInput.Affix
                 text={`${description.length}/100`}
@@ -173,70 +180,62 @@ export default function CreateCircle() {
               />
             }
           />
-          <HelperText type="error" visible={!!descError} style={{ marginBottom: 16 }}>
-            {descError ?? " "}
-          </HelperText>
-
-          {/* ── Privacy Toggle ── */}
-          <View style={{
-            flexDirection:   "row",
-            alignItems:      "center",
-            justifyContent:  "space-between",
-            backgroundColor: subtleBg,
-            borderRadius:    14,
-            paddingHorizontal: 16,
-            paddingVertical:   14,
-            marginBottom:    24,
-            borderWidth:     1,
-            borderColor:     isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Ionicons
-                name={isPrivate ? "lock-closed" : "globe-outline"}
-                size={18}
-                color={isPrivate ? theme.colors.primary : theme.colors.onSurfaceVariant}
-              />
-              <View>
-                <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                  {isPrivate ? "Private" : "Public"}
-                </Text>
-                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-                  {isPrivate
-                    ? "Members must request to join"
-                    : "Anyone can search and join"}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: isDark ? "#2a3a4a" : "#d0d8e8", true: theme.colors.primary }}
-              thumbColor={"#ffffff"}
-            />
-          </View>
-
-          <Button
-            mode="contained"
-            onPress={handleCreate}
-            loading={loading}
-            disabled={loading || name.length < 5}
-            contentStyle={{ paddingVertical: 10 }}
-            labelStyle={{ fontWeight: "900", fontSize: 16, letterSpacing: 0.5 }}
-            style={{ borderRadius: 16 }}
-          >
-            Create Circle
-          </Button>
-
-          <Button
-            mode="text"
-            onPress={() => router.back()}
-            style={{ marginTop: 8 }}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}
-          >
-            Cancel
-          </Button>
         </View>
+        <HelperText type="error" visible={!!descError} style={{ marginBottom: 16 }}>
+          {descError ?? " "}
+        </HelperText>
+
+        <View style={{
+          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          backgroundColor: "rgba(255,255,255,0.07)",
+          borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
+          marginBottom: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+        }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons
+              name={isPrivate ? "lock-closed" : "globe-outline"}
+              size={18}
+              color={isPrivate ? theme.colors.primary : theme.colors.onSurfaceVariant}
+            />
+            <View>
+              <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                {isPrivate ? "Private" : "Public"}
+              </Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+                {isPrivate ? "Members must request to join" : "Anyone can search and join"}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={isPrivate}
+            onValueChange={setIsPrivate}
+            trackColor={{ false: isDark ? "#2a3a4a" : "#d0d8e8", true: theme.colors.primary }}
+            thumbColor="#ffffff"
+          />
+        </View>
+
+        <Button
+          mode="contained"
+          onPress={handleCreate}
+          loading={loading}
+          disabled={loading || name.length < 5}
+          contentStyle={{ paddingVertical: 10 }}
+          labelStyle={{ fontWeight: "400", fontSize: 16 }}
+          style={{ borderRadius: 14, marginBottom: 8 }}
+        >
+          Create Circle
+        </Button>
+
+        <Button
+          mode="text"
+          onPress={() => router.back()}
+          style={{ marginTop: 4 }}
+          labelStyle={{ color: theme.colors.onSurfaceVariant }}
+        >
+          Cancel
+        </Button>
+
       </ScrollView>
-    </View>
+  </GradientBackground>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, View, StyleSheet, TouchableOpacity } from "react-native";
+import BetCard from "@/components/BetCard";
 import {
   Text,
   Button,
@@ -202,7 +203,7 @@ export default function ProfileScreen() {
         {/* ── Top bar ── */}
         <View style={s.topBar}>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity style={s.settingsBtn} onPress={() => router.push("/settings")}>
+          <TouchableOpacity style={s.settingsBtn} onPress={() => router.push("/(tabs)/settings")}>
             <Ionicons name="settings-outline" size={22} color={theme.colors.onSurface} />
           </TouchableOpacity>
         </View>
@@ -249,12 +250,12 @@ export default function ProfileScreen() {
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: "#4CAF50" }]}>{profile?.wins ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.primary }]}>{profile?.wins ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Wins</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.error }]}>{profile?.losses ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: "#e87060" }]}>{profile?.losses ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Losses</Text>
             </View>
           </View>
@@ -272,7 +273,9 @@ export default function ProfileScreen() {
         <Divider style={s.divider} />
 
         {/* ── My Bets ── */}
-        <Text variant="titleMedium" style={[s.sectionLabel, { marginBottom: 12 }]}>My Bets</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
+            <Text style={[s.sectionLabel, { fontSize: 24, fontWeight: "300", letterSpacing: 0.5 }]}>My Bets</Text>
+        </View>
 
         {/* ── Filter tabs ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
@@ -285,15 +288,16 @@ export default function ProfileScreen() {
                   paddingHorizontal: 14,
                   paddingVertical: 6,
                   borderRadius: 20,
-                  backgroundColor: betFilter === key ? theme.colors.primary : "#1a2035",
                   borderWidth: 1,
-                  borderColor: betFilter === key ? theme.colors.primary : "#2a3550",
+                    backgroundColor: betFilter === key ? "rgba(157,212,190,0.15)" : "transparent",
+                    borderColor: betFilter === key ? "rgba(157,212,190,0.3)" : "rgba(255,255,255,0.1)",
+
                 }}
               >
                 <Text style={{
                   fontSize: 12,
                   fontWeight: "500",
-                  color: betFilter === key ? "#fff" : "#94a3b8",
+                    color: betFilter === filter ? theme.colors.primary : theme.colors.onSurfaceVariant,
                 }}>
                   {label}
                 </Text>
@@ -342,24 +346,32 @@ export default function ProfileScreen() {
           <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
             Edit Profile
           </Text>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
           <TextInput
             label="Display Name"
             value={editName}
             onChangeText={setEditName}
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
+            mode="flat"
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
+          <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
           <TextInput
             label="Bio"
             value={editBio}
             onChangeText={setEditBio}
-            mode="outlined"
+            mode="flat"
             multiline
             numberOfLines={3}
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
+            style={{ backgroundColor: "transparent" }}
+            underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
           <View style={s.modalActions}>
             <Button onPress={() => setEditVisible(false)} textColor={theme.colors.onSurfaceVariant}>
               Cancel
@@ -462,8 +474,7 @@ const styles = (theme: any) =>
     topBar:      { flexDirection: "row", alignItems: "center", marginBottom: 4 },
     settingsBtn: {
       width: 36, height: 36, borderRadius: 10,
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1, borderColor: theme.colors.outline,
+        backgroundColor: "rgba(255,255,255,0.07)",      borderWidth: 1, borderColor: theme.colors.outline,
       justifyContent: "center", alignItems: "center",
     },
     header:      { alignItems: "center", paddingBottom: 24 },
@@ -484,16 +495,32 @@ const styles = (theme: any) =>
     statNum:     { color: theme.colors.onSurface, fontWeight: "700" },
     statLabel:   { color: theme.colors.onSurfaceVariant, marginTop: 2 },
     statDivider: { width: 1, backgroundColor: theme.colors.outline },
-    editBtn:     { marginTop: 16, borderColor: theme.colors.primary, borderRadius: 20, paddingHorizontal: 8 },
-    divider:     { backgroundColor: theme.colors.outline, marginVertical: 20 },
-    sectionLabel: { color: theme.colors.onSurface },
-    modal: {
-      margin: 24, borderRadius: 20, padding: 24,
-      backgroundColor: "#1f3347",
-      borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-    },
-    modalBackdrop: { backgroundColor: "rgba(10,20,30,0.85)" },
-    modalTitle:    { fontWeight: "700", marginBottom: 16 },
-    input:         { marginBottom: 12, backgroundColor: "transparent" },
-    modalActions:  { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },
+    editBtn: { marginTop: 16, borderColor: theme.colors.primary, borderRadius: 20, paddingHorizontal: 8 },
+    divider: { backgroundColor: theme.colors.outline, marginVertical: 20 },
+    sectionLabel: { color: theme.colors.onSurface, marginBottom: 0 },
+    betCard: { borderRadius: 16, backgroundColor: theme.colors.surface, padding: 16, marginBottom: 12 },
+    betHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+    betTitle: { color: theme.colors.onSurface, fontWeight: "600", flex: 1, marginRight: 8 },
+    statusBadge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+    statusText: { fontSize: 11, fontWeight: "600" },
+    betDesc: { color: theme.colors.onSurfaceVariant, marginBottom: 10, lineHeight: 18 },
+    betMeta: { flexDirection: "row", gap: 16, marginBottom: 10 },
+    betMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+    betMetaText: { color: theme.colors.onSurfaceVariant },
+    optionsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    optionChip: { flexDirection: "row", alignItems: "center", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, gap: 6, maxWidth: "48%" },
+    optionLabel: { fontWeight: "700", fontSize: 12 },
+    optionText: { fontSize: 12, flex: 1 },
+      modal: {
+  margin: 24,
+  borderRadius: 20,
+  padding: 24,
+  backgroundColor: "#314554",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.13)",
+},
+      modalBackdrop: { backgroundColor: "rgba(10, 20, 30, 0.85)" },
+    modalTitle: { fontWeight: "700", marginBottom: 16 },
+    input: { marginBottom: 12, backgroundColor: "transparent" },
+    modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 8 },
   });

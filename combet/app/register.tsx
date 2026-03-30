@@ -4,6 +4,8 @@ import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { View } from "react-native";
+import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 
 
@@ -59,148 +61,111 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-    >
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : undefined}
+    style={{ flex: 1 }}
+  >
+    <GradientBackground style={{ paddingHorizontal: 24 }}>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 20 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 40 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* ── Brand ── */}
-        <Text
-          variant="headlineLarge"
-          style={{
-            textAlign:     "center",
-            color:         theme.colors.primary,
-            fontWeight:    "900",
-            letterSpacing: 3,
-            marginBottom:  24,
-          }}
-        >
+        <Text style={{
+          textAlign: "center",
+          color: "#ffffff",
+          fontWeight: "300",
+          letterSpacing: 6,
+          fontSize: 32,
+          marginBottom: 8,
+        }}>
           COMBET
         </Text>
+        <Text style={{
+          textAlign: "center",
+          color: theme.colors.onSurfaceVariant,
+          marginBottom: 40,
+          fontSize: 14,
+        }}>
+          Create your account
+        </Text>
 
-        {/* ── Card ── */}
-        <Surface
-          elevation={2}
-          style={{
-            borderRadius:    18,
-            padding:         24,
-            backgroundColor: theme.colors.surface,
-          }}
-        >
-          <Text
-            variant="titleLarge"
-            style={{
-              textAlign:    "center",
-              fontWeight:   "800",
-              color:        theme.colors.onSurface,
-              marginBottom: 4,
-            }}
-          >
-            Create account
-          </Text>
-
-          <Text
-            variant="bodyMedium"
-            style={{
-              textAlign:    "center",
-              color:        theme.colors.onSurfaceVariant,
-              marginBottom: 24,
-            }}
-          >
-            Enter your information below
-          </Text>
-
-          {/* ── First & Last name row ── */}
-          <TextInput
-            label="First name"
-            value={first_name}
-            onChangeText={setFirst}
-            mode="outlined"
-            left={<TextInput.Icon icon="account" />}
-            style={{ marginBottom: 12 }}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+          <TextInput label="First name" value={first_name} onChangeText={setFirst}
+            mode="flat" left={<TextInput.Icon icon="account" />}
+            style={{ backgroundColor: "transparent" }} underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          <TextInput
-            label="Last name"
-            value={last_name}
-            onChangeText={setLast}
-            mode="outlined"
-            left={<TextInput.Icon icon="account" />}
-            style={{ marginBottom: 12 }}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+          <TextInput label="Last name" value={last_name} onChangeText={setLast}
+            mode="flat" left={<TextInput.Icon icon="account" />}
+            style={{ backgroundColor: "transparent" }} underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Username ── */}
-          <TextInput
-            label="Username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            mode="outlined"
-            left={<TextInput.Icon icon="at" />}
-            style={{ marginBottom: 12 }}
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+          <TextInput label="Username" value={username} onChangeText={setUsername}
+            autoCapitalize="none" mode="flat" left={<TextInput.Icon icon="at" />}
+            style={{ backgroundColor: "transparent" }} underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Email ── */}
-          <TextInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            mode="outlined"
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
+          <TextInput label="Email" value={email} onChangeText={setEmail}
+            autoCapitalize="none" keyboardType="email-address" mode="flat"
             left={<TextInput.Icon icon="email" />}
-            style={{ marginBottom: 12 }}
+            style={{ backgroundColor: "transparent" }} underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Password ── */}
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!passwordVisible}
-            mode="outlined"
+        <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 4 }}>
+          <TextInput label="Password" value={password} onChangeText={setPassword}
+            secureTextEntry={!passwordVisible} mode="flat"
             left={<TextInput.Icon icon="lock" />}
-            right={
-              <TextInput.Icon
-                icon={passwordVisible ? "eye-off" : "eye"}
-                onPress={() => setPasswordVisible((v) => !v)}
-              />
-            }
-            style={{ marginBottom: 4 }}
+            right={<TextInput.Icon icon={passwordVisible ? "eye-off" : "eye"} onPress={() => setPasswordVisible((v) => !v)} />}
+            style={{ backgroundColor: "transparent" }} underlineColor="transparent"
+            activeUnderlineColor={theme.colors.primary}
+            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
           />
+        </View>
 
-          {/* ── Error ── */}
-          <HelperText type="error" visible={!!errorMsg} style={{ marginBottom: 8 }}>
-            {errorMsg}
-          </HelperText>
+        <HelperText type="error" visible={!!errorMsg} style={{ marginBottom: 8 }}>
+          {errorMsg}
+        </HelperText>
 
-          {/* ── Register Button ── */}
-          <Button
-            mode="contained"
-            onPress={onRegister}
-            loading={loading}
-            disabled={loading}
-            contentStyle={{ paddingVertical: 6 }}
-            labelStyle={{ fontWeight: "900", fontSize: 16 }}
-            style={{ borderRadius: 12, marginTop: 4 }}
-          >
-            {loading ? "Creating..." : "Create account"}
-          </Button>
+        <Button
+          mode="contained"
+          onPress={onRegister}
+          loading={loading}
+          disabled={loading}
+          contentStyle={{ paddingVertical: 6 }}
+          labelStyle={{ fontWeight: "400", fontSize: 16 }}
+          style={{ borderRadius: 12, marginTop: 4 }}
+        >
+          {loading ? "Creating..." : "Create account"}
+        </Button>
 
-          {/* ── Back to login ── */}
-          <Button
-            mode="text"
-            onPress={() => router.back()}
-            style={{ marginTop: 8 }}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}
-          >
-            Back to login
-          </Button>
-        </Surface>
+        <Button
+          mode="text"
+          onPress={() => router.back()}
+          style={{ marginTop: 8 }}
+          labelStyle={{ color: theme.colors.onSurfaceVariant }}
+        >
+          Back to login
+        </Button>
       </ScrollView>
-    </KeyboardAvoidingView>
-  );
+    </GradientBackground>
+  </KeyboardAvoidingView>
+);
+
+
 }
