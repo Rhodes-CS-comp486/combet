@@ -9,7 +9,7 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 
-type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; };
+type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; follow_status?: string | null; is_private?: boolean; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; icon?: string; icon_color?: string; };type SearchResult = UserResult | CircleResult;
 
 
@@ -127,9 +127,6 @@ export default function HomeScreen() {
 
   // ── Follow user ───────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
-    setResults((prev) =>
-      prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: true } : r)
-    );
     try {
       const sessionId = await getSessionId();
       const res = await fetch(`${API_BASE}/users/follows`, {
@@ -138,10 +135,17 @@ export default function HomeScreen() {
         body: JSON.stringify({ followingId }),
       });
       if (!res.ok) throw new Error();
-    } catch {
+      const data = await res.json();
+      // "requested" for private accounts, "following" for public
       setResults((prev) =>
-        prev.map((r) => r.type === "user" && r.id === followingId ? { ...r, isFriend: false } : r)
+        prev.map((r) =>
+          r.type === "user" && r.id === followingId
+            ? { ...r, isFriend: data.status === "following", follow_status: data.status }
+            : r
+        )
       );
+    } catch {
+      // No change on failure
     }
   };
 
@@ -266,7 +270,22 @@ export default function HomeScreen() {
                       @{item.subtitle}
                     </Text>
                   </View>
-                  {!item.isFriend ? (
+                  {item.follow_status === "requested" ? (
+                    <View style={{
+                      backgroundColor:  theme.colors.surface,
+                      borderRadius:     20,
+                      paddingHorizontal: 12,
+                      paddingVertical:  6,
+                      borderWidth:      0.5,
+                      borderColor:      theme.colors.outline,
+                      flexDirection:    "row",
+                      alignItems:       "center",
+                      gap:              4,
+                    }}>
+                      <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
+                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Requested</Text>
+                    </View>
+                  ) : !item.isFriend ? (
                     <TouchableOpacity
                       onPress={() => followUser(item.id)}
                       style={{
@@ -344,8 +363,8 @@ export default function HomeScreen() {
                         alignItems:       "center",
                         gap:              3,
                         backgroundColor:  item.is_private
-                          ? "rgba(232,112,96,0.1)"
-                          : "rgba(157,212,190,0.1)",
+                          ? "rgba(239,68,68,0.1)"
+                          : "rgba(34,197,94,0.1)",
                         borderRadius:     20,
                         paddingHorizontal: 6,
                         paddingVertical:  2,
@@ -353,12 +372,12 @@ export default function HomeScreen() {
                         <Ionicons
                           name={item.is_private ? "lock-closed" : "globe-outline"}
                           size={10}
-                          color={item.is_private ? "#e87060" : "#9dd4be"}
+                          color={item.is_private ? "#ef4444" : "#22c55e"}
                         />
                         <Text style={{
                           fontSize:   10,
                           fontWeight: "500",
-                            color: item.is_private ? "#e87060" : "#9dd4be",
+                          color:      item.is_private ? "#ef4444" : "#22c55e",
                         }}>
                           {item.is_private ? "Private" : "Public"}
                         </Text>
@@ -382,30 +401,30 @@ export default function HomeScreen() {
                     }}
                     style={{
                       backgroundColor:
-                          item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
-                          item.joinStatus === "pending" ? theme.colors.surface :
-                          theme.colors.primary,
+                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
+                        item.joinStatus === "pending" ? theme.colors.surface :
+                        theme.colors.primary,
                       borderRadius:     20,
                       paddingHorizontal: 14,
                       paddingVertical:  6,
                       borderWidth:      0.5,
                       borderColor:
-                          item.joinStatus === "joined"  ? "rgba(157,212,190,0.25)" :
-                          item.joinStatus === "pending" ? "rgba(255,255,255,0.1)" :
-                          "rgba(157,212,190,0.3)",
+                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
+                        item.joinStatus === "pending" ? theme.colors.outline :
+                        theme.colors.primary,
                       flexDirection: "row",
                       alignItems:    "center",
                       gap:           4,
                     }}
                   >
                     {item.joinStatus === "joined" && (
-                        <Ionicons name="checkmark" size={12} color="#9dd4be" />
+                      <Ionicons name="checkmark" size={12} color="#4CAF50" />
                     )}
                     <Text style={{
                       color:
-                          item.joinStatus === "joined"  ? "#9dd4be" :
-                          item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
-                          "#fff",
+                        item.joinStatus === "joined"  ? "#4CAF50" :
+                        item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
+                        "#fff",
                       fontSize:   12,
                       fontWeight: "500",
                     }}>
@@ -539,86 +558,47 @@ export default function HomeScreen() {
                   const timeLabel  = days < 1 ? "today" : days < 7 ? `${days}d ago` : `${Math.floor(days / 7)}w ago`;
 
                   return (
-                      <View key={item.id} style={{
-                          width: 180,
-                          borderRadius: 16,
-                          padding: 14,
-                          flexShrink: 0,
-                          backgroundColor: "rgba(255,255,255,0.07)",
-                          borderWidth: 2,
-                          borderColor: iWon ? "rgba(157,212,190,0.4)" : "rgba(232,112,96,0.4)",
-                          flexDirection: "column",
-                        }}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                            {item.target_type === "circle" ? (
-                              <View style={{
-                                width: 40, height: 40, borderRadius: 20,
-                                backgroundColor: item.circle_icon_color ?? "rgba(255,255,255,0.08)",
-                                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                                alignItems: "center", justifyContent: "center", flexShrink: 0,
-                              }}>
-                                <Ionicons name={(item.circle_icon as any) ?? "people"} size={20} color="#fff" />
-                              </View>
-                            ) : (
-                              <UserAvatar
-                                user={{
-                                  display_name: item.is_creator ? item.target_name : item.creator_username,
-                                  username: item.is_creator ? item.target_name : item.creator_username,
-                                  avatar_color: item.is_creator ? item.target_avatar_color : item.creator_avatar_color,
-                                  avatar_icon: item.is_creator ? item.target_avatar_icon : item.creator_avatar_icon,
-                                }}
-                                size={40}
-                              />
-                            )}
-                            <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={{ fontSize: 12, color: iWon ? "#9dd4be" : "#e87060", fontWeight: "600" }} numberOfLines={1}>
-                                {item.target_name ?? ""}
-                              </Text>
-                              <Text style={{ fontSize: 10, color: theme.colors.onSurfaceVariant }}>{timeLabel}</Text>
-                            </View>
-                          </View>
-                          <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 12, lineHeight: 18, flex: 1 }} numberOfLines={2}>
-                            {item.title}
-                          </Text>
-                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                            {iWon && stake > 0 ? (
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
-                                <Text style={{ color: DesignTokens.gold, fontWeight: "400", fontSize: 20 }}>+ {payout}</Text>
-                              </View>
-                            ) : !iWon && stake > 0 ? (
-                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
-                                <Text style={{ color: "#e87060", fontWeight: "400", fontSize: 20 }}>- {stake}</Text>
-                              </View>
-                            ) : item.custom_stake ? (
-                              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
-                            ) : (
-                              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
-                            )}
-                            {!iWon && !item.is_creator && (
-                              <TouchableOpacity
-                                onPress={async () => {
-                                  const sessionId = await getSessionId();
-                                  const res = await fetch(`${API_BASE}/bets/${item.id}/dispute`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                                  });
-                                  if (res.ok) fetchRecentResults();
-                                }}
-                                style={{
-                                  backgroundColor: "rgba(232,112,96,0.1)",
-                                  borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
-                                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                                }}
-                              >
-                                <Text style={{ fontSize: 11, color: "#e87060", fontWeight: "500" }}>Dispute</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
+                    <View key={item.id} style={{
+                      minWidth:        140,
+                      borderRadius:    16,
+                      padding:         12,
+                      flexShrink:      0,
+                      backgroundColor: "rgba(255,255,255,0.07)",
+                      borderWidth:     1,
+                      borderColor:     iWon ? "rgba(157,212,190,0.2)" : "rgba(239,68,68,0.2)",
+                    }}>
+                      <View style={{
+                        alignSelf:       "flex-start",
+                        backgroundColor: iWon ? "rgba(157,212,190,0.15)" : "rgba(239,68,68,0.15)",
+                        borderRadius:    20,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        marginBottom:    6,
+                      }}>
+                        <Text style={{ fontSize: 10, fontWeight: "600", color: iWon ? "#9dd4be" : "#e87060" }}>
+                          {iWon ? "Won" : "Lost"}
+                        </Text>
+                      </View>
+                      <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 6 }} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      {iWon && stake > 0 ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
+                          <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 16 }}>+{payout}</Text>
                         </View>
+                      ) : !iWon && stake > 0 ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
+                          <Text style={{ color: "#e87060", fontWeight: "600", fontSize: 16 }}>-{stake}</Text>
+                        </View>
+                      ) : item.custom_stake ? (
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
+                      ) : (
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
+                      )}
+                    </View>
                   );
-
                 })}
               </ScrollView>
               <Divider style={{ backgroundColor: "rgba(255,255,255,0.15)", marginTop: 16, marginBottom: 12 }} />

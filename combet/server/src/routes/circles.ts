@@ -325,11 +325,36 @@ circlesRouter.post("/:circleId/request-join", requireAuth, async (req: AuthReque
     );
     if (member.rows.length) return res.status(400).json({ error: "Already a member" });
 
-    await pool.query(
+    // Insert the join request
+    const requestResult = await pool.query(
       `INSERT INTO circle_join_requests (circle_id, user_id, status)
-       VALUES ($1, $2, 'pending') ON CONFLICT (circle_id, user_id) DO NOTHING`,
+       VALUES ($1, $2, 'pending')
+       ON CONFLICT (circle_id, user_id) DO NOTHING
+       RETURNING request_id`,
       [circleId, userId]
     );
+
+    // Only fire notifications if a new request was actually created
+    if (requestResult.rows.length) {
+      const requestId = requestResult.rows[0].request_id;
+
+      // Notify all current circle members
+      const members = await pool.query(
+        `SELECT user_id FROM circle_members
+         WHERE circle_id = $1 AND status = 'accepted' AND user_id <> $2`,
+        [circleId, userId]
+      );
+
+      for (const m of members.rows) {
+        await pool.query(
+          `INSERT INTO notifications
+             (recipient_id, actor_id, type, entity_type, entity_id)
+           VALUES ($1, $2, 'circle_join_request', 'circle_join_request', $3)`,
+          [m.user_id, userId, requestId]
+        );
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error("REQUEST JOIN ERROR:", err);
