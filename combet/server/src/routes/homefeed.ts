@@ -17,6 +17,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         b.stake_amount,
         b.custom_stake,
         b.status,
+        b.closes_at,
         CASE
           WHEN bt.target_type = 'circle' THEN COALESCE(c.icon, 'ellipse-outline')
           WHEN bt.target_type = 'user'   THEN 'people-outline'
@@ -82,6 +83,7 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         creator.avatar_color,
         creator.avatar_icon,
         bt.target_type,
+        b.closes_at,
         c.name,
         c.icon,
         c.icon_color,
