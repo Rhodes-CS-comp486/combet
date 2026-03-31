@@ -78,7 +78,7 @@ export default function BetCard({
               {item.title}
             </Text>
             <Text numberOfLines={1} style={{ fontSize: 11, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
-              {item.target_name ?? item.circle_name ?? item.creator_name}
+                {item.creator_name || item.creator_username}
             </Text>
           </View>
 
