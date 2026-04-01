@@ -224,16 +224,195 @@ circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, r
     const { circleId } = req.params;
     const userId        = req.userId;
 
-    await client.query("BEGIN");
-    await client.query(`DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`, [circleId, userId]);
+    // Verify they're actually a member
+    const memberCheck = await client.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!memberCheck.rows.length) return res.status(403).json({ error: "Not a member" });
 
-    const remaining = await client.query(`SELECT COUNT(*) FROM circle_members WHERE circle_id = $1`, [circleId]);
-    if (parseInt(remaining.rows[0].count, 10) === 0) {
+    await client.query("BEGIN");
+
+    // Check remaining count BEFORE removing
+    const remaining = await client.query(
+      `SELECT COUNT(*) FROM circle_members WHERE circle_id = $1 AND status = 'accepted'`,
+      [circleId]
+    );
+    const isLastMember = parseInt(remaining.rows[0].count, 10) === 1;
+
+    if (isLastMember) {
+      // ── Nuke everything related to this circle ──────────────────────────
+
+      // 1. Notifications for circle invites
+      await client.query(
+        `DELETE FROM notifications
+         WHERE entity_type = 'circle_invite'
+           AND entity_id IN (
+             SELECT invite_id FROM circle_invites WHERE circle_id = $1
+           )`,
+        [circleId]
+      );
+
+      // 2. Notifications for join requests
+      await client.query(
+        `DELETE FROM notifications
+         WHERE entity_type = 'circle_join_request'
+           AND entity_id IN (
+             SELECT request_id FROM circle_join_requests WHERE circle_id = $1
+           )`,
+        [circleId]
+      );
+
+      // 3. Notifications for bets in this circle
+      await client.query(
+        `DELETE FROM notifications
+         WHERE entity_type = 'bet'
+           AND entity_id IN (
+             SELECT bet_id FROM bet_targets
+             WHERE target_type = 'circle' AND target_id = $1
+           )`,
+        [circleId]
+      );
+
+      // 4. Bet deadline notifications for bets in this circle
+      await client.query(
+        `DELETE FROM bet_deadline_notifications
+         WHERE bet_id IN (
+           SELECT bet_id FROM bet_targets
+           WHERE target_type = 'circle' AND target_id = $1
+         )`,
+        [circleId]
+      );
+
+      // 4b. Bet winner votes for bets in this circle
+      await client.query(
+        `DELETE FROM bet_winner_votes
+         WHERE bet_id IN (
+           SELECT bet_id FROM bet_targets
+           WHERE target_type = 'circle' AND target_id = $1
+         )`,
+        [circleId]
+      );
+
+      // 4c. Bet responses for bets in this circle
+      await client.query(
+        `DELETE FROM bet_responses
+         WHERE bet_id IN (
+           SELECT bet_id FROM bet_targets
+           WHERE target_type = 'circle' AND target_id = $1
+         )`,
+        [circleId]
+      );
+
+      // 5. Bet options for bets in this circle
+      await client.query(
+        `DELETE FROM bet_options
+         WHERE bet_id IN (
+           SELECT bet_id FROM bet_targets
+           WHERE target_type = 'circle' AND target_id = $1
+         )`,
+        [circleId]
+      );
+
+      // 6. Delete bets — CASCADE handles bet_targets automatically
+      await client.query(
+        `DELETE FROM bets WHERE id IN (
+           SELECT bet_id FROM bet_targets
+           WHERE target_type = 'circle' AND target_id = $1
+         )`,
+        [circleId]
+      );
+
+      // 7. Circle messages, invites, join requests, members
+      await client.query(`DELETE FROM circle_messages WHERE circle_id = $1`, [circleId]);
+      await client.query(`DELETE FROM circle_invites WHERE circle_id = $1`, [circleId]);
+      await client.query(`DELETE FROM circle_join_requests WHERE circle_id = $1`, [circleId]);
+      await client.query(`DELETE FROM circle_members WHERE circle_id = $1`, [circleId]);
+
+      // 8. The circle itself
       await client.query(`DELETE FROM circles WHERE circle_id = $1`, [circleId]);
+
+    } else {
+      // ── Clean up only this user's data ─────────────────────────────────
+
+      // 1. Remove from circle
+      await client.query(
+        `DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
+        [circleId, userId]
+      );
+
+      // 2. Delete their messages in this circle
+      await client.query(
+        `DELETE FROM circle_messages WHERE circle_id = $1 AND user_id = $2`,
+        [circleId, userId]
+      );
+
+      // 3. Remove their bet responses for bets in this circle
+      await client.query(
+        `DELETE FROM bet_responses
+         WHERE user_id = $1
+           AND bet_id IN (
+             SELECT bet_id FROM bet_targets
+             WHERE target_type = 'circle' AND target_id = $2
+           )`,
+        [userId, circleId]
+      );
+
+      // 3b. Delete their bet deadline notifications for bets in this circle
+      await client.query(
+        `DELETE FROM bet_deadline_notifications
+         WHERE user_id = $1
+           AND bet_id IN (
+             SELECT bet_id FROM bet_targets
+             WHERE target_type = 'circle' AND target_id = $2
+           )`,
+        [userId, circleId]
+      );
+
+      // 3c. Delete their bet winner votes for bets in this circle
+      await client.query(
+        `DELETE FROM bet_winner_votes
+         WHERE user_id = $1
+           AND bet_id IN (
+             SELECT bet_id FROM bet_targets
+             WHERE target_type = 'circle' AND target_id = $2
+           )`,
+        [userId, circleId]
+      );
+
+      // 4. Delete notifications sent TO them about this circle (invites, join requests)
+      await client.query(
+        `DELETE FROM notifications
+         WHERE recipient_id = $1
+           AND entity_type = 'circle_invite'
+           AND entity_id IN (
+             SELECT invite_id FROM circle_invites WHERE circle_id = $2
+           )`,
+        [userId, circleId]
+      );
+      await client.query(
+        `DELETE FROM notifications
+         WHERE recipient_id = $1
+           AND entity_type = 'circle_join_request'
+           AND entity_id IN (
+             SELECT request_id FROM circle_join_requests WHERE circle_id = $2
+           )`,
+        [userId, circleId]
+      );
+
+      // 5. Delete any pending invite or join request for this user in this circle
+      await client.query(
+        `DELETE FROM circle_invites WHERE circle_id = $1 AND invitee_id = $2`,
+        [circleId, userId]
+      );
+      await client.query(
+        `DELETE FROM circle_join_requests WHERE circle_id = $1 AND user_id = $2`,
+        [circleId, userId]
+      );
     }
 
     await client.query("COMMIT");
-    res.json({ success: true });
+    res.json({ success: true, circleDeleted: isLastMember });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("LEAVE CIRCLE ERROR:", err);
@@ -325,6 +504,26 @@ circlesRouter.post("/:circleId/request-join", requireAuth, async (req: AuthReque
     );
     if (member.rows.length) return res.status(400).json({ error: "Already a member" });
 
+    // logic for checking if user added before accepted
+    const existingInvite = await pool.query(
+        `SELECT invite_id FROM circle_invites WHERE circle_id = $1 AND invitee_id = $2 AND status = 'pending'`,
+        [circleId, userId]
+    );
+    if (existingInvite.rows.length) {
+        // Just accept the invite instead
+        await pool.query(
+            `UPDATE circle_invites SET status = 'accepted' WHERE invite_id = $1`,
+            [existingInvite.rows[0].invite_id]
+        );
+    await pool.query(
+        `INSERT INTO circle_members (circle_id, user_id, status, joined_at)
+            VALUES ($1, $2, 'accepted', NOW())
+            ON CONFLICT ON CONSTRAINT unique_member DO UPDATE SET status = 'accepted', joined_at = NOW()`,
+        [circleId, userId]
+    );
+    return res.json({ success: true });
+    }
+
     // Insert the join request
     const requestResult = await pool.query(
       `INSERT INTO circle_join_requests (circle_id, user_id, status)
@@ -378,6 +577,16 @@ circlesRouter.post("/:circleId/join", requireAuth, async (req: AuthRequest, res)
        VALUES ($1, $2, 'accepted', NOW())
        ON CONFLICT ON CONSTRAINT unique_member DO NOTHING`,
       [circleId, userId]
+    );
+    // After the INSERT into circle_members:
+    await pool.query(
+        `DELETE FROM notifications WHERE recipient_id = $1 AND entity_type = 'circle_invite'
+        AND entity_id IN (SELECT invite_id::text FROM circle_invites WHERE circle_id = $2 AND invitee_id = $1)`,
+        [userId, circleId]
+    );
+    await pool.query(
+        `DELETE FROM circle_invites WHERE circle_id = $1 AND invitee_id = $2`,
+        [circleId, userId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -616,6 +825,7 @@ circlesRouter.get("/:circleId/messages/since/:messageId", requireAuth, async (re
     res.status(500).json({ error: "Server error" });
   }
 });
+
 // ─── Get Single Circle ────────────────────────────────────────────────────────
 circlesRouter.get("/:circleId", async (req, res) => {
   const { circleId } = req.params;

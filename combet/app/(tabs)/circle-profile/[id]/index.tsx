@@ -64,21 +64,34 @@ export default function CircleProfile() {
   };
 
   const handleLeave = async () => {
-    const confirmed = await new Promise<boolean>((resolve) =>
-      Alert.alert("Leave Circle", "Are you sure you want to leave this circle?", [
-        { text: "Cancel", style: "cancel",      onPress: () => resolve(false) },
-        { text: "Leave",  style: "destructive", onPress: () => resolve(true)  },
-      ])
-    );
+    const confirmed =
+      typeof window !== "undefined"
+        ? window.confirm("Are you sure you want to leave this circle?")
+        : await new Promise<boolean>((resolve) =>
+            Alert.alert(
+              "Leave Circle",
+              "Are you sure you want to leave this circle?",
+              [
+                { text: "Cancel", style: "cancel",      onPress: () => resolve(false) },
+                { text: "Leave",  style: "destructive", onPress: () => resolve(true)  },
+              ]
+            )
+          );
+
     if (!confirmed) return;
 
     try {
       const sessionId = await getSessionId();
       if (!sessionId) { alert("Not authenticated"); return; }
       const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
-        method: "DELETE", headers: { "x-session-id": sessionId },
+        method: "DELETE",
+        headers: { "x-session-id": sessionId },
       });
-      if (!res.ok) { const data = await res.json().catch(() => ({})); alert(data.error || "Could not leave circle"); return; }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not leave circle");
+        return;
+      }
       router.replace("/(tabs)/circles");
     } catch (err) {
       alert("Could not connect to server");

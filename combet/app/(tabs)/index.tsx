@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback} from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Text, Searchbar, ActivityIndicator, Button, Divider, Portal, Modal as PaperModal } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,13 +37,18 @@ export default function HomeScreen() {
   const [recentResults, setRecentResults] = useState<any[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { fetchFeed(); fetchCoins(); fetchActiveBets(); fetchRecentResults(); }, []);
+  useFocusEffect(useCallback(() => {
+      void fetchFeed();
+      void fetchCoins();
+      void fetchActiveBets();
+      void fetchRecentResults();
+  }, []));
 
   useEffect(() => {
     if (activeTab === "active") {
-      fetchCoins();
-      fetchActiveBets();
-      fetchRecentResults();
+      void fetchCoins();
+      void fetchActiveBets();
+      void fetchRecentResults();
     }
   }, [activeTab]);
 
@@ -114,6 +120,7 @@ export default function HomeScreen() {
         setResults(data.map((r: any) => ({
           ...r,
           joinStatus: r.join_status ?? null,
+          is_private: r.type === "circle" ? (r.is_private_circle ?? false) : r.is_private,
         })));
       } catch {
         setResults([]);
