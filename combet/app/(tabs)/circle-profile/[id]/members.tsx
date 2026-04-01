@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity } from "react-native";
 import { Text, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,7 +25,9 @@ export default function MembersScreen() {
   const [requests,  setRequests]  = useState<Request[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
 
-  useEffect(() => { loadAll(); }, []);
+  useFocusEffect(useCallback(() => {
+      void loadAll();
+  }, []));
 
   const loadAll = async () => {
     try {

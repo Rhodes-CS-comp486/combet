@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, Surface, Button, Chip, ActivityIndicator } from "react-native-paper";
+import { Text, Surface, Button,ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
-import {router} from "expo-router";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
@@ -31,6 +31,7 @@ type Notification = {
   request_id: string | null;
   join_request_status: string | null;
   join_request_circle_name: string | null;
+  invite_status: string | null;
 
   // Bet deadline
   bet_id: string | null;
@@ -52,8 +53,11 @@ export default function InboxScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading]             = useState(true);
   const [activeFilter, setActiveFilter]   = useState<FilterKey>("all");
+  const [actioning, setActioning]         = useState<string | null>(null);
 
-  useEffect(() => { fetchInbox(); }, []);
+  useFocusEffect(useCallback(() => {
+      void fetchInbox();
+  }, []));
 
   const fetchInbox = async () => {
     try {
@@ -137,19 +141,24 @@ export default function InboxScreen() {
 
   // ── New: circle join request actions ──────────────────────────────────────
   const handleAcceptJoinRequest = async (requestId: string) => {
+    if (actioning === requestId) return;
+    setActioning(requestId);
     try {
       const sessionId = await getSessionId();
       if (!sessionId) return;
-      await fetch(`${API_BASE}/inbox/join-requests/${requestId}/accept`, {
+      const res = await fetch(`${API_BASE}/inbox/join-requests/${requestId}/accept`, {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });
+      if (!res.ok) return;
       setNotifications((prev) =>
         prev.map((n) => n.request_id === requestId
           ? { ...n, join_request_status: "accepted" } : n)
       );
     } catch (err) {
       console.error("Accept join request error:", err);
+    } finally {
+      setActioning(null);
     }
   };
 
@@ -215,6 +224,8 @@ export default function InboxScreen() {
 
     // ── Existing: circle invite (unchanged) ───────────────────────────────
     if (item.type === "circle_invite") {
+      const isPending  = item.invite_status === "pending";
+      const isAccepted = item.invite_status === "accepted";
       return (
         <Surface
           elevation={1}

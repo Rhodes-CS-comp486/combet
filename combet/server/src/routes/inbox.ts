@@ -67,6 +67,8 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         ON n.entity_type = 'bet' AND b.id = n.entity_id::uuid
 
       WHERE n.recipient_id = $1
+        AND (n.entity_type <> 'circle_invite'       OR ci.invite_id IS NOT NULL)
+        AND (n.entity_type <> 'circle_join_request' OR cjr.request_id IS NOT NULL)
       ORDER BY n.created_at DESC
       `,
       [req.userId]
@@ -85,15 +87,16 @@ inboxRouter.post("/invites/:inviteId/accept", requireAuth, async (req: AuthReque
   const userId       = req.userId;
   const client       = await pool.connect();
   try {
+    // Don't require status = 'pending' — handle already-accepted invites gracefully
     const invite = await client.query(
-      `SELECT * FROM circle_invites
-       WHERE invite_id = $1 AND invitee_id = $2 AND status = 'pending'`,
+      `SELECT * FROM circle_invites WHERE invite_id = $1 AND invitee_id = $2`,
       [inviteId, userId]
     );
     if (!invite.rows.length)
       return res.status(400).json({ error: "Invite not found" });
 
     const circleId = invite.rows[0].circle_id;
+
     await client.query("BEGIN");
     await client.query(
       `UPDATE circle_invites SET status = 'accepted' WHERE invite_id = $1`,
@@ -215,11 +218,14 @@ inboxRouter.post("/join-requests/:requestId/accept", requireAuth, async (req: Au
   const client        = await pool.connect();
   try {
     const request = await client.query(
-      `SELECT * FROM circle_join_requests WHERE request_id = $1 AND status = 'pending'`,
+      `SELECT * FROM circle_join_requests WHERE request_id = $1::uuid`,
       [requestId]
     );
     if (!request.rows.length)
       return res.status(400).json({ error: "Request not found" });
+
+    if (request.rows[0].status === 'accepted')
+      return res.json({ success: true });
 
     const { circle_id, user_id: requesterId } = request.rows[0];
 
@@ -235,8 +241,8 @@ inboxRouter.post("/join-requests/:requestId/accept", requireAuth, async (req: Au
     await client.query(
       `DELETE FROM notifications
        WHERE recipient_id = $1 AND entity_type = 'circle_invite'
-         AND entity_id IN (
-           SELECT invite_id::text FROM circle_invites
+         AND entity_id::uuid IN (
+           SELECT invite_id FROM circle_invites
            WHERE circle_id = $2 AND invitee_id = $1
          )`,
       [requesterId, circle_id]
