@@ -46,8 +46,8 @@ export default function EditCircle() {
     if (val.length < 5) return;
     try {
       const res = await fetch(
-        `http://localhost:3001/circles/check-name?name=${encodeURIComponent(val)}&excludeId=${circleId}`
-      );
+  `${API_BASE}/circles/check-name?name=${encodeURIComponent(val)}&excludeId=${circleId}`
+        );
       const data = await res.json();
       if (data.taken) setNameError("A circle with that name already exists");
     } catch {}
@@ -61,7 +61,7 @@ export default function EditCircle() {
 
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:3001/circles/${circleId}`, {
+        const res = await fetch(`${API_BASE}/circles/${circleId}`, {
         method:  "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description, icon: ICONS[iconIndex], icon_color: selectedColor, is_private: isPrivate }),
