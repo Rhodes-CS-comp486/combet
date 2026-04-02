@@ -1,3 +1,6 @@
+export const API_BASE = "http://combet.live/api";
+
+/*
 import Constants from "expo-constants";
 
 // In development, use the machine's local IP (Expo provides this automatically)
@@ -11,7 +14,9 @@ const getApiUrl = () => {
     return "http://localhost:3001";
   }
   // Production URL — replace with your deployed backend
-  return "https://your-production-api.com";
+  return "http://combet.live/api";
 };
 
 export const API_BASE = getApiUrl();
+
+ */
