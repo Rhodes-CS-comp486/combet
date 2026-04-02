@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
 
-const API_BASE = "http://localhost:3001";
+import { API_BASE } from "@/constants/api";
 
 export default function CombetHeader() {
   const [coinBalance, setCoinBalance] = useState<number>(120);
@@ -26,16 +26,18 @@ export default function CombetHeader() {
   }, []);
 
   useEffect(() => {
-    fetchCoins();
-    const appStateSub = AppState.addEventListener("change", (state) => {
-      if (state === "active") fetchCoins();
-    });
-    const eventSub = DeviceEventEmitter.addListener("coinsUpdated", fetchCoins);
-    return () => {
-      appStateSub.remove();
-      eventSub.remove();
-    };
-  }, [fetchCoins]);
+  fetchCoins();
+  const interval = setInterval(fetchCoins, 10000); // refresh every 10s
+  const appStateSub = AppState.addEventListener("change", (state) => {
+    if (state === "active") fetchCoins();
+  });
+  const eventSub = DeviceEventEmitter.addListener("coinsUpdated", fetchCoins);
+  return () => {
+    clearInterval(interval);
+    appStateSub.remove();
+    eventSub.remove();
+  };
+}, [fetchCoins]);
 
   return (
     <Appbar.Header
