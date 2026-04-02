@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { FlatList, View, TouchableOpacity } from "react-native";
+import { FlatList, View, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Text, Searchbar, Surface } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -20,6 +20,8 @@ type Circle = {
 export default function CirclesScreen() {
   const router      = useRouter();
   const { theme }   = useAppTheme();
+  const { width } = useWindowDimensions();
+  const itemSize = Math.floor((width - 48) / 3);
 
   const [circles, setCircles] = useState<Circle[]>([]);
   const [q, setQ]             = useState("");
@@ -68,9 +70,9 @@ export default function CirclesScreen() {
       <Surface
         elevation={2}
         style={{
-          width:           150,
-          height:          150,
-          borderRadius:    75,
+          width:        itemSize,
+            height:       itemSize,
+            borderRadius: itemSize / 2,
           backgroundColor: item.icon_color ?? theme.colors.primary,
           justifyContent:  "center",
           alignItems:      "center",
@@ -79,7 +81,7 @@ export default function CirclesScreen() {
       >
         <Ionicons
           name={(item.icon as any) || "people"}
-          size={70}
+          size={Math.floor(itemSize * 0.55)}
           color="#fff"
         />
       </Surface>
@@ -87,8 +89,8 @@ export default function CirclesScreen() {
       <Text style={{
         color:       theme.colors.onSurface,
         textAlign:   "center",
-        fontSize:    15,
-        fontWeight:  "300",
+        fontSize: 13,
+          fontWeight:  "300",
         letterSpacing: 1.5,
       }}>
         {item.name}
