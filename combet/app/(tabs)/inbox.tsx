@@ -78,20 +78,20 @@ export default function InboxScreen() {
 
   // ── Existing: circle invite actions ──────────────────────────────────────
   const handleAccept = async (inviteId: string) => {
-    try {
-      const sessionId = await getSessionId();
-      if (!sessionId) return;
-      await fetch(`${API_BASE}/inbox/invites/${inviteId}/accept`, {
-        method: "POST",
-        headers: { "x-session-id": sessionId },
-      });
-      setNotifications((prev) =>
-        prev.map((n) => n.invite_id === inviteId ? { ...n, status: "accepted" } : n)
-      );
-    } catch (err) {
-      console.error("Accept error:", err);
-    }
-  };
+  try {
+    const sessionId = await getSessionId();
+    if (!sessionId) return;
+    await fetch(`${API_BASE}/inbox/invites/${inviteId}/accept`, {
+      method: "POST",
+      headers: { "x-session-id": sessionId },
+    });
+    setNotifications((prev) =>
+      prev.map((n) => n.invite_id === inviteId ? { ...n, invite_status: "accepted" } : n)
+    );
+  } catch (err) {
+    console.error("Accept error:", err);
+  }
+};
 
   const handleDecline = async (inviteId: string) => {
     try {
