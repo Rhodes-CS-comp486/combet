@@ -6,7 +6,7 @@ import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 
-const API_BASE = "http://localhost:3001";
+import { API_BASE } from "@/constants/api";
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
