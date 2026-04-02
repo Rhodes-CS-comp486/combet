@@ -21,8 +21,7 @@ export default function CirclesScreen() {
   const router      = useRouter();
   const { theme }   = useAppTheme();
   const { width } = useWindowDimensions();
-  const itemSize = Math.floor((width - 48) / 3);
-
+  const itemSize = Math.floor((width - 150) / 3);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [q, setQ]             = useState("");
 
