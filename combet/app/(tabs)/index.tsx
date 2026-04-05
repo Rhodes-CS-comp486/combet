@@ -9,6 +9,7 @@ import UserAvatar from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
+import { router } from "expo-router";
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; follow_status?: string | null; is_private?: boolean; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; icon?: string; icon_color?: string; };type SearchResult = UserResult | CircleResult;
@@ -258,74 +259,75 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
               renderItem={({ item }) => (
-                <View style={{
-                  flexDirection: "row", alignItems: "center",
-                  paddingVertical: 12, gap: 12,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: theme.colors.outline,
-                }}>
-                  <UserAvatar
-                    user={{
-                      display_name: item.label,
-                      username:     item.subtitle,
-                      avatar_color: item.avatar_color,
-                      avatar_icon:  item.avatar_icon,
-                    }}
-                    size={42}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                      {item.label}
-                    </Text>
-                     {console.log("rendering user:", item.subtitle, "isFriend:", item.isFriend, "follow_status:", item.follow_status)}
-                    <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
-                      @{item.subtitle}
-                    </Text>
-                  </View>
-                  {item.follow_status === "requested" ? (
-                    <View style={{
-                      backgroundColor:  theme.colors.surface,
-                      borderRadius:     20,
-                      paddingHorizontal: 12,
-                      paddingVertical:  6,
-                      borderWidth:      0.5,
-                      borderColor:      theme.colors.outline,
-                      flexDirection:    "row",
-                      alignItems:       "center",
-                      gap:              4,
-                    }}>
-                      <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
-                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Requested</Text>
-                    </View>
-                  ) : !item.isFriend ? (
-                    <TouchableOpacity
-                      onPress={() => followUser(item.id)}
-                      style={{
-                        backgroundColor:  theme.colors.primary,
-                        borderRadius:     20,
-                        paddingHorizontal: 14,
-                        paddingVertical:  6,
+                <TouchableOpacity onPress={() => router.push(`/user/${item.id}`)}>
+                  <View style={{
+                    flexDirection: "row", alignItems: "center",
+                    paddingVertical: 12, gap: 12,
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: theme.colors.outline,
+                  }}>
+                    <UserAvatar
+                      user={{
+                        display_name: item.label,
+                        username:     item.subtitle,
+                        avatar_color: item.avatar_color,
+                        avatar_icon:  item.avatar_icon,
                       }}
-                    >
-                      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={{
-                      backgroundColor:  theme.colors.surface,
-                      borderRadius:     20,
-                      paddingHorizontal: 12,
-                      paddingVertical:  6,
-                      borderWidth:      0.5,
-                      borderColor:      theme.colors.outline,
-                      flexDirection:    "row",
-                      alignItems:       "center",
-                      gap:              4,
-                    }}>
-                      <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
-                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
+                      size={42}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                        {item.label}
+                      </Text>
+                      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
+                        @{item.subtitle}
+                      </Text>
                     </View>
-                  )}
-                </View>
+                    {item.follow_status === "requested" ? (
+                      <View style={{
+                        backgroundColor:  theme.colors.surface,
+                        borderRadius:     20,
+                        paddingHorizontal: 12,
+                        paddingVertical:  6,
+                        borderWidth:      0.5,
+                        borderColor:      theme.colors.outline,
+                        flexDirection:    "row",
+                        alignItems:       "center",
+                        gap:              4,
+                      }}>
+                        <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Requested</Text>
+                      </View>
+                    ) : !item.isFriend ? (
+                      <TouchableOpacity
+                        onPress={(e) => { e.stopPropagation(); followUser(item.id); }}
+                        style={{
+                          backgroundColor:  theme.colors.primary,
+                          borderRadius:     20,
+                          paddingHorizontal: 14,
+                          paddingVertical:  6,
+                        }}
+                      >
+                        <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={{
+                        backgroundColor:  theme.colors.surface,
+                        borderRadius:     20,
+                        paddingHorizontal: 12,
+                        paddingVertical:  6,
+                        borderWidth:      0.5,
+                        borderColor:      theme.colors.outline,
+                        flexDirection:    "row",
+                        alignItems:       "center",
+                        gap:              4,
+                      }}>
+                        <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
               )}
             />
           )

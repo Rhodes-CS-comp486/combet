@@ -70,7 +70,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
 // ─── Update My Profile ────────────────────────────────────────────────────────
 usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { display_name, bio, avatar_color, avatar_icon, is_private } = req.body;
+    const { display_name, bio, avatar_color, avatar_icon, is_private, show_bets_to_followers} = req.body;
     const parts      = (display_name ?? "").trim().split(/\s+/);
     const first_name = parts[0] ?? "";
     const last_name  = parts.slice(1).join(" ") ?? "";
@@ -78,12 +78,13 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
     const result = await pool.query(
       `UPDATE users
        SET first_name = $1, last_name = $2, bio = $3,
-           avatar_color = $4, avatar_icon = $5, is_private = $6
-       WHERE id = $7
+           avatar_color = $4, avatar_icon = $5, is_private = $6,
+           show_bets_to_followers = $7
+       WHERE id = $8
        RETURNING id, username, email, first_name, last_name, bio,
-                 avatar_color, avatar_icon, coins, created_at, is_private`,
+                 avatar_color, avatar_icon, coins, created_at, is_private, show_bets_to_followers`,
       [first_name, last_name, bio ?? "", avatar_color ?? "#2563eb",
-       avatar_icon ?? "initials", is_private ?? false, req.userId]
+       avatar_icon ?? "initials", is_private ?? false, show_bets_to_followers ?? false, req.userId]
     );
 
     const user = result.rows[0];
@@ -96,6 +97,7 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
       avatar_color: user.avatar_color ?? "#2563eb",
       avatar_icon:  user.avatar_icon ?? "initials",
       is_private:   user.is_private ?? false,
+      show_bets_to_followers: user.show_bets_to_followers ?? false,
       coins:        user.coins,
       created_at:   user.created_at,
     });
@@ -270,6 +272,108 @@ usersRouter.get("/friends", requireAuth, async (req: AuthRequest, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("GET /users/friends error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Get Another User's Profile ───────────────────────────────────────────────
+usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.userId;
+
+  try {
+    // Get target user profile
+    const userResult = await pool.query(
+      `SELECT u.id, u.username, u.first_name, u.last_name, u.bio,
+              u.avatar_color, u.avatar_icon, u.is_private, u.show_bets_to_followers,
+              (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
+              (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+              (SELECT COUNT(*) FROM bets WHERE creator_user_id = u.id) AS total_bets,
+              (SELECT COUNT(*) FROM bet_responses br
+               JOIN bets b ON b.id = br.bet_id
+               WHERE br.user_id = u.id AND br.status = 'accepted'
+               AND b.status = 'SETTLED' AND br.selected_option_id = b.winning_option_id) AS wins,
+              (SELECT COUNT(*) FROM bet_responses br
+               JOIN bets b ON b.id = br.bet_id
+               WHERE br.user_id = u.id AND br.status = 'accepted'
+               AND b.status = 'SETTLED' AND br.selected_option_id <> b.winning_option_id) AS losses
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (!userResult.rows.length)
+      return res.status(404).json({ error: "User not found" });
+
+    const user = userResult.rows[0];
+
+    // Check if current user follows this user
+    const followResult = await pool.query(
+      `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
+      [currentUserId, userId]
+    );
+    const isFollowing = followResult.rows.length > 0;
+
+    // Check follow request status
+    const requestResult = await pool.query(
+      `SELECT status FROM follow_requests WHERE requester_id = $1 AND requestee_id = $2`,
+      [currentUserId, userId]
+    );
+    const followRequestStatus = requestResult.rows[0]?.status ?? null;
+
+    const profile = {
+      id:                    user.id,
+      username:              user.username,
+      display_name:          `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || user.username,
+      bio:                   user.bio ?? "",
+      avatar_color:          user.avatar_color ?? "#2563eb",
+      avatar_icon:           user.avatar_icon ?? "initials",
+      is_private:            user.is_private ?? false,
+      show_bets_to_followers: user.show_bets_to_followers ?? false,
+      followers_count:       Number(user.followers_count),
+      following_count:       Number(user.following_count),
+      total_bets:            Number(user.total_bets),
+      wins:                  Number(user.wins),
+      losses:                Number(user.losses),
+      is_following:          isFollowing,
+      follow_request_status: followRequestStatus,
+    };
+
+    // Private + not following → stats only
+    if (user.is_private && !isFollowing) {
+      return res.json({ ...profile, bets: [], shared_bets: [] });
+    }
+
+    // Bets you're both involved in
+    const sharedBetsResult = await pool.query(
+      `SELECT DISTINCT b.id, b.title, b.status, b.stake_amount, b.custom_stake,
+              b.created_at, b.closes_at
+       FROM bets b
+       LEFT JOIN bet_responses br1 ON br1.bet_id = b.id AND br1.user_id = $1
+       LEFT JOIN bet_responses br2 ON br2.bet_id = b.id AND br2.user_id = $2
+       WHERE (b.creator_user_id = $1 OR br1.user_id = $1)
+         AND (b.creator_user_id = $2 OR br2.user_id = $2)
+       ORDER BY b.created_at DESC`,
+      [currentUserId, userId]
+    );
+
+    // All their bets (only if public OR private+following+show_bets_to_followers)
+    let allBets: any[] = [];
+    if (!user.is_private || (isFollowing && user.show_bets_to_followers)) {
+      const allBetsResult = await pool.query(
+        `SELECT b.id, b.title, b.status, b.stake_amount, b.custom_stake,
+                b.created_at, b.closes_at
+         FROM bets b
+         LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
+         WHERE b.creator_user_id = $1 OR br.user_id = $1
+         ORDER BY b.created_at DESC`,
+        [userId]
+      );
+      allBets = allBetsResult.rows;
+    }
+
+    res.json({ ...profile, shared_bets: sharedBetsResult.rows, bets: allBets });
+  } catch (err) {
+    console.error("GET /users/:userId error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
