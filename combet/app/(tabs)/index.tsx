@@ -134,8 +134,10 @@ export default function HomeScreen() {
 
   // ── Follow user ───────────────────────────────────────────────────────────
   const followUser = async (followingId: string) => {
+      console.log("followUser called:", followingId);
     try {
       const sessionId = await getSessionId();
+      console.log("sessionId:", sessionId);
       const res = await fetch(`${API_BASE}/users/follows`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
@@ -143,6 +145,7 @@ export default function HomeScreen() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
+      console.log("follow response:", res.status, data);
       // "requested" for private accounts, "following" for public
       setResults((prev) =>
         prev.map((r) =>
@@ -151,7 +154,8 @@ export default function HomeScreen() {
             : r
         )
       );
-    } catch {
+    } catch (err){
+        console.error("followUser error:", err);
       // No change on failure
     }
   };
@@ -273,6 +277,7 @@ export default function HomeScreen() {
                     <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
                       {item.label}
                     </Text>
+                     {console.log("rendering user:", item.subtitle, "isFriend:", item.isFriend, "follow_status:", item.follow_status)}
                     <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 1 }}>
                       @{item.subtitle}
                     </Text>

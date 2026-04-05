@@ -185,6 +185,7 @@ usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+
 // ─── Follow / Request to Follow a User ───────────────────────────────────────
 usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
   const { followingId } = req.body;
@@ -209,13 +210,22 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
     if (isPrivate) {
       // ── Private profile: create a follow request + notification ──
       const existing = await pool.query(
-        `SELECT request_id FROM follow_requests
-         WHERE requester_id = $1 AND requestee_id = $2`,
-        [currentUserId, followingId]
-      );
-      if (existing.rows.length)
-        return res.status(400).json({ error: "Follow request already sent" });
-
+          `SELECT request_id, status FROM follow_requests
+           WHERE requester_id = $1 AND requestee_id = $2`,
+          [currentUserId, followingId]
+        );
+        console.log("existing follow_requests rows:", existing.rows);
+        if (existing.rows.length) {
+          const { request_id, status } = existing.rows[0];
+          console.log("found existing row, status:", status);
+          if (status === 'pending')
+            return res.json({ ok: true, status: "requested" });
+          // For 'accepted' or 'declined', delete the old row and allow a fresh request
+          await pool.query(
+            `DELETE FROM follow_requests WHERE request_id = $1`,
+            [request_id]
+          );
+        }
       const request = await pool.query(
         `INSERT INTO follow_requests (requester_id, requestee_id, status)
          VALUES ($1, $2, 'pending') RETURNING request_id`,
