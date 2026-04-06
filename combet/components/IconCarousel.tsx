@@ -1,7 +1,7 @@
 import React from "react";
-import { View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/context/ThemeContext";
+import { View, TouchableOpacity, useWindowDimensions } from "react-native";
 
 export const ICONS: (keyof typeof Ionicons.glyphMap)[] = [
   "people",
@@ -35,6 +35,11 @@ export default function IconCarousel({ selectedIndex, onIndexChange , selectedCo
   const disabledBg  = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
   const disabledClr = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
 
+  const { width } = useWindowDimensions();
+  const centerSize = Math.min(130, width * 0.32);
+  const sideSize   = Math.min(72,  width * 0.17);
+  const arrowSize  = 36;
+
   return (
     <View>
       {/* ── Three-icon row ── */}
@@ -47,12 +52,12 @@ export default function IconCarousel({ selectedIndex, onIndexChange , selectedCo
       }}>
 
         {/* ← arrow + prev icon */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <TouchableOpacity
             onPress={() => canGoLeft && onIndexChange(selectedIndex - 1)}
             activeOpacity={0.7}
             style={{
-              width: 40, height: 40, borderRadius: 20,
+                width: arrowSize, height: arrowSize, borderRadius: arrowSize / 2,
               backgroundColor: canGoLeft ? arrowBg : disabledBg,
               alignItems: "center", justifyContent: "center",
             }}
@@ -63,20 +68,20 @@ export default function IconCarousel({ selectedIndex, onIndexChange , selectedCo
 
           {/* Previous icon peeking */}
           <View style={{
-            width: 72, height: 72, borderRadius: 36,
+              width: sideSize, height: sideSize, borderRadius: sideSize / 2,
             backgroundColor: selectedColor ?? theme.colors.primary,
             alignItems: "center", justifyContent: "center",
             opacity: prevIcon ? 0.3 : 0,
           }}>
-            {prevIcon && <Ionicons name={prevIcon} size={30} color="white" />}
+              {prevIcon && <Ionicons name={prevIcon} size={Math.round(sideSize * 0.42)} color="white" />}
           </View>
         </View>
 
         {/* Center — current icon (large) */}
         <View style={{
-          width:           130,
-          height:          130,
-          borderRadius:    65,
+          width:           centerSize,
+          height:          centerSize,
+          borderRadius:    centerSize / 2,
           backgroundColor: selectedColor ?? theme.colors.primary,
           alignItems:      "center",
           justifyContent:  "center",
@@ -87,26 +92,26 @@ export default function IconCarousel({ selectedIndex, onIndexChange , selectedCo
           shadowOffset:    { width: 0, height: 8 },
           elevation:       14,
         }}>
-          <Ionicons name={currIcon} size={54} color="white" />
+            <Ionicons name={currIcon} size={Math.round(centerSize * 0.42)} color="white" />
         </View>
 
         {/* Next icon peeking + → arrow */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {/* Next icon peeking */}
           <View style={{
-            width: 72, height: 72, borderRadius: 36,
+              width: sideSize, height: sideSize, borderRadius: sideSize / 2,
             backgroundColor: selectedColor ?? theme.colors.primary,
             alignItems: "center", justifyContent: "center",
             opacity: nextIcon ? 0.3 : 0,
           }}>
-            {nextIcon && <Ionicons name={nextIcon} size={30} color="white" />}
+              {nextIcon && <Ionicons name={nextIcon} size={Math.round(sideSize * 0.42)} color="white" />}
           </View>
 
           <TouchableOpacity
             onPress={() => canGoRight && onIndexChange(selectedIndex + 1)}
             activeOpacity={0.7}
             style={{
-              width: 40, height: 40, borderRadius: 20,
+                width: arrowSize, height: arrowSize, borderRadius: arrowSize / 2,
               backgroundColor: canGoRight ? arrowBg : disabledBg,
               alignItems: "center", justifyContent: "center",
             }}

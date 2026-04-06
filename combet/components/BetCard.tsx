@@ -1,5 +1,5 @@
 import React from "react";
-import { View, TouchableOpacity, DeviceEventEmitter } from "react-native";
+import { View, TouchableOpacity, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { Text, Button, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -190,7 +190,7 @@ export default function BetCard({
           )}
 
           <View style={{ flex: 1, marginTop: 6 }}>
-            <Text style={{ fontSize: 20, fontWeight: "600", color: theme.colors.onSurface, lineHeight: 22 }}>
+              <Text style={{ fontSize: 22, fontWeight: "400", color: theme.colors.onSurface, lineHeight: 22 }}>
               {item.title}
             </Text>
             <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
@@ -203,25 +203,29 @@ export default function BetCard({
           </View>
 
           <View style={{ alignItems: "flex-end", gap: 6 }}>
-            <View style={{
-              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(240,192,112,0.12)",
-              borderColor:     item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(240,192,112,0.2)",
-              borderWidth: 1, borderRadius: 20,
-              paddingHorizontal: 12, paddingVertical: 5,
-            }}>
-              <Text style={{ color: item.custom_stake ? "#a5b4fc" : DesignTokens.gold, fontWeight: "600", fontSize: 12 }}>
-                {item.custom_stake ?? `${stake} coins`}
-              </Text>
-            </View>
-            {mode === "active" && (
+            {item.custom_stake ? (
               <View style={{
-                backgroundColor: isCreator ? "rgba(157,212,190,0.12)" : "rgba(123,143,196,0.12)",
-                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
-                borderWidth: 1,
-                borderColor: isCreator ? "rgba(157,212,190,0.2)" : "rgba(123,143,196,0.2)",
+                backgroundColor: "rgba(99,102,241,0.1)",
+                borderColor: "rgba(99,102,241,0.25)",
+                borderWidth: 1, borderRadius: 20,
+                paddingHorizontal: 16, paddingVertical: 8,
               }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: isCreator ? theme.colors.primary : "#a0b0d8" }}>
-                  {isCreator ? "Created" : "Joined"}
+                <Text style={{ color: "#a5b4fc", fontWeight: "600", fontSize: 15 }}>
+                  {item.custom_stake}
+                </Text>
+              </View>
+            ) : (
+              <View style={{
+                width: 62, height: 62, borderRadius: 31,
+                backgroundColor: "rgba(240,192,112,0.1)",
+                borderWidth: 1, borderColor: "rgba(240,192,112,0.2)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 18, lineHeight: 21 }}>
+                  {stake}
+                </Text>
+                <Text style={{ color: "rgba(240,192,112,0.6)", fontSize: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  coins
                 </Text>
               </View>
             )}
@@ -248,22 +252,11 @@ export default function BetCard({
         </View>
         <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.07)", marginVertical: 4 }} />
         <View style={{ flex: 1, alignItems: "center" }}>
-          {mode === "active" ? (
-            <View style={{
-              backgroundColor: isClosed ? "rgba(232,112,96,0.1)" : "rgba(157,212,190,0.1)",
-              borderColor:     isClosed ? "rgba(232,112,96,0.25)" : "rgba(157,212,190,0.25)",
-              borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-              borderWidth: 1,
-            }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", color: isClosed ? "#e87060" : theme.colors.primary }}>
-                {["CLOSED", "CANCELLED", "SETTLED"].includes(item.status?.toUpperCase()) ? "Closed" : item.closes_at ? fmtDate(item.closes_at) : "Open"}
-              </Text>
-            </View>
-          ) : (
-            <Text style={{ fontSize: 13, fontWeight: "300", color: theme.colors.onSurface }}>
-              {item.closes_at ? fmtDate(item.closes_at) : "-"}
-            </Text>
-          )}
+          <Text style={{ fontSize: 20, fontWeight: "300", color: isClosed ? "#e87060" : theme.colors.onSurface }}>
+            {mode === "active"
+              ? (["CLOSED", "CANCELLED", "SETTLED"].includes(item.status?.toUpperCase()) ? "Closed" : item.closes_at ? fmtDate(item.closes_at) : "Open")
+              : (item.closes_at ? fmtDate(item.closes_at) : "-")}
+          </Text>
           <Text style={{ fontSize: 9, fontWeight: "500", color: theme.colors.onSurfaceVariant, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
             {mode === "active" ? (isClosed ? "Status" : "Closes") : "Closes"}
           </Text>
@@ -280,21 +273,28 @@ export default function BetCard({
           const isMyOption   = item.my_option_id === opt.id;
           const colors       = DesignTokens.optionColors[i % DesignTokens.optionColors.length];
           const potentialWin = mode === "feed" && !item.custom_stake
-            ? Math.round((pot + stake) / (count + 1)) - stake
+            ? Math.round((pot + stake) / (count + 1))
             : null;
 
           return (
             <View key={opt.id} style={{
               borderRadius: 12, padding: 10,
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+              borderWidth: 1, borderColor: isMyOption ? colors.btnBorder : "rgba(255,255,255,0.07)",
               flexDirection: "row", alignItems: "center", gap: 12,
-              backgroundColor: "rgba(255,255,255,0.04)",
+              backgroundColor: isMyOption ? colors.btn : "rgba(255,255,255,0.04)",
             }}>
-              <Text style={{ fontSize: 13, fontWeight: "500", color: theme.colors.onSurface, minWidth: 40, textAlign: "center" }}>
-                {opt.text}
-              </Text>
-              <View style={{ flex: 1, gap: 4 }}>
-                <View style={{ height: 5, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "500", color: isMyOption ? colors.btnText : theme.colors.onSurface }}>
+                    {opt.text ?? opt.option_text}
+                  </Text>
+                  {potentialWin !== null && (
+                    <Text style={{ fontSize: 16, fontWeight: "500", color: colors.bar }}>
+                      + {potentialWin} coins
+                    </Text>
+                  )}
+                </View>
+                <View style={{ height: 5, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 5 }}>
                   <View style={{ height: "100%", width: `${pct}%`, backgroundColor: colors.bar, borderRadius: 99 }} />
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -303,23 +303,8 @@ export default function BetCard({
                 </View>
               </View>
 
-              {isMyOption && <Ionicons name="checkmark-circle" size={14} color={theme.colors.primary} />}
-
-              {mode === "feed" && !item.custom_stake && potentialWin !== null && (
-                <View style={{
-                  backgroundColor: "rgba(157,212,190,0.08)",
-                  borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
-                  borderWidth: 1, borderColor: "rgba(157,212,190,0.15)",
-                }}>
-                  <Text style={{ fontSize: 11, color: theme.colors.primary }}>+{potentialWin}</Text>
-                </View>
-              )}
-
               {mode === "feed" && (
-                <Button
-                  mode="contained"
-                  compact
-                  loading={accepting === `${item.id}-${opt.id}`}
+                <TouchableOpacity
                   disabled={accepting !== null}
                   onPress={async () => {
                     setAccepting?.(`${item.id}-${opt.id}`);
@@ -343,14 +328,42 @@ export default function BetCard({
                       setAccepting?.(null);
                     }
                   }}
-                  style={{ borderRadius: 8, backgroundColor: colors.btn, borderWidth: 1, borderColor: colors.btnBorder }}
-                  labelStyle={{ fontWeight: "600", fontSize: 11, color: colors.btnText }}
+                  style={{
+                    width: 38, height: 38, borderRadius: 19,
+                    backgroundColor: colors.btn,
+                    borderWidth: 1, borderColor: colors.btnBorder,
+                    alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                    opacity: accepting !== null ? 0.5 : 1,
+                  }}
                 >
-                  Join
-                </Button>
+                  {accepting === `${item.id}-${opt.id}`
+                    ? <ActivityIndicator size="small" color={colors.btnText} />
+                    : <Ionicons name="add" size={20} color={colors.btnText} />
+                  }
+                </TouchableOpacity>
               )}
+
+              {mode === "active" && (
+                <View style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  backgroundColor: isMyOption ? colors.btn : "transparent",
+                  borderWidth: 1, borderColor: isMyOption ? colors.btnBorder : colors.bar + "66",
+                  alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <Text style={{
+                    fontSize: 13, fontWeight: isMyOption ? "600" : "500",
+                    color: isMyOption ? colors.btnText : colors.bar + "bb",
+                  }}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+
             </View>
           );
+
         })}
       </View>
 
@@ -431,10 +444,10 @@ export default function BetCard({
 
         if (isDisputed) return (
           <View style={{ padding: 12, paddingTop: 0 }}>
-            <View style={{ borderRadius: 12, padding: 12, backgroundColor: "rgba(239,68,68,0.08)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)" }}>
-              <Text style={{ color: "#ef4444", fontWeight: "700", textAlign: "center" }}>Outcome Disputed</Text>
+            <View style={{ borderRadius: 12, padding: 12, backgroundColor: "rgba(232,112,96,0.08)", borderWidth: 1, borderColor: "rgba(232,112,96,0.2)"  }}>
+                <Text style={{ color: "#e87060", fontWeight: "700", textAlign: "center" }}>Outcome Disputed</Text>
               <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4, fontSize: 12 }}>
-                Majority disputed this result. No payout has been made.
+                  This result has been disputed and is waiting on admin review
               </Text>
             </View>
           </View>
