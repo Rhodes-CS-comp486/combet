@@ -376,4 +376,5 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
     console.error("GET /users/:userId error:", err);
     res.status(500).json({ error: "Server error" });
   }
+
 });
