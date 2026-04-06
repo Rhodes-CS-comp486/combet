@@ -299,12 +299,12 @@ export default function ProfileScreen() {
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: "#4CAF50" }]}>{profile?.wins ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: "#9dd4be" }]}>{profile?.wins ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Wins</Text>
             </View>
             <View style={s.statDivider} />
             <View style={s.stat}>
-              <Text variant="titleLarge" style={[s.statNum, { color: theme.colors.error }]}>{profile?.losses ?? 0}</Text>
+              <Text variant="titleLarge" style={[s.statNum, { color: "#e87060" }]}>{profile?.losses ?? 0}</Text>
               <Text variant="labelSmall" style={s.statLabel}>Losses</Text>
             </View>
           </View>

@@ -606,16 +606,26 @@ export default function HomeScreen() {
                         <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 13, marginBottom: 12, lineHeight: 18, flex: 1 }} numberOfLines={2}>
                           {item.title}
                         </Text>
-                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", marginTop: 8 }}>
                           {iWon && stake > 0 ? (
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: DesignTokens.gold }} />
-                              <Text style={{ color: DesignTokens.gold, fontWeight: "400", fontSize: 18 }}>+{payout}</Text>
+                           <View style={{
+                              width: 44, height: 44, borderRadius: 22,
+                              backgroundColor: "rgba(240,192,112,0.12)",
+                              borderWidth: 1, borderColor: "rgba(240,192,112,0.3)",
+                              alignItems: "center", justifyContent: "center",
+                            }}>
+                              <Text style={{ color: DesignTokens.gold, fontWeight: "400", fontSize: 13, lineHeight: 18 }}>+{payout}</Text>
+                              <Text style={{ color: "rgba(240,192,112,0.6)", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>coins</Text>
                             </View>
                           ) : !iWon && stake > 0 ? (
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#e87060" }} />
-                              <Text style={{ color: "#e87060", fontWeight: "400", fontSize: 18 }}>-{stake}</Text>
+                           <View style={{
+                              width: 44, height: 44, borderRadius: 22,
+                              backgroundColor: "rgba(232,112,96,0.12)",
+                              borderWidth: 1, borderColor: "rgba(232,112,96,0.3)",
+                              alignItems: "center", justifyContent: "center",
+                            }}>
+                              <Text style={{ color: "#e87060", fontWeight: "400", fontSize: 13, lineHeight: 18 }}>-{stake}</Text>
+                              <Text style={{ color: "rgba(232,112,96,0.6)", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>coins</Text>
                             </View>
                           ) : item.custom_stake ? (
                             <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>
@@ -677,44 +687,45 @@ export default function HomeScreen() {
           visible={!!settlingBet}
           onDismiss={() => setSettlingBet(null)}
           contentContainerStyle={{
-            margin:          24,
-            borderRadius:    20,
-            padding:         24,
-            backgroundColor: isDark ? "#0D1F35" : "#ffffff",
+            margin: 24, borderRadius: 20, padding: 24,
+            backgroundColor: "#1f3347",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
           }}
         >
-          <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "800", marginBottom: 8 }}>
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 20, marginBottom: 6 }}>
             Declare Winner
           </Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 20 }}>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginBottom: 20 }}>
             Pick the winning option for "{settlingBet?.title}"
           </Text>
           <View style={{ gap: 10 }}>
             {(settlingBet?.options ?? []).map((opt: any) => (
-              <Button
+              <TouchableOpacity
                 key={opt.id}
-                mode="outlined"
                 onPress={async () => {
                   const sessionId = await getSessionId();
                   const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                    body:    JSON.stringify({ winningOptionId: opt.id }),
+                    body: JSON.stringify({ winningOptionId: opt.id }),
                   });
                   if (res.ok) {
                     setSettlingBet(null);
                     fetchActiveBets();
                     fetchRecentResults();
                     fetchCoins();
-                    setSettlingBet(null);
-
-                }}}
-
-                style={{ borderRadius: 12, borderColor: theme.colors.primary }}
-                labelStyle={{ color: theme.colors.primary, fontWeight: "700" }}
+                  }
+                }}
+                style={{
+                  borderRadius: 12, padding: 14,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                }}
               >
-                {opt.text}
-              </Button>
+                <Text style={{ color: theme.colors.onSurface, fontSize: 14, fontWeight: "500", textAlign: "center" }}>
+                  {opt.text}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
           <Button
