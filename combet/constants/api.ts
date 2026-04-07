@@ -14,7 +14,7 @@ const getApiUrl = () => {
     return "http://localhost:3001";
   }
   // Production URL — replace with your deployed backend
-  return "https://combet.live";
+  return "https://combet.live/api";
 };
 
 export const API_BASE = getApiUrl();
