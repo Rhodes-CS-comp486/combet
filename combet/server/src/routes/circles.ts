@@ -358,17 +358,6 @@ circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, r
         [userId, circleId]
       );
 
-      // 3b. Delete their bet deadline notifications for bets in this circle
-      await client.query(
-        `DELETE FROM bet_deadline_notifications
-         WHERE user_id = $1
-           AND bet_id IN (
-             SELECT bet_id FROM bet_targets
-             WHERE target_type = 'circle' AND target_id = $2
-           )`,
-        [userId, circleId]
-      );
-
       // 3c. Delete their bet winner votes for bets in this circle
       await client.query(
         `DELETE FROM bet_winner_votes
