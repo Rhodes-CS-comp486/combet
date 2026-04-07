@@ -9,6 +9,8 @@ import { betsRouter }      from "./routes/bets";
 import { usersRouter }     from "./routes/users";
 import { inboxRouter }     from "./routes/inbox";
 import { homefeedRouter }  from "./routes/homefeed";
+import { leaderboardRouter } from "./routes/leaderboard";
+
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use("/bets",     betsRouter);
 app.use("/users",    usersRouter);
 app.use("/inbox",    inboxRouter);
 app.use("/homefeed", homefeedRouter);
+app.use("/leaderboard", leaderboardRouter);
+
 
 import { startCronJobs } from "./cron";
 startCronJobs();

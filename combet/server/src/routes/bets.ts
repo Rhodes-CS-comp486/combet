@@ -118,6 +118,10 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
       if (optionId) {
         if (stake > 0) {
           await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, creatorUserId]);
+          await client.query(
+            `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
+            [creatorUserId, betId, -stake]
+          );
         }
         await client.query(
           `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
@@ -167,6 +171,11 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
         return res.status(400).json({ error: "Not enough coins", coins });
       }
       await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, req.userId]);
+      await client.query(
+  `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
+  [req.userId, betId, -stake]
+);
+
     }
 
     await client.query(
@@ -275,6 +284,12 @@ betsRouter.post("/:betId/settle", requireAuth, async (req: AuthRequest, res) => 
             `UPDATE users SET coins = coins + $1 WHERE id = $2`,
             [payout, winner.user_id]
           );
+
+          await client.query(
+  `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'payout')`,
+              [winner.user_id, betId, payout]
+            );
+
         }
       }
     }
@@ -357,6 +372,17 @@ betsRouter.post("/:betId/cancel", requireAuth, async (req: AuthRequest, res) => 
          )`,
         [stake_amount, betId]
       );
+
+      const participants = await client.query(
+        `SELECT user_id FROM bet_responses WHERE bet_id = $1 AND status = 'accepted'`,
+        [betId]
+      );
+      for (const p of participants.rows) {
+        await client.query(
+          `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'refund')`,
+          [p.user_id, betId, stake_amount]
+        );
+      }
     }
 
     await client.query(`UPDATE bets SET status = 'CANCELLED' WHERE id = $1`, [betId]);
