@@ -370,6 +370,48 @@ export default function InboxScreen() {
         </Surface>
       );
     }
+    // ── Follow accepted ───────────────────────────────────────────────────
+    if (item.type === "follow_accepted") {
+      return (
+        <Surface elevation={1} style={{
+          borderRadius: 16, marginBottom: 12,
+          backgroundColor: cardBg, overflow: "hidden",
+        }}>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ marginRight: 12 }}>
+                <UserAvatar
+                  user={{
+                    username:     item.actor_username ?? undefined,
+                    avatar_color: item.actor_avatar_color ?? undefined,
+                    avatar_icon:  item.actor_avatar_icon ?? undefined,
+                  }}
+                  size={40}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
+                  <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
+                  {" accepted your follow request"}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  {timeAgo(item.created_at)}
+                </Text>
+              </View>
+              <View style={{
+                backgroundColor: "rgba(157,212,190,0.12)",
+                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                flexDirection: "row", alignItems: "center", gap: 5,
+              }}>
+                <Ionicons name="checkmark" size={11} color="#9dd4be" />
+                <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
+              </View>
+            </View>
+          </View>
+        </Surface>
+      );
+    }
 
     // ── New: circle join request ──────────────────────────────────────────
     if (item.type === "circle_join_request") {

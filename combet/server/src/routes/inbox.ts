@@ -174,6 +174,11 @@ inboxRouter.post("/follow-requests/:requestId/accept", requireAuth, async (req: 
       [requesterId, userId]
     );
     await client.query(
+      `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+       VALUES ($1, $2, 'follow_accepted', 'follow_request', $3, false, NOW())`,
+      [requesterId, userId, requestId]
+    );
+    await client.query(
       `UPDATE notifications SET is_read = true
        WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'follow_request'`,
       [userId, requestId]
@@ -195,8 +200,7 @@ inboxRouter.post("/follow-requests/:requestId/decline", requireAuth, async (req:
   const userId        = req.userId;
   try {
     await pool.query(
-      `UPDATE follow_requests SET status = 'declined'
-       WHERE request_id = $1 AND requestee_id = $2`,
+      `DELETE FROM follow_requests WHERE request_id = $1 AND requestee_id = $2`,
       [requestId, userId]
     );
     await pool.query(
