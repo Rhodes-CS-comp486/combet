@@ -21,13 +21,13 @@ app.use((req, _res, next) => {
 });
 app.use(express.json());
 
-app.use("/auth",     authRouter);
-app.use("/circles",  circlesRouter);
-app.use("/bets",     betsRouter);
-app.use("/users",    usersRouter);
-app.use("/inbox",    inboxRouter);
-app.use("/homefeed", homefeedRouter);
-app.use("/leaderboard", leaderboardRouter);
+app.use("/api/auth",     authRouter);
+app.use("/api/circles",  circlesRouter);
+app.use("/api/bets",     betsRouter);
+app.use("/api/users",    usersRouter);
+app.use("/api/inbox",    inboxRouter);
+app.use("/api/homefeed", homefeedRouter);
+app.use("/api/leaderboard", leaderboardRouter);
 
 
 import { startCronJobs } from "./cron";
