@@ -1,6 +1,6 @@
-export const API_BASE = "http://combet.live/api";
+//export const API_BASE = "http://combet.live/api";
 
-/*
+
 import Constants from "expo-constants";
 
 // In development, use the machine's local IP (Expo provides this automatically)
@@ -19,4 +19,3 @@ const getApiUrl = () => {
 
 export const API_BASE = getApiUrl();
 
- */
