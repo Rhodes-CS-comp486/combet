@@ -9,9 +9,9 @@ const getApiUrl = () => {
   if (__DEV__) {
     // Expo gives us the host machine's IP via the debugger host
     const debuggerHost = Constants.expoConfig?.hostUri?.split(":")[0];
-    if (debuggerHost) return `http://${debuggerHost}:3001`;
+    if (debuggerHost) return `http://${debuggerHost}:3001/api`;
     // Fallback for web browser
-    return "http://localhost:3001";
+    return "http://localhost:3001/api";
   }
   // Production URL — replace with your deployed backend
   return "https://combet.live/api";
