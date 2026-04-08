@@ -11,7 +11,7 @@ import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
 
-type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string };
+type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string; is_creator?: boolean };
 type Request = { request_id: string; user_id: string; username: string; created_at: string; avatar_color?: string; avatar_icon?: string };
 
 export default function MembersScreen() {
@@ -25,9 +25,7 @@ export default function MembersScreen() {
   const [requests,  setRequests]  = useState<Request[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
 
-  useFocusEffect(useCallback(() => {
-      void loadAll();
-  }, []));
+
 
   const loadAll = async () => {
     try {
@@ -51,6 +49,12 @@ export default function MembersScreen() {
       console.error("Error loading members:", err);
     }
   };
+
+  useFocusEffect(useCallback(() => {
+  setMembers([]);
+  setRequests([]);
+  void loadAll();
+  }, [circleId]));
 
   const handleAccept = async (requestId: string) => {
     setActioning(requestId);
@@ -95,12 +99,25 @@ export default function MembersScreen() {
       borderRadius: 14, padding: 14, marginBottom: 10,
     }}>
       <View style={{ marginRight: 14 }}>
-      <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
-    </View>
+        <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
+      </View>
       <View style={{ flex: 1 }}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-          {item.username}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+            {item.username}
+          </Text>
+          {item.is_creator && (
+            <View style={{
+              backgroundColor: "rgba(157,212,190,0.18)",
+              borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
+              borderWidth: 1, borderColor: "rgba(157,212,190,0.35)",
+            }}>
+              <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600", letterSpacing: 0.5 }}>
+                Creator
+              </Text>
+            </View>
+          )}
+        </View>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           @{item.username}
         </Text>

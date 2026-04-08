@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
-import { View, ScrollView, Alert, Pressable, Platform, DeviceEventEmitter } from "react-native";
+import { View, ScrollView, Alert, Pressable, DeviceEventEmitter } from "react-native";
 import GradientBackground from "@/components/GradientBackground";
 import {
   Text,
