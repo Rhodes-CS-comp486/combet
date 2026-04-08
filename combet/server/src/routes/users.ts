@@ -395,9 +395,20 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
       [currentUserId, userId]
     );
 
-    // Their public circles (any public circle they are in)
+    // Circles both users are in together
+    const sharedCirclesResult = await pool.query(
+      `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private,
+         (SELECT COUNT(*) FROM circle_members WHERE circle_id = c.circle_id AND status = 'accepted') AS member_count
+       FROM circles c
+       JOIN circle_members cm1 ON cm1.circle_id = c.circle_id AND cm1.user_id = $1 AND cm1.status = 'accepted'
+       JOIN circle_members cm2 ON cm2.circle_id = c.circle_id AND cm2.user_id = $2 AND cm2.status = 'accepted'
+       ORDER BY c.name`,
+      [currentUserId, userId]
+    );
+
+    // Their public circles (any public circle they are in, that we're not already in via shared_circles)
     const publicCirclesResult = await pool.query(
-      `SELECT c.circle_id, c.name, c.icon, c.icon_color,
+      `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private,
          (SELECT COUNT(*) FROM circle_members WHERE circle_id = c.circle_id AND status = 'accepted') AS member_count,
          EXISTS (
            SELECT 1 FROM circle_members
@@ -414,6 +425,7 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
       ...profile,
       shared_bets:    sharedBetsResult.rows,
       circle_bets:    circleBetsResult.rows,
+      shared_circles: sharedCirclesResult.rows,
       public_circles: publicCirclesResult.rows,
       bets:           [],
     });

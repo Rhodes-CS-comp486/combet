@@ -11,34 +11,88 @@ import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 
 type UserProfile = {
-  id:                   string;
-  username:             string;
-  display_name:         string;
-  bio:                  string;
-  avatar_color:         string;
-  avatar_icon:          string;
-  is_private:           boolean;
+  id:                    string;
+  username:              string;
+  display_name:          string;
+  bio:                   string;
+  avatar_color:          string;
+  avatar_icon:           string;
+  is_private:            boolean;
   show_bets_to_followers: boolean;
-  followers_count:      number;
-  following_count:      number;
-  total_bets:           number;
-  wins:                 number;
-  losses:               number;
-  is_following:         boolean;
+  followers_count:       number;
+  following_count:       number;
+  total_bets:            number;
+  wins:                  number;
+  losses:                number;
+  is_following:          boolean;
   follow_request_status: string | null;
-  shared_bets:          any[];
-  circle_bets:          any[];
-  public_circles:       any[];
-  bets:                 any[];
+  shared_bets:           any[];
+  circle_bets:           any[];
+  shared_circles:        any[];
+  public_circles:        any[];
+  bets:                  any[];
 };
 
-type TabKey = "bets" | "circle_bets" | "circles";
+type TabKey = "bets" | "circle_bets";
+
+// ── Circle pill ───────────────────────────────────────────────────────────────
+function CirclePill({ circle, isMember }: { circle: any; isMember: boolean }) {
+  const { theme } = useAppTheme();
+  const isPrivate = circle.is_private ?? false;
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(`/circle-profile/${circle.circle_id}`)}
+      style={{ alignItems: "center", marginRight: 14, width: 68, opacity: isMember ? 1 : 0.38 }}
+    >
+      {/* Circle icon with privacy badge */}
+      <View style={{ width: 56, height: 56, position: "relative" }}>
+        <View style={{
+          width: 56, height: 56, borderRadius: 28,
+          backgroundColor: circle.icon_color ?? theme.colors.primary,
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Ionicons name={(circle.icon as any) ?? "people"} size={24} color="#fff" />
+        </View>
+
+        {/* Privacy badge — bottom right */}
+        <View style={{
+          position: "absolute", bottom: -1, right: -1,
+          width: 18, height: 18, borderRadius: 9,
+          backgroundColor: theme.colors.surface,
+          alignItems: "center", justifyContent: "center",
+          borderWidth: 0.5,
+          borderColor: theme.colors.outline,
+        }}>
+          <Ionicons
+            name={isPrivate ? "lock-closed-outline" : "globe-outline"}
+            size={10}
+            color={isPrivate ? "#e87060" : "#9dd4be"}
+          />
+        </View>
+      </View>
+
+      <Text
+        numberOfLines={1}
+        style={{
+          color: theme.colors.onSurface, fontSize: 11, fontWeight: "500",
+          marginTop: 6, textAlign: "center", width: 68,
+        }}
+      >
+        {circle.name}
+      </Text>
+      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 10, marginTop: 1 }}>
+        {circle.member_count} members
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function UserProfileScreen() {
   const { userId }        = useLocalSearchParams<{ userId: string }>();
   const { theme, isDark } = useAppTheme();
-  const [profile, setProfile]   = useState<UserProfile | null>(null);
-  const [loading, setLoading]   = useState(true);
+  const [profile, setProfile]     = useState<UserProfile | null>(null);
+  const [loading, setLoading]     = useState(true);
   const [actioning, setActioning] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("bets");
 
@@ -135,17 +189,25 @@ export default function UserProfileScreen() {
     );
   };
 
-  const TABS: { key: TabKey; label: string; icon: string; count: number }[] = [
-    { key: "bets",        label: "Bets Together", icon: "receipt-outline",  count: profile.shared_bets.length    },
-    { key: "circle_bets", label: "Circle Bets",   icon: "trophy-outline",   count: profile.circle_bets.length    },
-    { key: "circles",     label: "Circles",        icon: "people-outline",   count: profile.public_circles.length },
+  const TABS: { key: TabKey; label: string; count: number }[] = [
+    { key: "bets",        label: "Bets Together", count: profile.shared_bets.length  },
+    { key: "circle_bets", label: "Circle Bets",   count: profile.circle_bets.length  },
+  ];
+
+  // Merge into one list: shared first (isMember=true), then public-only (isMember=false).
+  // De-duplicate in case a circle somehow appears in both arrays.
+  const sharedIds = new Set(profile.shared_circles.map((c) => c.circle_id));
+  const publicOnly = profile.public_circles.filter((c) => !sharedIds.has(c.circle_id));
+  const allCircles = [
+    ...profile.shared_circles.map((c) => ({ ...c, isMember: true })),
+    ...publicOnly.map((c) => ({ ...c, isMember: false })),
   ];
 
   return (
     <GradientBackground>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* ── Back button ── */}
+        {/* ── Back ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, marginBottom: 8 }}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
@@ -154,7 +216,6 @@ export default function UserProfileScreen() {
 
         {/* ── Profile header ── */}
         <View style={{ alignItems: "center", paddingHorizontal: 20, paddingBottom: 24 }}>
-
           <UserAvatar
             user={{
               username:     profile.username,
@@ -165,7 +226,6 @@ export default function UserProfileScreen() {
             size={80}
           />
 
-          {/* Name + lock */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 }}>
             <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 22 }}>
               {profile.display_name}
@@ -179,7 +239,6 @@ export default function UserProfileScreen() {
             @{profile.username}
           </Text>
 
-          {/* Followers / Following */}
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, marginBottom: 4, gap: 8 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline" }}>
               <Text style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{profile.followers_count}</Text>
@@ -198,7 +257,7 @@ export default function UserProfileScreen() {
             </Text>
           ) : null}
 
-          {/* Stats row */}
+          {/* Stats */}
           <View style={{
             flexDirection: "row", marginTop: 20,
             backgroundColor: theme.colors.surface,
@@ -220,7 +279,6 @@ export default function UserProfileScreen() {
             </View>
           </View>
 
-          {/* Follow button */}
           <View style={{ marginTop: 16 }}>
             {renderFollowButton()}
           </View>
@@ -234,8 +292,7 @@ export default function UserProfileScreen() {
             <View style={{
               width: 72, height: 72, borderRadius: 36,
               backgroundColor: "rgba(255,255,255,0.06)",
-              alignItems: "center", justifyContent: "center",
-              marginBottom: 16,
+              alignItems: "center", justifyContent: "center", marginBottom: 16,
             }}>
               <Ionicons name="lock-closed-outline" size={32} color={theme.colors.onSurfaceVariant} />
             </View>
@@ -248,7 +305,45 @@ export default function UserProfileScreen() {
           </View>
         ) : (
           <>
-            {/* ── Tabs ── */}
+            {/* ── Circles (single merged row) ── */}
+            {allCircles.length > 0 && (
+              <View style={{ paddingTop: 20, paddingBottom: 8 }}>
+                <View style={{
+                  flexDirection: "row", alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 20, marginBottom: 14,
+                }}>
+                  <Text style={{
+                    color: theme.colors.onSurfaceVariant, fontSize: 11,
+                    fontWeight: "600", letterSpacing: 1, textTransform: "uppercase",
+                  }}>
+                    Circles
+                  </Text>
+                  <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
+                    {sharedIds.size} shared · {allCircles.length} total
+                  </Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 4 }}
+                >
+                  {allCircles.map((circle) => (
+                    <CirclePill
+                      key={circle.circle_id}
+                      circle={circle}
+                      isMember={circle.isMember}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {allCircles.length > 0 && (
+              <Divider style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)", marginTop: 8 }} />
+            )}
+
+            {/* ── Tabs: Bets Together / Circle Bets ── */}
             <View style={{ flexDirection: "row", paddingHorizontal: 20, paddingTop: 4 }}>
               {TABS.map(({ key, label, count }) => {
                 const active = activeTab === key;
@@ -257,15 +352,13 @@ export default function UserProfileScreen() {
                     key={key}
                     onPress={() => setActiveTab(key)}
                     style={{
-                      flex: 1,
-                      paddingVertical: 14,
-                      alignItems: "center",
+                      flex: 1, paddingVertical: 14, alignItems: "center",
                       borderBottomWidth: 2,
                       borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
                     }}
                   >
                     <Text style={{
-                      fontSize: 12, fontWeight: active ? "700" : "400",
+                      fontSize: 13, fontWeight: active ? "700" : "400",
                       color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                       marginBottom: 2,
                     }}>
@@ -288,7 +381,7 @@ export default function UserProfileScreen() {
 
             <View style={{ padding: 20 }}>
 
-              {/* ── Tab: Bets Together ── */}
+              {/* Bets Together */}
               {activeTab === "bets" && (
                 profile.shared_bets.length === 0 ? (
                   <View style={{ alignItems: "center", paddingTop: 48 }}>
@@ -304,7 +397,7 @@ export default function UserProfileScreen() {
                 )
               )}
 
-              {/* ── Tab: Circle Bets ── */}
+              {/* Circle Bets */}
               {activeTab === "circle_bets" && (
                 profile.circle_bets.length === 0 ? (
                   <View style={{ alignItems: "center", paddingTop: 48 }}>
@@ -316,65 +409,6 @@ export default function UserProfileScreen() {
                 ) : (
                   profile.circle_bets.map((bet) => (
                     <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchProfile} />
-                  ))
-                )
-              )}
-
-              {/* ── Tab: Circles ── */}
-              {activeTab === "circles" && (
-                profile.public_circles.length === 0 ? (
-                  <View style={{ alignItems: "center", paddingTop: 48 }}>
-                    <Ionicons name="people-outline" size={40} color={theme.colors.onSurfaceVariant} />
-                    <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14, textAlign: "center" }}>
-                      No public circles.
-                    </Text>
-                  </View>
-                ) : (
-                  profile.public_circles.map((circle) => (
-                    <TouchableOpacity
-                      key={circle.circle_id}
-                      onPress={() => router.push(`/circle-profile/${circle.circle_id}`)}
-                    >
-                      <View style={{
-                        flexDirection: "row", alignItems: "center", gap: 12,
-                        backgroundColor: "rgba(255,255,255,0.07)",
-                        borderRadius: 14, padding: 14, marginBottom: 10,
-                        borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-                      }}>
-                        <View style={{
-                          width: 44, height: 44, borderRadius: 22,
-                          backgroundColor: circle.icon_color ?? theme.colors.primary,
-                          alignItems: "center", justifyContent: "center", flexShrink: 0,
-                        }}>
-                          <Ionicons name={(circle.icon as any) ?? "people"} size={20} color="#fff" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
-                            {circle.name}
-                          </Text>
-                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 2 }}>
-                            {circle.member_count} members
-                          </Text>
-                        </View>
-                        {circle.am_member ? (
-                          <View style={{
-                            backgroundColor: "rgba(157,212,190,0.12)",
-                            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-                            borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-                          }}>
-                            <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Member</Text>
-                          </View>
-                        ) : (
-                          <View style={{
-                            backgroundColor: theme.colors.primary,
-                            borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                          }}>
-                            <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Join</Text>
-                          </View>
-                        )}
-                        <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
-                      </View>
-                    </TouchableOpacity>
                   ))
                 )
               )}
