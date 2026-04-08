@@ -16,8 +16,10 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
         b.description,
         b.stake_amount,
         b.custom_stake,
+        b.winning_option_id,
         b.status AS status,
         br.status AS response_status,
+        br.selected_option_id AS my_option_id,
         b.created_at,
         b.closes_at,
         CASE WHEN b.creator_user_id = $1 THEN true ELSE false END AS is_creator,
@@ -61,8 +63,7 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
            SELECT 1 FROM bet_responses
            WHERE bet_id = b.id AND user_id = $1
          )
-      GROUP BY b.id, br.status, u.first_name, u.last_name, u.username,
-               u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, b.post_to,
+    GROUP BY b.id, br.status, br.selected_option_id, u.first_name, u.last_name, u.username,               u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, b.post_to,
                tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
       ORDER BY b.created_at DESC
       `,
@@ -367,6 +368,11 @@ betsRouter.post("/:betId/cancel", requireAuth, async (req: AuthRequest, res) => 
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Bet not found" });
     }
+    if (!["PENDING", "CLOSED"].includes(betResult.rows[0].status)) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ error: "Bet cannot be cancelled" });
+        }
+
     if (betResult.rows[0].creator_user_id !== req.userId) {
       await client.query("ROLLBACK");
       return res.status(403).json({ error: "Only the creator can cancel this bet" });

@@ -254,9 +254,12 @@ export default function BetCard({
         <View style={{ flex: 1, alignItems: "center" }}>
           <Text style={{ fontSize: 20, fontWeight: "300", color: isClosed ? "#e87060" : theme.colors.onSurface }}>
             {mode === "active"
-              ? (["CLOSED", "CANCELLED", "SETTLED"].includes(item.status?.toUpperCase()) ? "Closed" : item.closes_at ? fmtDate(item.closes_at) : "Open")
+              ? (item.status?.toUpperCase() === "CANCELLED" ? "Cancelled"
+                : item.status?.toUpperCase() === "SETTLED" ? "Settled"
+                : item.status?.toUpperCase() === "CLOSED" ? "Closed"
+                : item.closes_at ? fmtDate(item.closes_at) : "Open")
               : (item.closes_at ? fmtDate(item.closes_at) : "-")}
-          </Text>
+            </Text>
           <Text style={{ fontSize: 9, fontWeight: "500", color: theme.colors.onSurfaceVariant, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
             {mode === "active" ? (isClosed ? "Status" : "Closes") : "Closes"}
           </Text>
@@ -369,26 +372,42 @@ export default function BetCard({
 
       {/* SETTLED */}
       {item.status === "SETTLED" && (() => {
-        const winningOption = options.find((o: any) => o.id === item.winning_option_id);
+          const winningOption = options.find((o: any) => String(o.id) === String(item.winning_option_id));
         const iWon          = item.my_option_id === item.winning_option_id || item.my_selected_option_id === item.winning_option_id;
         const winnerCount   = options.find((o: any) => o.id === item.winning_option_id)?.count ?? 1;
         const payout        = stake > 0 ? Math.floor((totalJoined * stake) / winnerCount) : 0;
         return (
           <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-            <View style={{
-              borderRadius: 12, padding: 12,
-              backgroundColor: iWon ? "rgba(157,212,190,0.08)" : "rgba(239,68,68,0.08)",
-              borderWidth: 1,
-              borderColor: iWon ? "rgba(157,212,190,0.2)" : "rgba(239,68,68,0.2)",
-            }}>
-              <Text style={{ color: iWon ? "#9dd4be" : "#e87060", fontWeight: "600", textAlign: "center", fontSize: 14 }}>
-                {iWon ? "You won!" : "You lost"}
-              </Text>
-              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 4, fontSize: 12 }}>
-                {winningOption ? `Winner: ${winningOption.text ?? winningOption.option_text}` : "Result pending"}
-                {iWon && stake > 0 ? `  -  +${payout} coins` : ""}
-              </Text>
-            </View>
+              <View style={{
+                borderRadius: 12, padding: 14,
+                backgroundColor: iWon ? "rgba(157,212,190,0.08)" : "rgba(239,68,68,0.08)",                borderWidth: 1,
+                borderColor: iWon ? "rgba(157,212,190,0.2)" : "rgba(232,112,96,0.2)",
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12,
+              }}>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Text style={{ color: iWon ? "#9dd4be" : "#e87060", fontWeight: "400", fontSize: 20 }}>
+                    {iWon ? "You won!" : "You lost"}
+                  </Text>
+                  <Text style={{ color: iWon ? "rgba(157,212,190,0.7)" : "rgba(232,112,96,0.7)", fontSize: 14 }}>
+                    {winningOption ? `Winner: ${winningOption.text ?? winningOption.option_text}` : "Result pending"}
+                  </Text>
+                </View>
+                {stake > 0 && (
+                  <View style={{
+                    width: 64, height: 64, borderRadius: 32,
+                    backgroundColor: iWon ? "rgba(240,192,112,0.1)" : "rgba(232,112,96,0.1)",
+                    borderWidth: 1, borderColor: iWon ? "rgba(240,192,112,0.25)" : "rgba(232,112,96,0.25)",
+                    alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <Text style={{ color: iWon ? "#f0c070" : "#e87060", fontWeight: "400", fontSize: 18 }}>
+                      {iWon ? `+${payout}` : `-${stake}`}
+                    </Text>
+                    <Text style={{ color: iWon ? "rgba(240,192,112,0.6)" : "rgba(232,112,96,0.6)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                      coins
+                    </Text>
+                  </View>
+                )}
+              </View>
             {!isCreator && !iWon && (
               <TouchableOpacity
                 onPress={async () => {
@@ -438,6 +457,7 @@ export default function BetCard({
 
       {/* ACTIVE ACTIONS */}
       {mode === "active" && (() => {
+          if (["SETTLED", "CANCELLED"].includes(item.status?.toUpperCase())) return null;
         const isDisputed      = item.status === "DISPUTED";
         const participantCount = Number(item.total_joined ?? 0);
         const tooFewToSettle  = participantCount < 2;
@@ -453,7 +473,7 @@ export default function BetCard({
           </View>
         );
 
-        if (isCreator && tooFewToSettle && isClosed) return (
+        if (isCreator && tooFewToSettle && ["CLOSED"].includes(item.status?.toUpperCase())) return (
           <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
             <TouchableOpacity
               onPress={async () => {
