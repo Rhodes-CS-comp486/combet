@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Alert, ScrollView, View, StyleSheet, TouchableOpacity } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Text,
   Button,
@@ -128,7 +129,7 @@ export default function ProfileScreen() {
   }, []);
 
   // ── Fetch my bets ──────────────────────────────────────────────────────────
-  useEffect(() => { fetchBets(); }, []);
+  useFocusEffect(useCallback(() => { fetchBets(); }, []));
 
   const fetchBets = async () => {
     try {

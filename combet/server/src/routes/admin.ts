@@ -85,6 +85,7 @@ adminRouter.delete("/users/:userId", requireAuth, async (req: AuthRequest, res) 
     );
     await pool.query(`DELETE FROM bet_winner_votes WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
     await pool.query(`DELETE FROM bet_responses WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
+    await pool.query(`DELETE FROM coin_transactions WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
     await pool.query(`DELETE FROM bet_options WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
     await pool.query(`DELETE FROM bet_targets WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
     await pool.query(`DELETE FROM bet_deadline_notifications WHERE bet_id IN (SELECT id FROM bets WHERE creator_user_id = $1)`, [userId]);
@@ -150,6 +151,7 @@ adminRouter.delete("/bets/:betId", requireAuth, async (req: AuthRequest, res) =>
     await pool.query(`DELETE FROM bet_deadline_notifications WHERE bet_id = $1`, [betId]);
     await pool.query(`DELETE FROM bet_winner_votes WHERE bet_id = $1`, [betId]);
     await pool.query(`DELETE FROM bet_responses WHERE bet_id = $1`, [betId]);
+    await pool.query(`DELETE FROM coin_transactions WHERE bet_id = $1`, [betId]);
     await pool.query(`DELETE FROM bet_targets WHERE bet_id = $1`, [betId]);
     await pool.query(`DELETE FROM bet_options WHERE bet_id = $1`, [betId]);
 

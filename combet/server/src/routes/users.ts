@@ -282,6 +282,9 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;
   const currentUserId = req.userId;
 
+  if (!userId || userId === "undefined")
+    return res.status(400).json({ error: "Invalid user ID" });
+
   try {
     // Get target user profile
     const userResult = await pool.query(
@@ -341,7 +344,7 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
 
     // Private + not following → stats only
     if (user.is_private && !isFollowing) {
-      return res.json({ ...profile, bets: [], shared_bets: [] });
+      return res.json({ ...profile, bets: [], shared_bets: [], circle_bets: [], shared_circles: [], public_circles: [] });
     }
 
     // Bets you're both involved in — full fields for BetCard
@@ -407,7 +410,7 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
       [currentUserId, userId]
     );
 
-    // Their public circles (any public circle they are in, that we're not already in via shared_circles)
+    // Their public circles
     const publicCirclesResult = await pool.query(
       `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private,
          (SELECT COUNT(*) FROM circle_members WHERE circle_id = c.circle_id AND status = 'accepted') AS member_count,
@@ -434,5 +437,4 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
     console.error("GET /users/:userId error:", err);
     res.status(500).json({ error: "Server error" });
   }
-
 });
