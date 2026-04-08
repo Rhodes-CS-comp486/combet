@@ -343,35 +343,80 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
       return res.json({ ...profile, bets: [], shared_bets: [] });
     }
 
-    // Bets you're both involved in
+    // Bets you're both involved in — full fields for BetCard
     const sharedBetsResult = await pool.query(
-      `SELECT DISTINCT b.id, b.title, b.status, b.stake_amount, b.custom_stake,
-              b.created_at, b.closes_at
+      `SELECT DISTINCT
+         b.id, b.title, b.status, b.stake_amount, b.custom_stake,
+         b.created_at, b.closes_at, b.winning_option_id,
+         b.creator_user_id = $1 AS is_creator,
+         bt.target_type,
+         CASE WHEN bt.target_type = 'circle' THEN c.name ELSE tu.username END AS target_name,
+         c.icon AS icon, c.icon_color,
+         creator.username    AS creator_username,
+         creator.avatar_color AS creator_avatar_color,
+         creator.avatar_icon  AS creator_avatar_icon,
+         my_r.selected_option_id AS my_option_id,
+         (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted') AS total_joined
        FROM bets b
-       LEFT JOIN bet_responses br1 ON br1.bet_id = b.id AND br1.user_id = $1
-       LEFT JOIN bet_responses br2 ON br2.bet_id = b.id AND br2.user_id = $2
-       WHERE (b.creator_user_id = $1 OR br1.user_id = $1)
+       JOIN bet_targets bt ON bt.bet_id = b.id
+       LEFT JOIN circles c ON bt.target_type = 'circle' AND c.circle_id = bt.target_id
+       LEFT JOIN users tu ON bt.target_type = 'user' AND tu.id = bt.target_id
+       LEFT JOIN users creator ON creator.id = b.creator_user_id
+       LEFT JOIN bet_responses my_r ON my_r.bet_id = b.id AND my_r.user_id = $1 AND my_r.status = 'accepted'
+       LEFT JOIN bet_responses br2 ON br2.bet_id = b.id AND br2.user_id = $2 AND br2.status = 'accepted'
+       WHERE (b.creator_user_id = $1 OR my_r.user_id = $1)
          AND (b.creator_user_id = $2 OR br2.user_id = $2)
        ORDER BY b.created_at DESC`,
       [currentUserId, userId]
     );
 
-    // All their bets (only if public OR private+following+show_bets_to_followers)
-    let allBets: any[] = [];
-    if (!user.is_private || (isFollowing && user.show_bets_to_followers)) {
-      const allBetsResult = await pool.query(
-        `SELECT b.id, b.title, b.status, b.stake_amount, b.custom_stake,
-                b.created_at, b.closes_at
-         FROM bets b
-         LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $1
-         WHERE b.creator_user_id = $1 OR br.user_id = $1
-         ORDER BY b.created_at DESC`,
-        [userId]
-      );
-      allBets = allBetsResult.rows;
-    }
+    // Circle bets — bets made in circles both users are members of
+    const circleBetsResult = await pool.query(
+      `SELECT DISTINCT
+         b.id, b.title, b.status, b.stake_amount, b.custom_stake,
+         b.created_at, b.closes_at, b.winning_option_id,
+         b.creator_user_id = $1 AS is_creator,
+         'circle' AS target_type,
+         c.name AS target_name,
+         c.icon AS icon, c.icon_color,
+         creator.username     AS creator_username,
+         creator.avatar_color AS creator_avatar_color,
+         creator.avatar_icon  AS creator_avatar_icon,
+         my_r.selected_option_id AS my_option_id,
+         (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted') AS total_joined
+       FROM bets b
+       JOIN bet_targets bt ON bt.bet_id = b.id AND bt.target_type = 'circle'
+       JOIN circles c ON c.circle_id = bt.target_id
+       JOIN circle_members cm1 ON cm1.circle_id = c.circle_id AND cm1.user_id = $1 AND cm1.status = 'accepted'
+       JOIN circle_members cm2 ON cm2.circle_id = c.circle_id AND cm2.user_id = $2 AND cm2.status = 'accepted'
+       LEFT JOIN users creator ON creator.id = b.creator_user_id
+       LEFT JOIN bet_responses my_r ON my_r.bet_id = b.id AND my_r.user_id = $1 AND my_r.status = 'accepted'
+       ORDER BY b.created_at DESC`,
+      [currentUserId, userId]
+    );
 
-    res.json({ ...profile, shared_bets: sharedBetsResult.rows, bets: allBets });
+    // Their public circles (any public circle they are in)
+    const publicCirclesResult = await pool.query(
+      `SELECT c.circle_id, c.name, c.icon, c.icon_color,
+         (SELECT COUNT(*) FROM circle_members WHERE circle_id = c.circle_id AND status = 'accepted') AS member_count,
+         EXISTS (
+           SELECT 1 FROM circle_members
+           WHERE circle_id = c.circle_id AND user_id = $1 AND status = 'accepted'
+         ) AS am_member
+       FROM circles c
+       JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $2 AND cm.status = 'accepted'
+       WHERE c.is_private = false
+       ORDER BY c.name`,
+      [currentUserId, userId]
+    );
+
+    res.json({
+      ...profile,
+      shared_bets:    sharedBetsResult.rows,
+      circle_bets:    circleBetsResult.rows,
+      public_circles: publicCirclesResult.rows,
+      bets:           [],
+    });
   } catch (err) {
     console.error("GET /users/:userId error:", err);
     res.status(500).json({ error: "Server error" });

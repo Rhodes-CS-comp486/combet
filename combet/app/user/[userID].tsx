@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, TouchableOpacity } from "react-native";
-import { Text, ActivityIndicator, Button } from "react-native-paper";
+import { Text, ActivityIndicator, Button, Divider } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -11,31 +11,36 @@ import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 
 type UserProfile = {
-  id: string;
-  username: string;
-  display_name: string;
-  bio: string;
-  avatar_color: string;
-  avatar_icon: string;
-  is_private: boolean;
+  id:                   string;
+  username:             string;
+  display_name:         string;
+  bio:                  string;
+  avatar_color:         string;
+  avatar_icon:          string;
+  is_private:           boolean;
   show_bets_to_followers: boolean;
-  followers_count: number;
-  following_count: number;
-  total_bets: number;
-  wins: number;
-  losses: number;
-  is_following: boolean;
+  followers_count:      number;
+  following_count:      number;
+  total_bets:           number;
+  wins:                 number;
+  losses:               number;
+  is_following:         boolean;
   follow_request_status: string | null;
-  shared_bets: any[];
-  bets: any[];
+  shared_bets:          any[];
+  circle_bets:          any[];
+  public_circles:       any[];
+  bets:                 any[];
 };
 
+type TabKey = "bets" | "circle_bets" | "circles";
+
 export default function UserProfileScreen() {
-  const { userId } = useLocalSearchParams<{ userId: string }>();
-  const { theme } = useAppTheme();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { userId }        = useLocalSearchParams<{ userId: string }>();
+  const { theme, isDark } = useAppTheme();
+  const [profile, setProfile]   = useState<UserProfile | null>(null);
+  const [loading, setLoading]   = useState(true);
   const [actioning, setActioning] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>("bets");
 
   useEffect(() => { void fetchProfile(); }, [userId]);
 
@@ -68,7 +73,7 @@ export default function UserProfileScreen() {
       const data = await res.json();
       setProfile((prev) => prev ? {
         ...prev,
-        is_following: data.status === "following",
+        is_following:          data.status === "following",
         follow_request_status: data.status === "requested" ? "pending" : prev.follow_request_status,
       } : prev);
     } catch (err) {
@@ -93,7 +98,6 @@ export default function UserProfileScreen() {
   );
 
   const isPrivateAndNotFollowing = profile.is_private && !profile.is_following;
-  const canSeeBets = !profile.is_private || (profile.is_following && profile.show_bets_to_followers);
 
   const renderFollowButton = () => {
     if (profile.is_following) return (
@@ -131,17 +135,26 @@ export default function UserProfileScreen() {
     );
   };
 
+  const TABS: { key: TabKey; label: string; icon: string; count: number }[] = [
+    { key: "bets",        label: "Bets Together", icon: "receipt-outline",  count: profile.shared_bets.length    },
+    { key: "circle_bets", label: "Circle Bets",   icon: "trophy-outline",   count: profile.circle_bets.length    },
+    { key: "circles",     label: "Circles",        icon: "people-outline",   count: profile.public_circles.length },
+  ];
+
   return (
     <GradientBackground>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* ── Back button ── */}
-        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 16 }}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
+          </TouchableOpacity>
+        </View>
 
-        {/* ── Header ── */}
-        <View style={{ alignItems: "center", marginBottom: 24 }}>
+        {/* ── Profile header ── */}
+        <View style={{ alignItems: "center", paddingHorizontal: 20, paddingBottom: 24 }}>
+
           <UserAvatar
             user={{
               username:     profile.username,
@@ -149,115 +162,223 @@ export default function UserProfileScreen() {
               avatar_color: profile.avatar_color,
               avatar_icon:  profile.avatar_icon,
             }}
-            size={72}
+            size={80}
           />
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 20, marginTop: 12 }}>
-            {profile.display_name}
-          </Text>
+
+          {/* Name + lock */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 }}>
+            <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 22 }}>
+              {profile.display_name}
+            </Text>
+            {profile.is_private && (
+              <Ionicons name="lock-closed" size={14} color={theme.colors.onSurfaceVariant} />
+            )}
+          </View>
+
           <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginTop: 2 }}>
             @{profile.username}
           </Text>
+
+          {/* Followers / Following */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, marginBottom: 4, gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{profile.followers_count}</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant }}> Followers</Text>
+            </View>
+            <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: theme.colors.onSurfaceVariant, marginHorizontal: 2 }} />
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{profile.following_count}</Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant }}> Following</Text>
+            </View>
+          </View>
+
           {profile.bio ? (
             <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 8, paddingHorizontal: 24 }}>
               {profile.bio}
             </Text>
           ) : null}
 
-          {/* Follow/Requested button */}
-          <View style={{ marginTop: 14 }}>
-            {renderFollowButton()}
+          {/* Stats row */}
+          <View style={{
+            flexDirection: "row", marginTop: 20,
+            backgroundColor: theme.colors.surface,
+            borderRadius: 16, paddingVertical: 16, paddingHorizontal: 32, gap: 16,
+          }}>
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text variant="titleLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>{profile.total_bets}</Text>
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>Bets</Text>
+            </View>
+            <View style={{ width: 1, backgroundColor: theme.colors.outline }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text variant="titleLarge" style={{ color: "#9dd4be", fontWeight: "700" }}>{profile.wins}</Text>
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>Wins</Text>
+            </View>
+            <View style={{ width: 1, backgroundColor: theme.colors.outline }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text variant="titleLarge" style={{ color: "#e87060", fontWeight: "700" }}>{profile.losses}</Text>
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>Losses</Text>
+            </View>
           </View>
 
-          {/* Private badge */}
-          {profile.is_private && (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8,
-              backgroundColor: "rgba(239,68,68,0.1)",
-              borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3,
-            }}>
-              <Ionicons name="lock-closed" size={10} color="#ef4444" />
-              <Text style={{ color: "#ef4444", fontSize: 11, fontWeight: "500" }}>Private</Text>
-            </View>
-          )}
+          {/* Follow button */}
+          <View style={{ marginTop: 16 }}>
+            {renderFollowButton()}
+          </View>
         </View>
 
-        {/* ── Stats ── */}
-        <View style={{
-          flexDirection: "row",
-          backgroundColor: theme.colors.surface,
-          borderRadius: 16, paddingVertical: 16, paddingHorizontal: 24,
-          gap: 16, marginBottom: 24,
-        }}>
-          {[
-            { label: "Bets",   value: profile.total_bets },
-            { label: "Wins",   value: profile.wins },
-            { label: "Losses", value: profile.losses },
-            { label: "Followers", value: profile.followers_count },
-          ].map(({ label, value }, i, arr) => (
-            <React.Fragment key={label}>
-              <View style={{ alignItems: "center", flex: 1 }}>
-                <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 18 }}>{value}</Text>
-                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11, marginTop: 2 }}>{label}</Text>
-              </View>
-              {i < arr.length - 1 && (
-                <View style={{ width: 1, backgroundColor: theme.colors.outline }} />
-              )}
-            </React.Fragment>
-          ))}
-        </View>
+        <Divider style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
 
         {/* ── Private lockout ── */}
         {isPrivateAndNotFollowing ? (
-          <View style={{ alignItems: "center", marginTop: 40 }}>
-            <Ionicons name="lock-closed-outline" size={48} color={theme.colors.onSurfaceVariant} />
-            <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14, textAlign: "center" }}>
-              This account is private.{"\n"}Follow to see their bets.
+          <View style={{ alignItems: "center", marginTop: 60, paddingHorizontal: 40 }}>
+            <View style={{
+              width: 72, height: 72, borderRadius: 36,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              alignItems: "center", justifyContent: "center",
+              marginBottom: 16,
+            }}>
+              <Ionicons name="lock-closed-outline" size={32} color={theme.colors.onSurfaceVariant} />
+            </View>
+            <Text style={{ color: theme.colors.onSurface, fontSize: 16, fontWeight: "600", textAlign: "center", marginBottom: 8 }}>
+              This account is private
+            </Text>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, textAlign: "center", lineHeight: 20 }}>
+              Follow this account to see their shared bets and circles.
             </Text>
           </View>
         ) : (
           <>
-            {/* ── Bets with you ── */}
-            {profile.shared_bets.length > 0 && (
-              <View style={{ marginBottom: 24 }}>
-                <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>
-                  Bets with you
-                </Text>
-                {profile.shared_bets.map((bet) => (
-                  <BetCard
-                    key={bet.id}
-                    item={bet}
-                    mode="active"
-                    onRefresh={fetchProfile}
-                  />
-                ))}
-              </View>
-            )}
+            {/* ── Tabs ── */}
+            <View style={{ flexDirection: "row", paddingHorizontal: 20, paddingTop: 4 }}>
+              {TABS.map(({ key, label, count }) => {
+                const active = activeTab === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => setActiveTab(key)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 14,
+                      alignItems: "center",
+                      borderBottomWidth: 2,
+                      borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12, fontWeight: active ? "700" : "400",
+                      color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                      marginBottom: 2,
+                    }}>
+                      {label}
+                    </Text>
+                    {count > 0 && (
+                      <View style={{
+                        backgroundColor: active ? theme.colors.primary : "rgba(255,255,255,0.12)",
+                        borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
+                      }}>
+                        <Text style={{ fontSize: 10, fontWeight: "600", color: active ? "#fff" : theme.colors.onSurfaceVariant }}>
+                          {count}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-            {/* ── All their bets ── */}
-            {canSeeBets && profile.bets.length > 0 && (
-              <View>
-                <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>
-                  All bets
-                </Text>
-                {profile.bets.map((bet) => (
-                  <BetCard
-                    key={bet.id}
-                    item={bet}
-                    mode="active"
-                    onRefresh={fetchProfile}
-                  />
-                ))}
-              </View>
-            )}
+            <View style={{ padding: 20 }}>
 
-            {profile.shared_bets.length === 0 && !canSeeBets && (
-              <View style={{ alignItems: "center", marginTop: 40 }}>
-                <Ionicons name="receipt-outline" size={48} color={theme.colors.onSurfaceVariant} />
-                <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14 }}>
-                  No shared bets yet.
-                </Text>
-              </View>
-            )}
+              {/* ── Tab: Bets Together ── */}
+              {activeTab === "bets" && (
+                profile.shared_bets.length === 0 ? (
+                  <View style={{ alignItems: "center", paddingTop: 48 }}>
+                    <Ionicons name="receipt-outline" size={40} color={theme.colors.onSurfaceVariant} />
+                    <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14, textAlign: "center" }}>
+                      No shared bets yet.
+                    </Text>
+                  </View>
+                ) : (
+                  profile.shared_bets.map((bet) => (
+                    <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchProfile} />
+                  ))
+                )
+              )}
+
+              {/* ── Tab: Circle Bets ── */}
+              {activeTab === "circle_bets" && (
+                profile.circle_bets.length === 0 ? (
+                  <View style={{ alignItems: "center", paddingTop: 48 }}>
+                    <Ionicons name="trophy-outline" size={40} color={theme.colors.onSurfaceVariant} />
+                    <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14, textAlign: "center" }}>
+                      No circle bets in common.
+                    </Text>
+                  </View>
+                ) : (
+                  profile.circle_bets.map((bet) => (
+                    <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchProfile} />
+                  ))
+                )
+              )}
+
+              {/* ── Tab: Circles ── */}
+              {activeTab === "circles" && (
+                profile.public_circles.length === 0 ? (
+                  <View style={{ alignItems: "center", paddingTop: 48 }}>
+                    <Ionicons name="people-outline" size={40} color={theme.colors.onSurfaceVariant} />
+                    <Text style={{ color: theme.colors.onSurfaceVariant, marginTop: 12, fontSize: 14, textAlign: "center" }}>
+                      No public circles.
+                    </Text>
+                  </View>
+                ) : (
+                  profile.public_circles.map((circle) => (
+                    <TouchableOpacity
+                      key={circle.circle_id}
+                      onPress={() => router.push(`/circle-profile/${circle.circle_id}`)}
+                    >
+                      <View style={{
+                        flexDirection: "row", alignItems: "center", gap: 12,
+                        backgroundColor: "rgba(255,255,255,0.07)",
+                        borderRadius: 14, padding: 14, marginBottom: 10,
+                        borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                      }}>
+                        <View style={{
+                          width: 44, height: 44, borderRadius: 22,
+                          backgroundColor: circle.icon_color ?? theme.colors.primary,
+                          alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}>
+                          <Ionicons name={(circle.icon as any) ?? "people"} size={20} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 14 }}>
+                            {circle.name}
+                          </Text>
+                          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12, marginTop: 2 }}>
+                            {circle.member_count} members
+                          </Text>
+                        </View>
+                        {circle.am_member ? (
+                          <View style={{
+                            backgroundColor: "rgba(157,212,190,0.12)",
+                            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+                            borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                          }}>
+                            <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Member</Text>
+                          </View>
+                        ) : (
+                          <View style={{
+                            backgroundColor: theme.colors.primary,
+                            borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                          }}>
+                            <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Join</Text>
+                          </View>
+                        )}
+                        <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )
+              )}
+            </View>
           </>
         )}
       </ScrollView>
