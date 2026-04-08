@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import CombetHeader from "@/components/CombetHeader";
 import { ThemeContextProvider, useAppTheme } from "@/context/ThemeContext";
+import { UserContextProvider } from "@/context/UserContext";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -73,7 +74,9 @@ export default function RootLayout(): JSX.Element {
   return (
     <SafeAreaProvider>
       <ThemeContextProvider>
-        <AppLayout />
+        <UserContextProvider>
+          <AppLayout />
+        </UserContextProvider>
       </ThemeContextProvider>
     </SafeAreaProvider>
   );

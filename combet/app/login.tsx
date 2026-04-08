@@ -4,12 +4,14 @@ import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { useUser } from "@/context/UserContext";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
 
 
 export default function Login() {
   const { theme } = useAppTheme();
+  const { setUser } = useUser();
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword]               = useState("");
@@ -38,6 +40,7 @@ export default function Login() {
 
       const data = await res.json();
       await setSessionId(data.session_id);
+      setUser(data.user);
       router.replace("/(tabs)");
     } catch {
       setErrorMsg("Unable to connect. Please try again.");

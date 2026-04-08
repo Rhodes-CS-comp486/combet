@@ -32,12 +32,17 @@ type UserProfile = {
 
 export default function UserProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
+
+    console.log("userId param:", userId);
   const { theme } = useAppTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState(false);
 
-  useEffect(() => { void fetchProfile(); }, [userId]);
+  useEffect(() => {
+    if (!userId || userId === "undefined") return;
+    void fetchProfile();
+  }, [userId]);
 
   const fetchProfile = async () => {
     try {

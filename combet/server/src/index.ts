@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { startCronJobs } from "./cron";
 import { authRouter }      from "./routes/auth";
 import { circlesRouter }   from "./routes/circles";
 import { betsRouter }      from "./routes/bets";
@@ -8,6 +9,8 @@ import { usersRouter }     from "./routes/users";
 import { inboxRouter }     from "./routes/inbox";
 import { homefeedRouter }  from "./routes/homefeed";
 import { leaderboardRouter } from "./routes/leaderboard";
+import { adminRouter } from "./routes/admin";
+
 
 
 dotenv.config();
@@ -29,9 +32,10 @@ app.use("/api/users",    usersRouter);
 app.use("/api/inbox",    inboxRouter);
 app.use("/api/homefeed", homefeedRouter);
 app.use("/api/leaderboard", leaderboardRouter);
+app.use("/api/admin", adminRouter);
 
 
-import { startCronJobs } from "./cron";
+
 startCronJobs();
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001; // changed for port 3002

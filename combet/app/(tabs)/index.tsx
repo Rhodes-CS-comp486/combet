@@ -43,7 +43,25 @@ export default function HomeScreen() {
       void fetchCoins();
       void fetchActiveBets();
       void fetchRecentResults();
-  }, []));
+
+      // Re-run search when returning from a profile so follow status updates
+      const query = q.trim();
+      if (!query) return;
+      setSearching(true);
+      getSessionId().then((sessionId) =>
+        fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        })
+          .then((r) => r.ok ? r.json() : [])
+          .then((data) => setResults(data.map((r: any) => ({
+            ...r,
+            joinStatus: r.join_status ?? null,
+            is_private: r.type === "circle" ? (r.is_private_circle ?? false) : r.is_private,
+          }))))
+          .catch(() => {})
+          .finally(() => setSearching(false))
+      );
+  }, [q]));
 
   useEffect(() => {
     if (activeTab === "active") {

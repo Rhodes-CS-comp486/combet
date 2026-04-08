@@ -46,7 +46,6 @@ authRouter.post("/register", async (req, res) => {
 
     return res.json({ session_id: sessionId, user: newUser });
   } catch (e: any) {
-    // Only return "already exists" for real unique violations
     if (e?.code === "23505") {
       return res.status(409).send("Username or email already exists");
     }
@@ -61,7 +60,7 @@ authRouter.post("/login", async (req, res) => {
   const { emailOrUsername, password } = req.body;
   const identifier = emailOrUsername?.trim().toLowerCase();
 
-    try {
+  try {
     const result = await pool.query(
       `
       SELECT * FROM users
@@ -69,7 +68,7 @@ authRouter.post("/login", async (req, res) => {
          OR LOWER(username) = $1
       LIMIT 1
       `,
-      [identifier]  // ← this uses it
+      [identifier]
     );
 
     const user = result.rows[0];
@@ -92,6 +91,7 @@ authRouter.post("/login", async (req, res) => {
         email:      user.email,
         first_name: user.first_name,
         last_name:  user.last_name,
+        is_admin:   user.is_admin,
       },
     });
   } catch (e: any) {
@@ -105,7 +105,7 @@ authRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT u.id, u.username, u.email, u.first_name, u.last_name
+      SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.is_admin
       FROM users u
       WHERE u.id = $1
       `,
