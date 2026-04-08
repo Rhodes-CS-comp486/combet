@@ -15,6 +15,8 @@ import { getSessionId } from "@/components/sessionStore";
 import {DesignTokens, useAppTheme} from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export default function AddBet() {
@@ -41,6 +43,8 @@ export default function AddBet() {
   const [step, setStep]                             = useState<1 | 2 | 3>(1);
 
   const [creatorOptionIndex, setCreatorOptionIndex] = useState<number | null>(null);
+
+  const [idempotencyKey] = useState(() => uuidv4());
 
   const [selectedTargetColor, setSelectedTargetColor] = useState<string | null>(null);
     const [selectedTargetIcon, setSelectedTargetIcon] = useState<string | null>(null);
@@ -114,7 +118,7 @@ export default function AddBet() {
       const response = await fetch(`${API_BASE}/bets`, {
 
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-id": sessionId },
+          headers: { "Content-Type": "application/json", "x-session-id": sessionId, "x-idempotency-key": idempotencyKey },
         body: JSON.stringify({
           title, description,
 
