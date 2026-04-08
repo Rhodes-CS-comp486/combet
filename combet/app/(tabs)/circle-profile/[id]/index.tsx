@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { View, ScrollView, Alert, TouchableOpacity } from "react-native";
-import { Text, Surface, Button} from "react-native-paper";
+import { View, ScrollView, Alert, TouchableOpacity, DeviceEventEmitter } from "react-native";
+import { Text, Surface, Button, Portal, Modal } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,6 +19,8 @@ type Bet = {
   closes_at: string | null; created_at: string; status: string;
   creator_username: string; my_response: "accepted" | "declined" | null;
   my_selected_option_id: string | null; options: BetOption[];
+  is_creator?: boolean;
+
 };
 type Circle      = { circle_id: string; name: string; description?: string; icon?: string; icon_color?: string; created_at: string; is_private?: boolean };
 type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
@@ -31,9 +33,10 @@ export default function CircleProfile() {
 
   const [circle, setCircle]         = useState<Circle | null>(null);
   const [history, setHistory]       = useState<HistoryData | null>(null);
-  const [activeTab, setActiveTab]   = useState<"live" | "history">("live");
-  const [responding, setResponding] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"new" | "open" | "history">("new");  const [responding, setResponding] = useState<string | null>(null);
   const [requestCount, setRequestCount] = useState(0);
+  const [settlingBet, setSettlingBet]   = useState<any>(null);
+
 
   useFocusEffect(
     useCallback(() => { fetchAll(); }, [circleId])
@@ -98,6 +101,25 @@ export default function CircleProfile() {
     }
   };
 
+  const handleSettle = async (opt: any) => {
+    if (!settlingBet) return;
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+        body: JSON.stringify({ winning_option_id: opt.id }),
+      });
+      if (res.ok) {
+        setSettlingBet(null);
+        fetchAll();
+        DeviceEventEmitter.emit("coinsUpdated");
+      }
+    } catch (err) {
+      console.error("Settle error:", err);
+    }
+  };
+
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -116,33 +138,36 @@ export default function CircleProfile() {
     if (!history) return (
       <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>Loading...</Text>
     );
-    const resolvedBets = history.bets.filter((b) => !!b.my_response);
+    const resolvedBets = history.bets.filter((b) =>
+  ["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+);
     return (
       <View>
         {resolvedBets.map((bet) => (
-          <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={() => {}} />
+            <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
         ))}
-        {history.bets.length === 0 && (
+        {resolvedBets.length === 0 && (
           <View style={{
-              borderRadius: 16, padding: 28,
-              backgroundColor: "rgba(255,255,255,0.07)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-              alignItems: "center",
-            }}>
-              <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-                No bets posted yet.{"\n"}Hit the + button to create one!
-              </Text>
-            </View>
+            borderRadius: 16, padding: 28,
+            backgroundColor: "rgba(255,255,255,0.07)",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+            alignItems: "center",
+          }}>
+            <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
+              No bet history yet
+            </Text>
+          </View>
         )}
       </View>
     );
   };
 
-  const tabs: { key: "live" | "history"; label: string }[] = [
-    { key: "live",    label: "Live Bets"      },
-    { key: "history", label: "Circle History" },
-  ];
+  const tabs: { key: "new" | "open" | "history"; label: string }[] = [
+  { key: "new",     label: "New"     },
+  { key: "open",    label: "Open"    },
+  { key: "history", label: "History" },
+];
 
   return (
     <GradientBackground>
@@ -276,10 +301,48 @@ export default function CircleProfile() {
 
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
-          {activeTab === "history" ? renderHistory() : (() => {
-            const pendingBets = history?.bets.filter((b) => !b.my_response && b.status === "PENDING") ?? [];
-            if (pendingBets.length === 0) {
-              return (
+            {activeTab === "history" ? renderHistory() : (() => {
+              const newBets = history?.bets.filter((b) =>
+                b.my_response == null && b.status?.toUpperCase() === "PENDING"
+              ) ?? [];
+
+              const openBets = history?.bets.filter((b) =>
+                (b.my_response === "accepted" || b.is_creator) &&
+                !["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+              ) ?? [];
+
+              if (activeTab === "new") {
+                if (newBets.length === 0) return (
+                  <View style={{
+                    borderRadius: 16, padding: 28,
+                    backgroundColor: "rgba(255,255,255,0.07)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                    alignItems: "center",
+                  }}>
+                    <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+                    <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
+                      No new bets right now
+                    </Text>
+                  </View>
+                );
+                return (
+                  <View>
+                    {newBets.map((bet) => (
+                      <BetCard
+                        key={bet.id} item={bet}
+                        mode="feed"
+                        accepting={responding} setAccepting={setResponding}
+                        onRemove={(id) => setHistory((prev) => prev ? {
+                          ...prev, bets: prev.bets.filter((b) => b.id !== id),
+                        } : prev)}
+                        onRefresh={fetchAll}
+                      />
+                    ))}
+                  </View>
+                );
+              }
+
+              if (openBets.length === 0) return (
                 <View style={{
                   borderRadius: 16, padding: 28,
                   backgroundColor: "rgba(255,255,255,0.07)",
@@ -288,28 +351,64 @@ export default function CircleProfile() {
                 }}>
                   <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
                   <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-                    No live bets right now
+                    No open bets right now
                   </Text>
                 </View>
               );
-            }
-            return (
-              <View>
-                {pendingBets.map((bet) => (
-                  <BetCard
-                    key={bet.id} item={bet} mode="feed"
-                    accepting={responding} setAccepting={setResponding}
-                    onRemove={(id) => setHistory((prev) => prev ? {
-                      ...prev, bets: prev.bets.filter((b) => b.id !== id),
-                    } : prev)}
-                    onRefresh={fetchAll}
-                  />
-                ))}
-              </View>
-            );
-          })()}
+              return (
+                <View>
+                  {openBets.map((bet) => (
+                    <BetCard
+                      key={bet.id} item={bet}
+                      mode="active"
+                      onRefresh={fetchAll}
+                      onSettle={setSettlingBet}
+                    />
+                  ))}
+                </View>
+              );
+            })()}
         </View>
       </ScrollView>
+
+      <Portal>
+        <Modal
+          visible={!!settlingBet}
+          onDismiss={() => setSettlingBet(null)}
+          contentContainerStyle={{
+            margin: 24, borderRadius: 20, padding: 24,
+            backgroundColor: "#1f3347",
+            borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+          }}
+          style={{ backgroundColor: "rgba(10,20,30,0.85)" }}
+        >
+          <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: "700", marginBottom: 4 }}>
+            Declare Winner
+          </Text>
+          <Text style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16, fontSize: 13 }}>
+            {settlingBet?.title}
+          </Text>
+          {(settlingBet?.options ?? []).map((opt: any) => (
+            <TouchableOpacity
+              key={opt.id}
+              onPress={() => handleSettle(opt)}
+              style={{
+                padding: 14, borderRadius: 12, marginBottom: 8,
+                backgroundColor: "rgba(157,212,190,0.07)",
+                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+              }}
+            >
+              <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 14 }}>
+                {opt.label}. {opt.option_text ?? opt.text}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <Button onPress={() => setSettlingBet(null)} textColor={theme.colors.onSurfaceVariant} style={{ marginTop: 4 }}>
+            Cancel
+          </Button>
+        </Modal>
+      </Portal>
     </GradientBackground>
   );
 }
+

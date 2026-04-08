@@ -101,6 +101,7 @@ export default function ProfileScreen() {
   const [selectedIcon, setSelectedIcon]   = useState("initials");
   const [avatarSaving, setAvatarSaving]   = useState(false);
   const [betFilter, setBetFilter]         = useState<FilterKey>("all");
+  const [settlingBet, setSettlingBet] = useState<any | null>(null);
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -430,9 +431,9 @@ export default function ProfileScreen() {
                 total_joined: bet.total_joined ?? 0,
               }}
               onRefresh={() => {
-                setBetsLoading(true);
                 fetchBets();
               }}
+              onSettle={(item) => setSettlingBet(item)}
             />
           ))
         )}
@@ -444,41 +445,97 @@ export default function ProfileScreen() {
 
       <Portal>
         {/* ── Edit Profile Modal ── */}
+
+
+            <Modal
+              visible={editVisible}
+              onDismiss={() => setEditVisible(false)}
+              contentContainerStyle={s.modal}
+              style={s.modalBackdrop}
+            >
+              <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
+                Edit Profile
+              </Text>
+              <TextInput
+                label="Display Name"
+                value={editName}
+                onChangeText={setEditName}
+                mode="outlined"
+                style={s.input}
+                theme={{ colors: { primary: theme.colors.primary } }}
+              />
+              <TextInput
+                label="Bio"
+                value={editBio}
+                onChangeText={setEditBio}
+                mode="outlined"
+                multiline
+                numberOfLines={3}
+                style={s.input}
+                theme={{ colors: { primary: theme.colors.primary } }}
+              />
+              <View style={s.modalActions}>
+                <Button onPress={() => setEditVisible(false)} textColor={theme.colors.onSurfaceVariant}>
+                  Cancel
+                </Button>
+                <Button mode="contained" onPress={saveProfile} loading={editSaving} disabled={editSaving}>
+                  Save
+                </Button>
+              </View>
+            </Modal>
+
         <Modal
-          visible={editVisible}
-          onDismiss={() => setEditVisible(false)}
-          contentContainerStyle={s.modal}
-          style={s.modalBackdrop}
+          visible={!!settlingBet}
+          onDismiss={() => setSettlingBet(null)}
+          contentContainerStyle={{
+            margin: 24, borderRadius: 20, padding: 24,
+            backgroundColor: "#1f3347",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+          }}
         >
-          <Text variant="titleLarge" style={[s.modalTitle, { color: theme.colors.onSurface }]}>
-            Edit Profile
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "600", fontSize: 20, marginBottom: 6 }}>
+            Declare Winner
           </Text>
-          <TextInput
-            label="Display Name"
-            value={editName}
-            onChangeText={setEditName}
-            mode="outlined"
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
-          />
-          <TextInput
-            label="Bio"
-            value={editBio}
-            onChangeText={setEditBio}
-            mode="outlined"
-            multiline
-            numberOfLines={3}
-            style={s.input}
-            theme={{ colors: { primary: theme.colors.primary } }}
-          />
-          <View style={s.modalActions}>
-            <Button onPress={() => setEditVisible(false)} textColor={theme.colors.onSurfaceVariant}>
-              Cancel
-            </Button>
-            <Button mode="contained" onPress={saveProfile} loading={editSaving} disabled={editSaving}>
-              Save
-            </Button>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginBottom: 20 }}>
+            Pick the winning option for "{settlingBet?.title}"
+          </Text>
+          <View style={{ gap: 10 }}>
+            {(settlingBet?.options ?? []).map((opt: any) => (
+              <TouchableOpacity
+                key={opt.id}
+                onPress={async () => {
+                  const sessionId = await getSessionId();
+                  const res = await fetch(`${API_BASE}/bets/${settlingBet.id}/settle`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
+                    body: JSON.stringify({ winningOptionId: opt.id }),
+                  });
+                  if (res.ok) {
+                    setSettlingBet(null);
+                    setBetsLoading(true);
+                    fetchBets();
+                  }
+                }}
+                style={{
+                  borderRadius: 12, padding: 14,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                }}
+              >
+                <Text style={{ color: theme.colors.onSurface, fontSize: 14, fontWeight: "500", textAlign: "center" }}>
+                  {opt.text ?? opt.option_text}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+          <Button
+            mode="text"
+            onPress={() => setSettlingBet(null)}
+            style={{ marginTop: 8 }}
+            labelStyle={{ color: theme.colors.onSurfaceVariant }}
+          >
+            Cancel
+          </Button>
         </Modal>
 
         {/* ── Avatar Picker Modal ── */}

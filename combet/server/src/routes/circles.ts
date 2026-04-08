@@ -437,6 +437,7 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
       `SELECT
          b.id, b.title, b.description, b.stake_amount, b.closes_at, b.created_at, b.status,
          b.creator_user_id,
+         CASE WHEN b.creator_user_id = $2 THEN true ELSE false END AS is_creator,
          u.username AS creator_username,
          u.avatar_color AS creator_avatar_color,
          u.avatar_icon AS creator_avatar_icon,
