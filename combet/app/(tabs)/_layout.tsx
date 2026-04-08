@@ -12,7 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function TabLayout() {
   const { theme, isDark } = useAppTheme();
 
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]       = useState(true);
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
@@ -108,8 +108,11 @@ export default function TabLayout() {
         <Tabs.Screen name="circle-profile/[id]/edit"       options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="circle-profile/[id]/members"    options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="circle-profile/[id]/add-friend" options={{ href: null, headerShown: false }} />
-        <Tabs.Screen name="circle-profile/[id]/inbox" options={{ href: null, headerShown: false }} />
-          <Tabs.Screen name="settings" options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="circle-profile/[id]/inbox"      options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="settings"                       options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="admin/view_users"               options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="admin/view_bets"                options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="admin/view_circles"             options={{ href: null, headerShown: false }} />
 
       </Tabs>
 
@@ -138,10 +141,6 @@ export default function TabLayout() {
             borderColor: "rgba(255,255,255,0.15)",
           justifyContent:  "center",
           alignItems:      "center",
-          //shadowColor:     "#9dd4be",
-          //shadowOpacity:   0.3,
-          //shadowRadius:    12,
-          //shadowOffset:    { width: 0, height: 4 },
           elevation:       8,
         }}
       >

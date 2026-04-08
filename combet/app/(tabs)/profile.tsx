@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { useUser } from "@/context/UserContext";
 import UserAvatar, { AVATAR_ICONS, AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
@@ -32,6 +33,7 @@ type UserProfile = {
   coins?: number;
   avatar_color?: string;
   avatar_icon?: string;
+  is_admin?: boolean;
 };
 
 type Bet = {
@@ -83,6 +85,7 @@ const SETTLED_STATUSES  = ["SETTLED", "CANCELLED"];
 
 export default function ProfileScreen() {
   const { theme } = useAppTheme();
+  const { setUser, adminMode, toggleAdminMode } = useUser();
 
   const [profile, setProfile]           = useState<UserProfile | null>(null);
   const [bets, setBets]                 = useState<Bet[]>([]);
@@ -110,6 +113,7 @@ export default function ProfileScreen() {
         if (!res.ok) throw new Error("Failed to fetch profile");
         const data = await res.json();
         setProfile(data);
+        setUser(data);
         setEditName(data.display_name || data.username);
         setEditBio(data.bio || "");
         setSelectedColor(data.avatar_color ?? "#2563eb");
@@ -317,10 +321,64 @@ export default function ProfileScreen() {
           >
             Edit Profile
           </Button>
+
+          {profile?.is_admin && (
+            <TouchableOpacity
+              onPress={toggleAdminMode}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 10,
+                marginTop: 12, paddingHorizontal: 16, paddingVertical: 10,
+                borderRadius: 12, borderWidth: 1,
+                borderColor: adminMode ? "rgba(157,212,190,0.4)" : "rgba(255,255,255,0.15)",
+                backgroundColor: adminMode ? "rgba(157,212,190,0.1)" : "rgba(255,255,255,0.05)",
+              }}
+            >
+              <Ionicons
+                name={adminMode ? "shield" : "shield-outline"}
+                size={18}
+                color={adminMode ? "#9dd4be" : theme.colors.onSurfaceVariant}
+              />
+              <Text style={{
+                color: adminMode ? "#9dd4be" : theme.colors.onSurfaceVariant,
+                fontSize: 14, fontWeight: "600",
+              }}>
+                {adminMode ? "Admin Mode On" : "Switch to Admin Mode"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Divider style={s.divider} />
 
+        {profile?.is_admin && adminMode ? (
+          /* ── Admin Panel ── */
+          <View style={{ gap: 12 }}>
+            <Text variant="titleMedium" style={[s.sectionLabel, { marginBottom: 4 }]}>Admin Panel</Text>
+            {[
+              { label: "All Users",   icon: "people-outline",   route: "/(tabs)/admin/view_users"   },
+              { label: "All Bets",    icon: "trophy-outline",   route: "/(tabs)/admin/view_bets"    },
+              { label: "All Circles", icon: "people-circle-outline", route: "/(tabs)/admin/view_circles" },
+            ].map(({ label, icon, route }) => (
+              <TouchableOpacity
+                key={route}
+                onPress={() => router.push(route as any)}
+                style={{
+                  flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderRadius: 14, padding: 16,
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Ionicons name={icon as any} size={22} color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.onSurface, fontSize: 15, fontWeight: "600" }}>{label}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <>
         {/* ── My Bets ── */}
         <Text variant="titleMedium" style={[s.sectionLabel, { marginBottom: 12 }]}>My Bets</Text>
 
@@ -379,6 +437,8 @@ export default function ProfileScreen() {
         )}
 
         <View style={{ height: 40 }} />
+          </>
+        )}
       </ScrollView>
 
       <Portal>
