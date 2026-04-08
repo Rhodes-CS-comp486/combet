@@ -11,7 +11,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
       `
       SELECT
         u.id, u.username, u.email, u.first_name, u.last_name, u.created_at,
-        u.coins, u.bio, u.avatar_color, u.avatar_icon, u.is_private,
+        u.coins, u.bio, u.avatar_color, u.avatar_icon, u.is_private, u.is_admin,
         (SELECT COUNT(*) FROM follows WHERE following_id = u.id) AS followers_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
         (SELECT COUNT(*) FROM bets WHERE creator_user_id = u.id) AS total_bets,
@@ -54,6 +54,7 @@ usersRouter.get("/me", requireAuth, async (req: AuthRequest, res) => {
       avatar_color:    user.avatar_color ?? "#2563eb",
       avatar_icon:     user.avatar_icon ?? "initials",
       is_private:      user.is_private ?? false,
+      is_admin:        user.is_admin ?? false,
       created_at:      user.created_at,
       followers_count: Number(user.followers_count),
       following_count: Number(user.following_count),
