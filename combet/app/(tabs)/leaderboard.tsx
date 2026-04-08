@@ -66,21 +66,6 @@ function Card({ children, style, accent }: { children: React.ReactNode; style?: 
   );
 }
 
-function StreakDots({ results, color }: { results: ("W" | "L")[]; color: string }) {
-  return (
-    <View style={{ flexDirection: "row", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
-      {results.map((r, i) => (
-        <View key={i} style={{
-          width: 22, height: 22, borderRadius: 6,
-          backgroundColor: `${color}25`,
-          alignItems: "center", justifyContent: "center",
-        }}>
-          <Text style={{ fontSize: 9, fontWeight: "700", color }}>{r}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
 
 function SpotlightCard({
   accent, label, avatarNode, name, sub, badgeStat, badgeSub, children, style,
@@ -97,23 +82,27 @@ function SpotlightCard({
 }) {
   return (
     <Card style={[{ flex: 1 }, style]} accent={accent}>
-      <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1, color: accent, marginBottom: 14 }}>
+      <Text style={{ fontSize: 15, fontWeight: "800", letterSpacing: 1, color: accent, marginBottom: 14 }}>
         {label}
       </Text>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {avatarNode}
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#f0f0f0" }} numberOfLines={1}>{name}</Text>
-          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>{sub}</Text>
-        </View>
-        <View style={{
-          width: 56, height: 56, borderRadius: 14,
-          backgroundColor: `${accent}20`,
-          borderWidth: 1.5, borderColor: `${accent}40`,
-          alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: accent, letterSpacing: -0.5 }}>{badgeStat}</Text>
-          {badgeSub && <Text style={{ fontSize: 9, color: `${accent}99`, marginTop: 1 }}>{badgeSub}</Text>}
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#f0f0f0", flex: 1 }} numberOfLines={1}>{name}</Text>
+        <View style={{ alignItems: "center", flexShrink: 0 }}>
+          <View style={{
+            width: 56, height: 56, borderRadius: 14,
+            backgroundColor: `${accent}20`,
+            borderWidth: 1.5, borderColor: `${accent}40`,
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: accent, letterSpacing: -0.5 }}>{badgeStat}</Text>
+          </View>
+          {badgeSub && (
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: 4 }}>{badgeSub}</Text>
+          )}
+          {sub && (
+            <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", marginTop: badgeSub ? 0 : 4 }}>{sub}</Text>
+          )}
         </View>
       </View>
       {children}
@@ -129,12 +118,12 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
 
   const isSmall   = width < 600;
-  const avSpot    = isSmall ? 42 : 48;
+  const avSpot    = isSmall ? 60 : 66;
   const avPodium1 = isSmall ? 50 : 60;
   const avPodium2 = isSmall ? 38 : 46;
   const avPodium3 = isSmall ? 30 : 38;
   const avList    = isSmall ? 34 : 38;
-  const avMe      = isSmall ? 44 : 50;
+  const avMe      = isSmall ? 60 : 66;
 
   const fetchData = useCallback(async (p: Period) => {
     setLoading(true);
@@ -300,7 +289,6 @@ export default function LeaderboardScreen() {
                   sub="win streak"
                   badgeStat={`${onFire.win_streak}W`}
                 >
-                  <StreakDots results={Array(Math.min(onFire.win_streak, 7)).fill("W")} color={TEAL} />
                 </SpotlightCard>
               )}
               {hotCircle && (
@@ -308,7 +296,7 @@ export default function LeaderboardScreen() {
                   accent={PURPLE} label="HOTTEST CIRCLE"
                   avatarNode={
                     <View style={{
-                      width: avSpot, height: avSpot, borderRadius: 12,
+                      width: avSpot, height: avSpot, borderRadius: avSpot / 2,
                       backgroundColor: hotCircle.icon_color ?? PURPLE,
                       alignItems: "center", justifyContent: "center", flexShrink: 0,
                     }}>
@@ -316,7 +304,7 @@ export default function LeaderboardScreen() {
                     </View>
                   }
                   name={hotCircle.name}
-                  sub={`${hotCircle.member_count} members`}
+                  sub=""
                   badgeStat={`${hotCircle.bet_count}`}
                   badgeSub="bets"
                 />
@@ -333,7 +321,6 @@ export default function LeaderboardScreen() {
                   sub="in a row"
                   badgeStat={`${losingBad.loss_streak}L`}
                 >
-                  <StreakDots results={Array(Math.min(losingBad.loss_streak, 7)).fill("L")} color={PEACH} />
                 </SpotlightCard>
               )}
               {mostBetsUser && (
@@ -341,41 +328,19 @@ export default function LeaderboardScreen() {
                   accent={BLUE} label="MOST ACTIVE"
                   avatarNode={<UserAvatar user={mostBetsUser} size={avSpot} />}
                   name={mostBetsUser.display_name.split(" ")[0]}
-                  sub="bets this period"
+                  sub="bets"
                   badgeStat={`${mostBetsUser.wins + mostBetsUser.losses}`}
-                />
-              )}
-            </View>
-
-            {/* ── Biggest fall + Most improved ── */}
-              <View style={{ flexDirection: isSmall ? "column" : "row", gap: 8 }}>
-              {biggestFall && biggestFall.coins_won < 0 && (
-                <SpotlightCard
-                  accent={PEACH} label="BIGGEST FALL"
-                  avatarNode={<UserAvatar user={biggestFall} size={avSpot} />}
-                  name={biggestFall.display_name.split(" ")[0]}
-                  sub="coins this period"
-                  badgeStat={`${biggestFall.coins_won}`}
-                />
-              )}
-              {mostImproved && (
-                <SpotlightCard
-                  accent={GOLD} label="MOST IMPROVED"
-                  avatarNode={<UserAvatar user={mostImproved} size={avSpot} />}
-                  name={mostImproved.display_name.split(" ")[0]}
-                  sub={periodLabel ? `vs ${periodLabel}` : "all time"}
-                  badgeStat={`+${mostImproved.pct_change}%`}
                 />
               )}
             </View>
 
             {/* ── Coins ranking ── */}
             <Card>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.6)", marginBottom: 16 }}>
-                Coins won
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.6)", marginBottom: 16 }}>
+                COINS WON
               </Text>
               <View style={{ gap: 14 }}>
-                {users.slice(0, 5).map((u, i) => {
+                  {users.filter(u => u.coins_won > 0).slice(0, 5).map((u, i) => {
                   const accent = i === 0 ? TEAL : i === 1 ? BLUE : i === 2 ? GOLD : "rgba(255,255,255,0.4)";
                   const maxCoins = users[0]?.coins_won ?? 1;
                   const barWidth = maxCoins > 0 ? Math.max((u.coins_won / maxCoins) * 100, 4) : 4;
@@ -412,12 +377,18 @@ export default function LeaderboardScreen() {
             {/* ── Circle rankings ── */}
             {circles.length > 0 && (
               <Card>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.6)", marginBottom: 16 }}>
-                  Circle rankings
-                </Text>
-                <View style={{ gap: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.6)" }}>CIRCLE RANKINGS</Text>
+                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>coins wagered</Text>
+                </View>
+                <View style={{ gap: 0 }}>
                   {circles.map((c, i) => (
-                    <View key={c.circle_id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <View key={c.circle_id} style={{
+                      flexDirection: "row", alignItems: "center", gap: 10,
+                      paddingVertical: 12,
+                      borderBottomWidth: i < circles.length - 1 ? 1 : 0,
+                      borderBottomColor: "rgba(255,255,255,0.07)",
+                    }}>
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.25)", width: 16 }}>{i + 1}</Text>
                       <View style={{
                         width: avList, height: avList, borderRadius: avList / 2,
@@ -433,35 +404,61 @@ export default function LeaderboardScreen() {
                         </Text>
                       </View>
                       <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
-                        {c.coins_wagered.toLocaleString()}
-                      </Text>
+                          {c.coins_wagered.toLocaleString()}
+                        </Text>
                     </View>
                   ))}
                 </View>
               </Card>
             )}
 
-            {/* ── You ── */}
+              {/* ── You ── */}
             {me && (
               <Card accent={TEAL}>
-                <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1, color: TEAL, marginBottom: 14 }}>YOU</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <UserAvatar user={me} size={avMe} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: "700", color: "#f0f0f0" }}>{me.display_name}</Text>
-                    <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>
-                      {me.wins}W · {me.losses}L · {me.wins + me.losses > 0 ? Math.round((me.wins / (me.wins + me.losses)) * 100) : 0}% ratio
-                    </Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: me.coins_won >= 0 ? TEAL : PEACH, marginTop: 6 }}>
-                      {me.coins_won >= 0 ? "+" : ""}{me.coins_won} coins
-                    </Text>
-                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: "800", letterSpacing: 1, color: TEAL, marginBottom: 14 }}>YOU</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                      <UserAvatar user={me} size={avMe} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: "700", color: "#f0f0f0" }}>{me.display_name}</Text>
+                      </View>
                   <View style={{
                     width: 56, height: 56, borderRadius: 14,
                     backgroundColor: `${TEAL}20`, borderWidth: 1.5, borderColor: `${TEAL}40`,
                     alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}>
                     <Text style={{ fontSize: 18, fontWeight: "900", color: TEAL }}>#{me.rank}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <View style={{
+                    flex: 1, backgroundColor: `${TEAL}15`, borderRadius: 12,
+                    padding: isSmall ? 10 : 12, alignItems: "center",
+                    borderWidth: 1, borderColor: `${TEAL}25`,
+                  }}>
+                    <Text style={{ fontSize: isSmall ? 16 : 20, fontWeight: "800", color: TEAL }}>
+                      {me.coins_won >= 0 ? "+" : ""}{me.coins_won}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>coins won</Text>
+                  </View>
+                  <View style={{
+                    flex: 1, backgroundColor: `${BLUE}15`, borderRadius: 12,
+                    padding: isSmall ? 10 : 12, alignItems: "center",
+                    borderWidth: 1, borderColor: `${BLUE}25`,
+                  }}>
+                    <Text style={{ fontSize: isSmall ? 16 : 20, fontWeight: "800", color: BLUE }}>
+                      {me.wins}W · {me.losses}L
+                    </Text>
+                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>record</Text>
+                  </View>
+                  <View style={{
+                    flex: 1, backgroundColor: `${GOLD}15`, borderRadius: 12,
+                    padding: isSmall ? 10 : 12, alignItems: "center",
+                    borderWidth: 1, borderColor: `${GOLD}25`,
+                  }}>
+                    <Text style={{ fontSize: isSmall ? 16 : 20, fontWeight: "800", color: GOLD }}>
+                      {me.wins + me.losses > 0 ? Math.round((me.wins / (me.wins + me.losses)) * 100) : 0}%
+                    </Text>
+                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", marginTop: 3 }}>win ratio</Text>
                   </View>
                 </View>
               </Card>
