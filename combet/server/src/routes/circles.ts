@@ -22,13 +22,13 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
       return res.status(409).json({ error: "A circle with that name already exists" });
 
     const circleResult = await pool.query(
-      `INSERT INTO circles (name, description, icon, icon_color, is_private)
-       VALUES ($1, $2, $3, $4, $5) RETURNING circle_id`,
-      [name, description, icon, icon_color, is_private ?? false]
+      `INSERT INTO circles (name, description, icon, icon_color, is_private, creator_id)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING circle_id`,
+      [name, description, icon, icon_color, is_private ?? false, userId]
     );
     const circleId = circleResult.rows[0].circle_id;
     await pool.query(
-      `INSERT INTO circle_members (circle_id, user_id, status) VALUES ($1, $2, 'accepted')`,
+      `INSERT INTO circle_members (circle_id, user_id, status, is_creator) VALUES ($1, $2, 'accepted', true)`,
       [circleId, userId]
     );
     res.status(201).json({ circle_id: circleId });
@@ -107,7 +107,7 @@ circlesRouter.get("/:id/members", async (req, res) => {
   const circleId = req.params.id;
   try {
     const result = await pool.query(
-      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.is_creator
        FROM circle_members cm
        JOIN users u ON cm.user_id = u.id
        WHERE cm.circle_id = $1 AND cm.status = 'accepted'`,
@@ -425,7 +425,7 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
     const circle = circleResult.rows[0];
 
     const membersResult = await pool.query(
-      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.joined_at
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.joined_at, cm.is_creator
        FROM circle_members cm
        JOIN users u ON cm.user_id = u.id
        WHERE cm.circle_id = $1 AND cm.status = 'accepted'
@@ -615,6 +615,7 @@ circlesRouter.post("/:circleId/requests/:requestId/accept", requireAuth, async (
   const { circleId, requestId } = req.params;
   const userId                   = req.userId;
   const client                   = await pool.connect();
+
   try {
     const member = await client.query(
       `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,

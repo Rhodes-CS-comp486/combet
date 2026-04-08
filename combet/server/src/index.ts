@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-dotenv.config();
-
 import { authRouter }      from "./routes/auth";
 import { circlesRouter }   from "./routes/circles";
 import { betsRouter }      from "./routes/bets";
@@ -10,6 +8,9 @@ import { usersRouter }     from "./routes/users";
 import { inboxRouter }     from "./routes/inbox";
 import { homefeedRouter }  from "./routes/homefeed";
 import { leaderboardRouter } from "./routes/leaderboard";
+
+
+dotenv.config();
 
 
 const app = express();

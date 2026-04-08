@@ -58,17 +58,6 @@ function AppLayout(): JSX.Element {
               }}
             />
 
-            <Stack.Screen
-              name="add-bet"
-              options={{
-                headerShown: true,
-                title: "Create Bet",
-                headerStyle: { backgroundColor: theme.colors.surface },
-                headerTintColor: theme.colors.onSurface,
-                headerTitleStyle: { fontWeight: "600" },
-              }}
-            />
-
 
           </Stack>
         </View>
