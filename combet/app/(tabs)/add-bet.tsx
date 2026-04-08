@@ -37,12 +37,24 @@ export default function AddBet() {
   const [selectedTargetName, setSelectedTargetName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery]               = useState("");
   const [loading, setLoading]                       = useState(false);
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
   const [step, setStep]                             = useState<1 | 2 | 3>(1);
 
   const [creatorOptionIndex, setCreatorOptionIndex] = useState<number | null>(null);
 
   const [selectedTargetColor, setSelectedTargetColor] = useState<string | null>(null);
     const [selectedTargetIcon, setSelectedTargetIcon] = useState<string | null>(null);
+
+    useEffect(() => {
+      const fetchBalance = async () => {
+        const sessionId = await getSessionId();
+        if (!sessionId) return;
+        const res = await fetch(`${API_BASE}/users/me`, { headers: { "x-session-id": sessionId } });
+        const data = await res.json();
+        if (res.ok) setCoinBalance(data.coins ?? 0);
+      };
+      fetchBalance();
+    }, []);
 
   useEffect(() => {
     const fetchTargets = async () => {
@@ -82,13 +94,14 @@ export default function AddBet() {
     setOptions(options.filter((_, i) => i !== index));
   };
 
-  const canProceedStep1 = title.trim().length > 0 && description.trim().length > 0;
+  const canProceedStep1 = title.trim().length > 0;
     const canProceedStep2 = options.filter((o) => o.trim()).length >= 2;
 
     const canShowSummary = canProceedStep1 && canProceedStep2 && !!selectedTargetId &&
     (stakeType === "coins" ? !!stake : !!customStake.trim());
 
-    const canSubmit = canShowSummary && creatorOptionIndex !== null;
+    const stakeExceedsBalance = stakeType === "coins" && coinBalance !== null && Number(stake) > coinBalance;
+    const canSubmit = canShowSummary && creatorOptionIndex !== null && !stakeExceedsBalance;
 
   const handleCreateBet = async () => {
     try {
@@ -501,20 +514,29 @@ export default function AddBet() {
                   ))}
                 </View>
 
-              {stakeType === "coins" ? (
-                  <View style={{
-                    backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
-                  }}>
-                    <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
-                      mode="flat" keyboardType="numeric"
-                      style={{ backgroundColor: "transparent" }}
-                      underlineColor="transparent"
-                      activeUnderlineColor={theme.colors.primary}
-                      theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
-                      left={<TextInput.Icon icon="cash" />} />
-                  </View>
+                {stakeType === "coins" ? (
+                  <>
+                    <View style={{
+                      backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
+                    }}>
+                      <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
+                        mode="flat" keyboardType="numeric"
+                        style={{ backgroundColor: "transparent" }}
+                        underlineColor="transparent"
+                        activeUnderlineColor={theme.colors.primary}
+                        theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                        left={<TextInput.Icon icon="cash" />} />
+                    </View>
+                    {stakeExceedsBalance && (
+                      <HelperText type="error" visible>
+                        You only have {coinBalance} coins
+                      </HelperText>
+                    )}
+                  </>
                 ) : (
+
+
                   <View style={{
                     backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
                     borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
@@ -625,16 +647,27 @@ export default function AddBet() {
                     <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
                     <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{selectedTargetName}</Text>
                   </View>
-                  <View style={{
-                    backgroundColor: "rgba(240,192,112,0.12)",
-                    borderColor: "rgba(240,192,112,0.2)",
-                    borderWidth: 1, borderRadius: 20,
-                    paddingHorizontal: 12, paddingVertical: 5,
-                  }}>
-                    <Text style={{ color: "#f0c070", fontWeight: "600", fontSize: 12 }}>
-                      {stakeType === "coins" ? `${stake} coins` : customStake}
-                    </Text>
-                  </View>
+                  {stakeType === "coins" ? (
+                    <View style={{
+                      width: 72, height: 72, borderRadius: 36,
+                      backgroundColor: "rgba(240,192,112,0.12)",
+                      borderColor: "rgba(240,192,112,0.2)",
+                      borderWidth: 1,
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Text style={{ color: "#f0c070", fontWeight: "700", fontSize: 22 }}>{stake}</Text>
+                      <Text style={{ color: "#f0c070", fontWeight: "400", fontSize: 10, letterSpacing: 1.5 }}>COINS</Text>
+                    </View>
+                  ) : (
+                    <View style={{
+                      backgroundColor: "rgba(240,192,112,0.12)",
+                      borderColor: "rgba(240,192,112,0.2)",
+                      borderWidth: 1, borderRadius: 20,
+                      paddingHorizontal: 12, paddingVertical: 5,
+                    }}>
+                      <Text style={{ color: "#f0c070", fontWeight: "600", fontSize: 12 }}>{customStake}</Text>
+                    </View>
+                  )}
                 </View>
 
                 <Text style={{ fontSize: 12, fontWeight: "400", color: theme.colors.onSurfaceVariant, letterSpacing: 1.2, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>
