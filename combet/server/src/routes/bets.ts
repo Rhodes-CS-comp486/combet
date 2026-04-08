@@ -80,19 +80,30 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
 
   try {
-    const { title, description, stake, customStake, closesAt, options, targetType, targetId, creatorOptionIndex } = req.body;
+      const { title, description, stake, customStake, closesAt, options, targetType, targetId, creatorOptionIndex } = req.body;
+        const idempotencyKey = req.headers["x-idempotency-key"] as string | undefined;
+
+        if (idempotencyKey) {
+          const existing = await pool.query(
+            `SELECT id FROM bets WHERE idempotency_key = $1`,
+            [idempotencyKey]
+          );
+          if (existing.rows[0]) {
+            return res.status(201).json({ success: true, betId: existing.rows[0].id });
+          }
+        }
     const creatorUserId = req.userId;
 
     if (!targetType || !targetId) return res.status(400).json({ error: "Target required" });
-    if (!title || !description || !options || options.length < 2) return res.status(400).json({ error: "Missing required fields" });
+    if (!title || !options || options.length < 2) return res.status(400).json({ error: "Missing required fields" });
     if (!stake && !customStake) return res.status(400).json({ error: "Stake or custom stake required" });
 
     await client.query("BEGIN");
 
     const betResult = await client.query(
-      `INSERT INTO bets (title, description, stake_amount, custom_stake, closes_at, creator_user_id, status, post_to, target_id)
-       VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8) RETURNING id`,
-      [title, description, stake ?? 0, customStake ?? null, closesAt, creatorUserId, targetType, targetId]
+      `INSERT INTO bets (title, description, stake_amount, custom_stake, closes_at, creator_user_id, status, post_to, target_id, idempotency_key)
+     VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9) RETURNING id`,
+    [title, description, stake ?? 0, customStake ?? null, closesAt, creatorUserId, targetType, targetId, idempotencyKey ?? null]
     );
 
     const betId = betResult.rows[0].id;
