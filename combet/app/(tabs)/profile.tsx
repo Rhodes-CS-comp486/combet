@@ -157,7 +157,14 @@ export default function ProfileScreen() {
       const res = await fetch(`${API_BASE}/users/me`, {
         method: "PATCH",
         headers: { "x-session-id": sessionId ?? "", "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: editName, bio: editBio }),
+        body: JSON.stringify({
+          display_name:          editName,
+          bio:                   editBio,
+          avatar_color:          profile?.avatar_color,
+          avatar_icon:           profile?.avatar_icon,
+          is_private:            profile?.is_private,
+          show_bets_to_followers: profile?.show_bets_to_followers ?? false,
+        }),
       });
       if (!res.ok) throw new Error("Failed to save");
       const updated = await res.json();

@@ -1,8 +1,9 @@
 import React, { useCallback, useState, useMemo } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, Surface, Button,ActivityIndicator } from "react-native-paper";
+import { Text, Button, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
@@ -13,10 +14,12 @@ type Notification = {
   notification_id: string;
   type: string;
   entity_id: string;
+  actor_id: string | null;
   actor_username: string | null;
   actor_avatar_color: string | null;
   actor_avatar_icon: string | null;
   circle_name: string | null;
+  circle_id: string | null;
   invite_id: string | null;
   status: string | null;
   is_read: boolean;
@@ -56,7 +59,7 @@ export default function InboxScreen() {
   const [actioning, setActioning]         = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
-      void fetchInbox();
+    void fetchInbox();
   }, []));
 
   const fetchInbox = async () => {
@@ -67,7 +70,6 @@ export default function InboxScreen() {
         headers: { "x-session-id": sessionId },
       });
       const data = await res.json();
-      // Guard: ensure we always set an array even if the API returns an error object
       setNotifications(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Inbox error:", err);
@@ -76,22 +78,21 @@ export default function InboxScreen() {
     }
   };
 
-  // ── Existing: circle invite actions ──────────────────────────────────────
   const handleAccept = async (inviteId: string) => {
-  try {
-    const sessionId = await getSessionId();
-    if (!sessionId) return;
-    await fetch(`${API_BASE}/inbox/invites/${inviteId}/accept`, {
-      method: "POST",
-      headers: { "x-session-id": sessionId },
-    });
-    setNotifications((prev) =>
-      prev.map((n) => n.invite_id === inviteId ? { ...n, invite_status: "accepted" } : n)
-    );
-  } catch (err) {
-    console.error("Accept error:", err);
-  }
-};
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      await fetch(`${API_BASE}/inbox/invites/${inviteId}/accept`, {
+        method: "POST",
+        headers: { "x-session-id": sessionId },
+      });
+      setNotifications((prev) =>
+        prev.map((n) => n.invite_id === inviteId ? { ...n, invite_status: "accepted" } : n)
+      );
+    } catch (err) {
+      console.error("Accept error:", err);
+    }
+  };
 
   const handleDecline = async (inviteId: string) => {
     try {
@@ -107,7 +108,6 @@ export default function InboxScreen() {
     }
   };
 
-  // ── New: follow request actions ───────────────────────────────────────────
   const handleAcceptFollow = async (requestId: string) => {
     try {
       const sessionId = await getSessionId();
@@ -139,7 +139,6 @@ export default function InboxScreen() {
     }
   };
 
-  // ── New: circle join request actions ──────────────────────────────────────
   const handleAcceptJoinRequest = async (requestId: string) => {
     if (actioning === requestId) return;
     setActioning(requestId);
@@ -180,27 +179,26 @@ export default function InboxScreen() {
   const filtered = useMemo(() => {
     if (activeFilter === "all")     return notifications;
     if (activeFilter === "pending") return notifications.filter((n) =>
-      (n.type === "circle_invite"        && n.status === "pending") ||
-      (n.type === "follow_request"       && n.follow_request_status === "pending") ||
-      (n.type === "circle_join_request"  && n.join_request_status === "pending") ||
+      (n.type === "circle_invite"       && n.status === "pending") ||
+      (n.type === "follow_request"      && n.follow_request_status === "pending") ||
+      (n.type === "circle_join_request" && n.join_request_status === "pending") ||
       (n.type === "bet_deadline")
     );
     if (activeFilter === "circle_invite") return notifications.filter((n) => n.type === "circle_invite");
     return notifications;
   }, [notifications, activeFilter]);
 
-  // ── Badge counts ──────────────────────────────────────────────────────────
   const pendingCount = notifications.filter((n) =>
-    (n.type === "circle_invite"        && n.status === "pending") ||
-    (n.type === "follow_request"       && n.follow_request_status === "pending") ||
-    (n.type === "circle_join_request"  && n.join_request_status === "pending")
+    (n.type === "circle_invite"       && n.status === "pending") ||
+    (n.type === "follow_request"      && n.follow_request_status === "pending") ||
+    (n.type === "circle_join_request" && n.join_request_status === "pending")
   ).length;
-  const inviteCount  = notifications.filter((n) => n.type === "circle_invite").length;
+  const inviteCount = notifications.filter((n) => n.type === "circle_invite").length;
 
   const getBadge = (key: FilterKey) => {
+    if (key === "all")           return notifications.length;
     if (key === "pending")       return pendingCount;
     if (key === "circle_invite") return inviteCount;
-    if (key === "all")           return notifications.length;
     return 0;
   };
 
@@ -208,11 +206,8 @@ export default function InboxScreen() {
 
   // ── Notification card ─────────────────────────────────────────────────────
   const renderItem = ({ item }: { item: Notification }) => {
-    const isPending  = item.status === "pending";
-    const isAccepted = item.status === "accepted";
-
     const timeAgo = (dateStr: string) => {
-      const diff = Date.now() - new Date(dateStr).getTime();
+      const diff  = Date.now() - new Date(dateStr).getTime();
       const mins  = Math.floor(diff / 60000);
       const hours = Math.floor(diff / 3600000);
       const days  = Math.floor(diff / 86400000);
@@ -222,38 +217,47 @@ export default function InboxScreen() {
       return `${days}d ago`;
     };
 
-    // ── Existing: circle invite (unchanged) ───────────────────────────────
+    const goToProfile = () => {
+      if (item.actor_id) router.push(`/user/${item.actor_id}`);
+    };
+
+    const cardStyle = {
+      borderRadius: 16 as const,
+      marginBottom: 12,
+      backgroundColor: cardBg,
+      overflow: "hidden" as const,
+    };
+
+    const avatarEl = (
+      <View style={{ marginRight: 12 }}>
+        <UserAvatar
+          user={{
+            username:     item.actor_username ?? undefined,
+            avatar_color: item.actor_avatar_color ?? undefined,
+            avatar_icon:  item.actor_avatar_icon ?? undefined,
+          }}
+          size={40}
+        />
+      </View>
+    );
+
+    // ── Circle invite ─────────────────────────────────────────────────────
     if (item.type === "circle_invite") {
       const isPending  = item.invite_status === "pending";
       const isAccepted = item.invite_status === "accepted";
       return (
-        <Surface
-          elevation={1}
-          style={{
-            borderRadius:    16,
-            marginBottom:    12,
-            backgroundColor: cardBg,
-            overflow:        "hidden",
-          }}
-        >
+        <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-              <View style={{ marginRight: 12 }}>
-                <UserAvatar
-                  user={{
-                    username:     item.actor_username ?? undefined,
-                    avatar_color: item.actor_avatar_color ?? undefined,
-                    avatar_icon:  item.actor_avatar_icon ?? undefined,
-                  }}
-                  size={40}
-                />
-              </View>
-
+              {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
                   <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
                   {" invited you to join "}
-                  <Text style={{ fontWeight: "700", color: theme.colors.primary }}>
+                  <Text
+                    onPress={() => item.circle_id && router.push(`/circle-profile/${item.circle_id}`)}
+                    style={{ fontWeight: "700", color: theme.colors.primary }}
+                  >
                     "{item.circle_name}"
                   </Text>
                 </Text>
@@ -261,7 +265,6 @@ export default function InboxScreen() {
                   {timeAgo(item.created_at)}
                 </Text>
               </View>
-
               {isAccepted && (
                 <View style={{
                   backgroundColor: "rgba(157,212,190,0.12)",
@@ -274,7 +277,6 @@ export default function InboxScreen() {
                 </View>
               )}
             </View>
-
             {isPending && item.invite_id && (
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                 <Button
@@ -289,40 +291,28 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDecline(item.invite_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
               </View>
             )}
           </View>
-        </Surface>
+        </TouchableOpacity>
       );
     }
 
-    // ── New: follow request ───────────────────────────────────────────────
+    // ── Follow request ────────────────────────────────────────────────────
     if (item.type === "follow_request") {
       const isFollowPending  = item.follow_request_status === "pending";
       const isFollowAccepted = item.follow_request_status === "accepted";
       return (
-        <Surface elevation={1} style={{
-          borderRadius: 16, marginBottom: 12,
-          backgroundColor: cardBg, overflow: "hidden",
-        }}>
+        <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-              <View style={{ marginRight: 12 }}>
-                <UserAvatar
-                  user={{
-                    username:     item.actor_username ?? undefined,
-                    avatar_color: item.actor_avatar_color ?? undefined,
-                    avatar_icon:  item.actor_avatar_icon ?? undefined,
-                  }}
-                  size={40}
-                />
-              </View>
+              {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
                   <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
@@ -358,82 +348,57 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDeclineFollow(item.follow_request_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
               </View>
             )}
           </View>
-        </Surface>
-      );
-    }
-    // ── Follow accepted ───────────────────────────────────────────────────
-    if (item.type === "follow_accepted") {
-      return (
-        <Surface elevation={1} style={{
-          borderRadius: 16, marginBottom: 12,
-          backgroundColor: cardBg, overflow: "hidden",
-        }}>
-          <View style={{ padding: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={{ marginRight: 12 }}>
-                <UserAvatar
-                  user={{
-                    username:     item.actor_username ?? undefined,
-                    avatar_color: item.actor_avatar_color ?? undefined,
-                    avatar_icon:  item.actor_avatar_icon ?? undefined,
-                  }}
-                  size={40}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
-                  <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
-                  {" accepted your follow request"}
-                </Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
-                  {timeAgo(item.created_at)}
-                </Text>
-              </View>
-              <View style={{
-                backgroundColor: "rgba(157,212,190,0.12)",
-                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-                flexDirection: "row", alignItems: "center", gap: 5,
-              }}>
-                <Ionicons name="checkmark" size={11} color="#9dd4be" />
-                <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
-              </View>
-            </View>
-          </View>
-        </Surface>
+        </TouchableOpacity>
       );
     }
 
-    // ── New: circle join request ──────────────────────────────────────────
+    // ── Follow accepted ───────────────────────────────────────────────────
+    if (item.type === "follow_accepted") {
+      return (
+        <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
+          <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
+            {avatarEl}
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
+                <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
+                {" accepted your follow request"}
+              </Text>
+              <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                {timeAgo(item.created_at)}
+              </Text>
+            </View>
+            <View style={{
+              backgroundColor: "rgba(157,212,190,0.12)",
+              borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+              borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+              flexDirection: "row", alignItems: "center", gap: 5,
+            }}>
+              <Ionicons name="checkmark" size={11} color="#9dd4be" />
+              <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    // ── Circle join request ───────────────────────────────────────────────
     if (item.type === "circle_join_request") {
       const isJoinPending  = item.join_request_status === "pending";
       const isJoinAccepted = item.join_request_status === "accepted";
       return (
-        <Surface elevation={1} style={{
-          borderRadius: 16, marginBottom: 12,
-          backgroundColor: cardBg, overflow: "hidden",
-        }}>
+        <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-              <View style={{ marginRight: 12 }}>
-                <UserAvatar
-                  user={{
-                    username:     item.actor_username ?? undefined,
-                    avatar_color: item.actor_avatar_color ?? undefined,
-                    avatar_icon:  item.actor_avatar_icon ?? undefined,
-                  }}
-                  size={40}
-                />
-              </View>
+              {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
                   <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
@@ -472,30 +437,27 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDeclineJoinRequest(item.request_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
               </View>
             )}
           </View>
-        </Surface>
+        </TouchableOpacity>
       );
     }
 
-    // ── New: bet deadline reminder ────────────────────────────────────────
+    // ── Bet deadline ──────────────────────────────────────────────────────
     if (item.type === "bet_deadline") {
       const closesAt  = item.bet_closes_at ? new Date(item.bet_closes_at) : null;
       const hoursLeft = closesAt
         ? Math.max(0, Math.round((closesAt.getTime() - Date.now()) / 3600000))
         : null;
       return (
-        <Surface elevation={1} style={{
-          borderRadius: 16, marginBottom: 12,
-          backgroundColor: cardBg, overflow: "hidden",
-        }}>
+        <View style={cardStyle}>
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               <View style={{
@@ -525,15 +487,13 @@ export default function InboxScreen() {
               </View>
             </View>
           </View>
-        </Surface>
+        </View>
       );
     }
 
-    // ── Fallback for future notification types (unchanged) ────────────────
+    // ── Fallback ──────────────────────────────────────────────────────────
     return (
-      <Surface elevation={1} style={{
-        borderRadius: 16, marginBottom: 12, backgroundColor: cardBg, padding: 16,
-      }}>
+      <View style={{ ...cardStyle, padding: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{
             width: 40, height: 40, borderRadius: 20,
@@ -552,67 +512,73 @@ export default function InboxScreen() {
             </Text>
           </View>
         </View>
-      </Surface>
+      </View>
     );
   };
 
   return (
-      <GradientBackground>
-
+    <GradientBackground>
       {/* ── Header ── */}
       <View style={{
-        paddingHorizontal: 20,
-        paddingTop:        16,
-        paddingBottom:     12,
+        paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
         borderBottomWidth: 1,
-        borderColor:       isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+        borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
       }}>
-
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-      <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
-  Inbox
-</Text>
-      {pendingCount > 0 && (
-        <View style={{
-          backgroundColor: theme.colors.primary,
-          borderRadius:    12,
-          paddingHorizontal: 10,
-          paddingVertical:   3,
-        }}>
-          <Text style={{ color: "white", fontWeight: "700", fontSize: 12 }}>
-            {pendingCount} pending
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
+            Inbox
           </Text>
-        </View>
+          {pendingCount > 0 && (
+            <View style={{
+              backgroundColor: theme.colors.primary,
+              borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3,
+            }}>
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 12 }}>
+                {pendingCount} pending
+              </Text>
+            </View>
           )}
         </View>
 
-        {/* ── Filter chips ── */}
+        {/* ── Filter tabs ── */}
         <View style={{ flexDirection: "row" }}>
           {FILTERS.map(({ key, label }) => {
             const active = activeFilter === key;
+            const count  = getBadge(key);
             return (
               <TouchableOpacity
                 key={key}
                 onPress={() => setActiveFilter(key)}
                 style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  alignItems: "center",
+                  flex: 1, paddingVertical: 12, alignItems: "center",
                   borderBottomWidth: 2,
                   borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
                 }}
               >
                 <Text style={{
-                  fontSize: 13,
-                  fontWeight: active ? "600" : "400",
+                  fontSize: 13, fontWeight: active ? "600" : "400",
                   color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
                 }}>
                   {label}
                 </Text>
+                {count > 0 && (
+                  <View style={{
+                    marginTop: 4,
+                    backgroundColor: active ? theme.colors.primary : "rgba(255,255,255,0.10)",
+                    borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
+                  }}>
+                    <Text style={{
+                      fontSize: 10, fontWeight: "600",
+                      color: active ? "#fff" : theme.colors.onSurfaceVariant,
+                    }}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}
-      </View>
+        </View>
       </View>
 
       {/* ── Content ── */}
@@ -639,6 +605,6 @@ export default function InboxScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-      </GradientBackground>
+    </GradientBackground>
   );
 }

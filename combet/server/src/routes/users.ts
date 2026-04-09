@@ -277,6 +277,57 @@ usersRouter.get("/friends", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /users/me/followers
+usersRouter.get("/me/followers", requireAuth, async (req: AuthRequest, res) => {
+  const result = await pool.query(
+    `SELECT
+       u.id, u.username, u.is_private,
+       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+       u.avatar_color, u.avatar_icon,
+       EXISTS (
+         SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = u.id
+       ) AS is_following_back,
+       EXISTS (
+         SELECT 1 FROM follow_requests WHERE requester_id = $1 AND requestee_id = u.id AND status = 'pending'
+       ) AS follow_requested
+     FROM follows f
+     JOIN users u ON u.id = f.follower_id
+     WHERE f.following_id = $1
+     ORDER BY u.username`,
+    [req.userId]
+  );
+  res.json(result.rows);
+});
+
+// GET /users/me/following
+usersRouter.get("/me/following", requireAuth, async (req, res) => {
+  const result = await pool.query(
+    `SELECT u.id, u.username,
+       COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+       u.avatar_color, u.avatar_icon
+     FROM follows f JOIN users u ON u.id = f.following_id
+     WHERE f.follower_id = $1 ORDER BY u.username`,
+    [req.userId]
+  );
+  res.json(result.rows);
+});
+
+// ─── Unfollow a User ──────────────────────────────────────────────────────────
+usersRouter.delete("/follows/:userId", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.userId;
+  try {
+    await pool.query(
+      `DELETE FROM follows WHERE follower_id = $1 AND following_id = $2`,
+      [currentUserId, userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /users/follows/:userId error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Another User's Profile ───────────────────────────────────────────────
 usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;

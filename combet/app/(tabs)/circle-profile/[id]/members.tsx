@@ -140,9 +140,9 @@ export default function MembersScreen() {
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
             onPress={() => handleDecline(item.request_id)}
-            style={{ borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}
+            style={{ borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
           >
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13 }}>Decline</Text>
+            <Text style={{ color: "#e87060", fontSize: 13, fontWeight: "600" }}>Decline</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleAccept(item.request_id)}
