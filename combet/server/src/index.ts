@@ -10,6 +10,8 @@ import { inboxRouter }     from "./routes/inbox";
 import { homefeedRouter }  from "./routes/homefeed";
 import { leaderboardRouter } from "./routes/leaderboard";
 import { adminRouter } from "./routes/admin";
+import { spinRouter } from "./routes/spin";
+
 
 
 
@@ -33,6 +35,8 @@ app.use("/api/inbox",    inboxRouter);
 app.use("/api/homefeed", homefeedRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/spin", spinRouter);
+
 
 
 
