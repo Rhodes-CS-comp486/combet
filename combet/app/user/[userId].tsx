@@ -342,15 +342,23 @@ export default function UserProfileScreen() {
 
           {/* Followers / Following — below username */}
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, marginBottom: 4, gap: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+            <TouchableOpacity
+              disabled={isPrivateAndNotFollowing}
+              onPress={() => router.push({ pathname: "/user/user-followers", params: { userId: profile.id, tab: "followers" } } as any)}
+              style={{ flexDirection: "row", alignItems: "baseline" }}
+            >
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{profile.followers_count}</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}> Followers</Text>
-            </View>
+            </TouchableOpacity>
             <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: theme.colors.onSurfaceVariant, marginHorizontal: 2 }} />
-            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+            <TouchableOpacity
+              disabled={isPrivateAndNotFollowing}
+              onPress={() => router.push({ pathname: "/user/user-followers", params: { userId: profile.id, tab: "following" } } as any)}
+              style={{ flexDirection: "row", alignItems: "baseline" }}
+            >
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, fontWeight: "600" }}>{profile.following_count}</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}> Following</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {profile.bio ? (

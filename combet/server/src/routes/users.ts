@@ -78,14 +78,26 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
 
     const result = await pool.query(
       `UPDATE users
-       SET first_name = $1, last_name = $2, bio = $3,
-           avatar_color = $4, avatar_icon = $5, is_private = $6,
-           show_bets_to_followers = $7
+       SET first_name            = COALESCE($1, first_name),
+           last_name             = COALESCE($2, last_name),
+           bio                   = COALESCE($3, bio),
+           avatar_color          = COALESCE($4, avatar_color),
+           avatar_icon           = COALESCE($5, avatar_icon),
+           is_private            = COALESCE($6, is_private),
+           show_bets_to_followers = COALESCE($7, show_bets_to_followers)
        WHERE id = $8
        RETURNING id, username, email, first_name, last_name, bio,
                  avatar_color, avatar_icon, coins, created_at, is_private, show_bets_to_followers`,
-      [first_name, last_name, bio ?? "", avatar_color ?? "#2563eb",
-       avatar_icon ?? "initials", is_private ?? false, show_bets_to_followers ?? false, req.userId]
+      [
+        first_name || null,
+        last_name  || null,
+        bio        ?? null,
+        avatar_color          ?? null,
+        avatar_icon           ?? null,
+        is_private            ?? null,
+        show_bets_to_followers ?? null,
+        req.userId,
+      ]
     );
 
     const user = result.rows[0];
@@ -324,6 +336,87 @@ usersRouter.delete("/follows/:userId", requireAuth, async (req: AuthRequest, res
     res.json({ ok: true });
   } catch (err) {
     console.error("DELETE /users/follows/:userId error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Another user's followers list ───────────────────────────────────────────
+usersRouter.get("/:userId/followers", requireAuth, async (req: AuthRequest, res) => {
+  const { userId }    = req.params;
+  const currentUserId = req.userId;
+  try {
+    // Only allowed if public OR current user is following them
+    const access = await pool.query(
+      `SELECT is_private,
+              EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2) AS is_following
+       FROM users WHERE id = $2`,
+      [currentUserId, userId]
+    );
+    const { is_private, is_following } = access.rows[0] ?? {};
+    if (is_private && !is_following)
+      return res.status(403).json({ error: "This account is private" });
+
+    const result = await pool.query(
+      `SELECT
+         u.id, u.username, u.is_private,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon,
+         EXISTS (
+           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = u.id
+         ) AS is_following_back,
+         EXISTS (
+           SELECT 1 FROM follow_requests
+           WHERE requester_id = $1 AND requestee_id = u.id AND status = 'pending'
+         ) AS follow_requested
+       FROM follows f
+       JOIN users u ON u.id = f.follower_id
+       WHERE f.following_id = $2
+       ORDER BY u.username`,
+      [currentUserId, userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/:userId/followers error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Another user's following list ───────────────────────────────────────────
+usersRouter.get("/:userId/following", requireAuth, async (req: AuthRequest, res) => {
+  const { userId }    = req.params;
+  const currentUserId = req.userId;
+  try {
+    const access = await pool.query(
+      `SELECT is_private,
+              EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2) AS is_following
+       FROM users WHERE id = $2`,
+      [currentUserId, userId]
+    );
+    const { is_private, is_following } = access.rows[0] ?? {};
+    if (is_private && !is_following)
+      return res.status(403).json({ error: "This account is private" });
+
+    const result = await pool.query(
+      `SELECT
+         u.id, u.username, u.is_private,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon,
+         EXISTS (
+           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = u.id
+         ) AS is_following_back,
+         EXISTS (
+           SELECT 1 FROM follow_requests
+           WHERE requester_id = $1 AND requestee_id = u.id AND status = 'pending'
+         ) AS follow_requested
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       WHERE f.follower_id = $2
+       ORDER BY u.username`,
+      [currentUserId, userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/:userId/following error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
