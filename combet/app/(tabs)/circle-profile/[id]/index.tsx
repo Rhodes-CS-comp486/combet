@@ -25,8 +25,11 @@ type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 export default function CircleProfile() {
   const router            = useRouter();
   const { theme, isDark } = useAppTheme();
-  const { id }            = useLocalSearchParams();
+  const { id, from, userId } = useLocalSearchParams();
   const circleId          = Array.isArray(id) ? id[0] : id;
+  const fromUserId        = Array.isArray(userId) ? userId[0] : userId;
+  const fromUser          = from === "user";
+  const fromPreview       = from === "preview";
 
   const [circle, setCircle]             = useState<Circle | null>(null);
   const [history, setHistory]           = useState<HistoryData | null>(null);
@@ -34,6 +37,7 @@ export default function CircleProfile() {
   const [responding, setResponding]     = useState<string | null>(null);
   const [requestCount, setRequestCount] = useState(0);
   const [settlingBet, setSettlingBet]   = useState<any>(null);
+  const [isMember, setIsMember]         = useState<boolean | null>(null);
 
   useFocusEffect(
     useCallback(() => { fetchAll(); }, [circleId])
@@ -49,7 +53,12 @@ export default function CircleProfile() {
       const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
-      if (histRes.ok) setHistory(await histRes.json());
+      if (histRes.ok) {
+        setHistory(await histRes.json());
+        setIsMember(true);
+      } else {
+        setIsMember(false);
+      }
 
       const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
         headers: { "x-session-id": sessionId ?? "" },
@@ -92,7 +101,11 @@ export default function CircleProfile() {
         alert(data.error || "Could not leave circle");
         return;
       }
-      router.replace("/(tabs)/circles");
+      if (fromUserId) {
+        router.replace({ pathname: `/circle-preview/${circleId}`, params: { userId: fromUserId } } as any);
+      } else {
+        router.replace("/(tabs)/circles");
+      }
     } catch (err) {
       alert("Could not connect to server");
     }
@@ -122,12 +135,13 @@ export default function CircleProfile() {
 
   if (!circle) return null;
 
-  const actionButtons = [
-    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`), showBadge: circle.is_private && requestCount > 0 },
-    { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),       showBadge: false },
-    { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`), showBadge: false },
-    { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                  showBadge: false },
+  const allActionButtons = [
+    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`), showBadge: circle.is_private && requestCount > 0, memberOnly: false },
+    { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),       showBadge: false, memberOnly: true },
+    { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`), showBadge: false, memberOnly: true },
+    { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                  showBadge: false, memberOnly: true },
   ];
+  const actionButtons = allActionButtons.filter(b => !b.memberOnly || isMember);
 
   const renderHistory = () => {
     if (!history) return (
@@ -175,7 +189,13 @@ export default function CircleProfile() {
         }}>
           {/* Pill back button matching the rest of the app */}
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/circles")}
+            onPress={() => {
+              if ((fromUser || fromPreview) && fromUserId) {
+                router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+              } else {
+                router.replace("/(tabs)/circles");
+              }
+            }}
             style={{ paddingHorizontal: 4, paddingVertical: 7 }}
           >
             <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
@@ -237,24 +257,58 @@ export default function CircleProfile() {
           </View>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-            {actionButtons.map(({ label, icon, onPress, showBadge }) => (
-              <TouchableOpacity
-                key={label}
-                onPress={onPress}
-                style={{
-                  flexDirection: "row", alignItems: "center", gap: 6,
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                  borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-                }}
-              >
-                <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
-                <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
-                {showBadge && (
-                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.5)", marginLeft: 2 }} />
+            {isMember === null ? null : (
+              <>
+                {actionButtons.map(({ label, icon, onPress, showBadge }) => (
+                  <TouchableOpacity
+                    key={label}
+                    onPress={onPress}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                      backgroundColor: "rgba(255,255,255,0.08)",
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                    }}
+                  >
+                    <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
+                    <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
+                    {showBadge && (
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.5)", marginLeft: 2 }} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+                {!isMember && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        const sessionId = await getSessionId();
+                        const res = await fetch(`${API_BASE}/circles/${circleId}/join`, {
+                          method: "POST",
+                          headers: { "x-session-id": sessionId ?? "" },
+                        });
+                        if (res.ok) {
+                          alert(`You have successfully joined ${circle.name}!`);
+                          fetchAll();
+                        } else {
+                          const data = await res.json().catch(() => ({}));
+                          alert(data.error || "Could not join circle");
+                        }
+                      } catch {
+                        alert("Could not connect to server");
+                      }
+                    }}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                      backgroundColor: theme.colors.primary,
+                      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                    }}
+                  >
+                    <Ionicons name="person-add" size={14} color="#fff" />
+                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Join</Text>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
-            ))}
+              </>
+            )}
           </View>
         </View>
 

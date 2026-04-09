@@ -217,6 +217,39 @@ circlesRouter.delete("/:circleId/retract/:inviteeId", requireAuth, async (req: A
   }
 });
 
+// ─── Join Public Circle ───────────────────────────────────────────────────────
+circlesRouter.post("/:circleId/join", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+  try {
+    // Must be a public circle
+    const circle = await pool.query(
+      `SELECT circle_id, is_private FROM circles WHERE circle_id = $1`,
+      [circleId]
+    );
+    if (!circle.rows.length) return res.status(404).json({ error: "Circle not found" });
+    if (circle.rows[0].is_private) return res.status(403).json({ error: "This circle is private" });
+
+    // Check not already a member
+    const existing = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (existing.rows.length) return res.status(400).json({ error: "Already a member" });
+
+    await pool.query(
+      `INSERT INTO circle_members (circle_id, user_id, status, joined_at)
+       VALUES ($1, $2, 'accepted', NOW())
+       ON CONFLICT ON CONSTRAINT unique_member DO UPDATE SET status = 'accepted', joined_at = NOW()`,
+      [circleId, userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("JOIN CIRCLE ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Leave Circle ─────────────────────────────────────────────────────────────
 circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
