@@ -18,6 +18,7 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         n.created_at,
 
         -- Actor
+        actor.id           AS actor_id,
         actor.username     AS actor_username,
         actor.avatar_color AS actor_avatar_color,
         actor.avatar_icon  AS actor_avatar_icon,

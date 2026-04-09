@@ -97,7 +97,22 @@ export default function UserProfileScreen() {
 
   useEffect(() => {
     if (!userId || userId === "undefined") return;
-    void fetchProfile();
+    // If viewing your own profile, redirect to the profile tab
+    getSessionId().then(async (sessionId) => {
+      try {
+        const res = await fetch(`${API_BASE}/users/me`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        if (res.ok) {
+          const me = await res.json();
+          if (me.id === userId) {
+            router.replace("/(tabs)/profile");
+            return;
+          }
+        }
+      } catch {}
+      void fetchProfile();
+    });
   }, [userId]);
 
   const fetchProfile = async () => {
@@ -239,19 +254,14 @@ export default function UserProfileScreen() {
           onDismiss={() => setShowUnfollowModal(false)}
           contentContainerStyle={{
             position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
+            bottom: 0, left: 0, right: 0,
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
             backgroundColor: "#1f3347",
-            borderWidth: 1,
-            borderColor: "rgba(157,212,190,0.2)",
+            borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
             paddingBottom: 36,
           }}
         >
           <View style={{ padding: 24 }}>
-            {/* Drag handle */}
             <View style={{
               width: 36, height: 4, borderRadius: 2,
               backgroundColor: "rgba(255,255,255,0.2)",
