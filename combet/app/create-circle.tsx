@@ -82,14 +82,13 @@ export default function CreateCircle() {
       >
         {/* ── Back ── */}
         <View>
-          <Button
-            icon="arrow-left" mode="text" compact
+          <TouchableOpacity
             onPress={() => router.back()}
-            style={{ alignSelf: "flex-start", marginLeft: -8, marginBottom: 8 }}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ alignSelf: "flex-start", paddingHorizontal: 4, paddingVertical: 7, marginBottom: 8 }}
           >
-            Back
-          </Button>
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
 
           <Text variant="headlineMedium" style={{
             color:        theme.colors.onSurface,

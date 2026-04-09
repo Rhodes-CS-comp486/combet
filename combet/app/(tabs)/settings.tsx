@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Alert, Platform, ScrollView, View, StyleSheet } from "react-native";
 import {
-  Text,
-  Switch,
-  Divider,
-  List,
-  Button,
-  Portal,
-  Modal,
-  TextInput,
-  HelperText,
+  Text, Switch, Divider, List, Button, Portal, Modal, TextInput, HelperText,
 } from "react-native-paper";
 import { router } from "expo-router";
 import { deleteSessionId, getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
-import BackHeader from "@/components/Backheader";
+import PageHeader from "@/components/PageHeader";
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme, theme } = useAppTheme();
@@ -28,11 +20,9 @@ export default function SettingsScreen() {
   const [pwError, setPwError]     = useState("");
   const [pwSaving, setPwSaving]   = useState(false);
 
-  // ── Private account toggle ─────────────────────────────────────────────────
-  const [isPrivate, setIsPrivate]       = useState(false);
+  const [isPrivate, setIsPrivate]         = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
 
-  // Load current privacy setting on mount
   useEffect(() => {
     const fetchPrivacy = async () => {
       try {
@@ -56,8 +46,6 @@ export default function SettingsScreen() {
     setPrivacySaving(true);
     try {
       const sessionId = await getSessionId();
-
-      // Fetch current profile first so we don't overwrite avatar/name with defaults
       const profileRes = await fetch(`${API_BASE}/users/me`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
@@ -89,19 +77,13 @@ export default function SettingsScreen() {
 
   const savePassword = async () => {
     setPwError("");
-    if (newPw !== confirmPw) {
-      setPwError("New passwords do not match.");
-      return;
-    }
+    if (newPw !== confirmPw) { setPwError("New passwords do not match."); return; }
     setPwSaving(true);
     try {
       const sessionId = await getSessionId();
       const res = await fetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
-        headers: {
-          "x-session-id": sessionId ?? "",
-          "Content-Type": "application/json",
-        },
+        headers: { "x-session-id": sessionId ?? "", "Content-Type": "application/json" },
         body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
       });
       if (!res.ok) {
@@ -149,14 +131,10 @@ export default function SettingsScreen() {
   const s = styles(theme);
 
   return (
-    <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        <BackHeader label="Profile" href="/(tabs)/profile" />
-        <Text style={{ color: theme.colors.onSurface, fontSize: 28, fontWeight: "300", letterSpacing: 0.5, marginBottom: 28, marginTop: 8 }}>
-          Settings
-        </Text>
+        <PageHeader title="Settings" onBack={() => router.replace("/(tabs)/profile")} />
 
-        {/* ── Account Settings ── */}
         <Text style={[s.sectionLabel, { fontSize: 13, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" }]}>
           Settings
         </Text>
@@ -177,32 +155,18 @@ export default function SettingsScreen() {
             onPress={() => Alert.alert("Coming Soon", "Notification settings coming soon.")}
           />
           <Divider style={{ backgroundColor: theme.colors.outline }} />
-
-          {/* ── Private Account Toggle ── */}
           <List.Item
             title="Private Account"
-            description={isPrivate
-              ? "Only approved followers can follow you"
-              : "Anyone can follow you"}
+            description={isPrivate ? "Only approved followers can follow you" : "Anyone can follow you"}
             titleStyle={{ color: theme.colors.onSurface }}
             descriptionStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}
             left={(props) => (
-              <List.Icon
-                {...props}
-                icon={isPrivate ? "lock" : "lock-open-outline"}
-                color={theme.colors.primary}
-              />
+              <List.Icon {...props} icon={isPrivate ? "lock" : "lock-open-outline"} color={theme.colors.primary} />
             )}
             right={() => (
-              <Switch
-                value={isPrivate}
-                onValueChange={togglePrivacy}
-                disabled={privacySaving}
-                color={theme.colors.primary}
-              />
+              <Switch value={isPrivate} onValueChange={togglePrivacy} disabled={privacySaving} color={theme.colors.primary} />
             )}
           />
-
           <Divider style={{ backgroundColor: theme.colors.outline }} />
           <List.Item
             title="Privacy & Security"
@@ -215,7 +179,6 @@ export default function SettingsScreen() {
 
         <Divider style={s.divider} />
 
-        {/* ── Account ── */}
         <Text style={[s.sectionLabel, { fontSize: 13, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" }]}>
           Account
         </Text>
@@ -242,39 +205,24 @@ export default function SettingsScreen() {
           </Text>
           <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
             <TextInput
-              label="Current Password"
-              value={currentPw}
-              onChangeText={setCurrentPw}
-              secureTextEntry
-              mode="flat"
-              style={{ backgroundColor: "transparent" }}
-              underlineColor="transparent"
+              label="Current Password" value={currentPw} onChangeText={setCurrentPw} secureTextEntry
+              mode="flat" style={{ backgroundColor: "transparent" }} underlineColor="transparent"
               activeUnderlineColor={theme.colors.primary}
               theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
             />
           </View>
           <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
             <TextInput
-              label="New Password"
-              value={newPw}
-              onChangeText={setNewPw}
-              secureTextEntry
-              mode="flat"
-              style={{ backgroundColor: "transparent" }}
-              underlineColor="transparent"
+              label="New Password" value={newPw} onChangeText={setNewPw} secureTextEntry
+              mode="flat" style={{ backgroundColor: "transparent" }} underlineColor="transparent"
               activeUnderlineColor={theme.colors.primary}
               theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
             />
           </View>
           <View style={{ backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12 }}>
             <TextInput
-              label="Confirm New Password"
-              value={confirmPw}
-              onChangeText={setConfirmPw}
-              secureTextEntry
-              mode="flat"
-              style={{ backgroundColor: "transparent" }}
-              underlineColor="transparent"
+              label="Confirm New Password" value={confirmPw} onChangeText={setConfirmPw} secureTextEntry
+              mode="flat" style={{ backgroundColor: "transparent" }} underlineColor="transparent"
               activeUnderlineColor={theme.colors.primary}
               theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
             />
@@ -298,7 +246,7 @@ const styles = (theme: any) =>
   StyleSheet.create({
     root:         { flex: 1 },
     sectionLabel: { color: theme.colors.onSurfaceVariant, marginBottom: 8 },
-    scroll:       { paddingBottom: 40, paddingTop: 12 },
+    scroll:       { paddingBottom: 40 },
     card:         { borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden" },
     divider:      { backgroundColor: theme.colors.outline, marginVertical: 20 },
     modal:        { margin: 24, borderRadius: 16, padding: 24 },
