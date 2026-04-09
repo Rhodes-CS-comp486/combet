@@ -439,12 +439,12 @@ useFocusEffect(useCallback(() => {
                         <Ionicons
                           name={item.is_private ? "lock-closed" : "globe-outline"}
                           size={10}
-                          color={item.is_private ? "#ef4444" : "#22c55e"}
+                          color={item.is_private ? "#e87060" : "#9dd4be"}
                         />
                         <Text style={{
                           fontSize:   10,
                           fontWeight: "500",
-                          color:      item.is_private ? "#ef4444" : "#22c55e",
+                          color: item.is_private ? "#e87060" : "#9dd4be",
                         }}>
                           {item.is_private ? "Private" : "Public"}
                         </Text>
@@ -468,7 +468,7 @@ useFocusEffect(useCallback(() => {
                     }}
                     style={{
                       backgroundColor:
-                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.1)" :
+                        item.joinStatus === "joined"  ? "rgba(157,212,190,0.15)" :
                         item.joinStatus === "pending" ? theme.colors.surface :
                         theme.colors.primary,
                       borderRadius:     20,
@@ -476,7 +476,7 @@ useFocusEffect(useCallback(() => {
                       paddingVertical:  6,
                       borderWidth:      0.5,
                       borderColor:
-                        item.joinStatus === "joined"  ? "rgba(76,175,80,0.3)" :
+                        item.joinStatus === "joined"  ? "rgba(157,212,190,0.4)" :
                         item.joinStatus === "pending" ? theme.colors.outline :
                         theme.colors.primary,
                       flexDirection: "row",
@@ -485,11 +485,11 @@ useFocusEffect(useCallback(() => {
                     }}
                   >
                     {item.joinStatus === "joined" && (
-                      <Ionicons name="checkmark" size={12} color="#4CAF50" />
+                      <Ionicons name="checkmark" size={12} color="#9dd4be" />
                     )}
                     <Text style={{
                       color:
-                        item.joinStatus === "joined"  ? "#4CAF50" :
+                        item.joinStatus === "joined"  ? "#9dd4be" :
                         item.joinStatus === "pending" ? theme.colors.onSurfaceVariant :
                         "#fff",
                       fontSize:   12,

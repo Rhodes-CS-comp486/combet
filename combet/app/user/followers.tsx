@@ -8,6 +8,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import PageHeader from "@/components/PageHeader";
 
 type TabKey = "followers" | "following";
 
@@ -86,7 +87,7 @@ export default function FollowersScreen() {
       onPress={() => router.push(`/user/${item.id}`)}
       style={{
         flexDirection: "row", alignItems: "center",
-        paddingVertical: 12, paddingHorizontal: 20, gap: 12,
+        paddingVertical: 12, gap: 12,
         borderBottomWidth: 0.5,
         borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
       }}
@@ -152,22 +153,11 @@ export default function FollowersScreen() {
   );
 
   return (
-    <GradientBackground>
-      {/* ── Back + title ── */}
-      <View style={{
-        flexDirection: "row", alignItems: "center", gap: 12,
-        paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8,
-      }}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
-        </TouchableOpacity>
-        <Text style={{ color: theme.colors.onSurface, fontSize: 17, fontWeight: "700" }}>
-          Connections
-        </Text>
-      </View>
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="Connections" />
 
       {/* ── Tabs ── */}
-      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginBottom: 4 }}>
+      <View style={{ flexDirection: "row", marginBottom: 4 }}>
         {(["followers", "following"] as TabKey[]).map((key) => {
           const active = activeTab === key;
           const count  = key === "followers" ? followers.length : following.length;

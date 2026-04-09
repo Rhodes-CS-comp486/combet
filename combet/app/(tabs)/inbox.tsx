@@ -181,10 +181,11 @@ export default function InboxScreen() {
     try {
       const sessionId = await getSessionId();
       if (!sessionId) return;
-      await fetch(`${API_BASE}/inbox/${notificationId}`, {
+      const res = await fetch(`${API_BASE}/inbox/${notificationId}`, {
         method: "DELETE",
         headers: { "x-session-id": sessionId },
       });
+      console.log("DELETE notification response:", res.status, notificationId);
     } catch (err) {
       console.error("Delete notification error:", err);
     }
@@ -238,7 +239,6 @@ export default function InboxScreen() {
 
     const cardStyle = {
       borderRadius: 16 as const,
-      marginBottom: 12,
       backgroundColor: cardBg,
       overflow: "hidden" as const,
     };
@@ -247,9 +247,10 @@ export default function InboxScreen() {
       <TouchableOpacity
         onPress={(e) => { e.stopPropagation(); handleDelete(item.notification_id); }}
         style={{
-          position: "absolute", top: 10, right: 10,
+          position: "absolute" as const, top: -8, right: -8,
           width: 22, height: 22, borderRadius: 11,
-          backgroundColor: "rgba(255,255,255,0.1)",
+          backgroundColor: "rgba(60,70,90,0.95)",
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
           alignItems: "center", justifyContent: "center",
           zIndex: 10,
         }}
@@ -277,10 +278,10 @@ export default function InboxScreen() {
       const isPending  = item.invite_status === "pending";
       const isAccepted = item.invite_status === "accepted";
       return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16, position: "relative" }}>
-            <XButton />
-            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -308,6 +309,7 @@ export default function InboxScreen() {
                   <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Joined</Text>
                 </View>
               )}
+
             </View>
             {isPending && item.invite_id && (
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
@@ -333,6 +335,8 @@ export default function InboxScreen() {
             )}
           </View>
         </TouchableOpacity>
+        <XButton />
+        </View>
       );
     }
 
@@ -341,10 +345,10 @@ export default function InboxScreen() {
       const isFollowPending  = item.follow_request_status === "pending";
       const isFollowAccepted = item.follow_request_status === "accepted";
       return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16, position: "relative" }}>
-            <XButton />
-            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -366,6 +370,7 @@ export default function InboxScreen() {
                   <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Accepted</Text>
                 </View>
               )}
+
             </View>
             {isFollowPending && item.follow_request_id && (
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
@@ -391,15 +396,17 @@ export default function InboxScreen() {
             )}
           </View>
         </TouchableOpacity>
+        <XButton />
+        </View>
       );
     }
 
     // ── Follow accepted ───────────────────────────────────────────────────
     if (item.type === "follow_accepted") {
       return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16, flexDirection: "row", alignItems: "center", position: "relative" }}>
-            <XButton />
+          <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
             {avatarEl}
             <View style={{ flex: 1 }}>
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -419,8 +426,11 @@ export default function InboxScreen() {
               <Ionicons name="checkmark" size={11} color="#9dd4be" />
               <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
             </View>
+
           </View>
         </TouchableOpacity>
+        <XButton />
+        </View>
       );
     }
 
@@ -429,10 +439,10 @@ export default function InboxScreen() {
       const isJoinPending  = item.join_request_status === "pending";
       const isJoinAccepted = item.join_request_status === "accepted";
       return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16, position: "relative" }}>
-            <XButton />
-            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -457,6 +467,7 @@ export default function InboxScreen() {
                   <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Accepted</Text>
                 </View>
               )}
+
             </View>
             {isJoinPending && item.request_id && (
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
@@ -482,6 +493,8 @@ export default function InboxScreen() {
             )}
           </View>
         </TouchableOpacity>
+        <XButton />
+        </View>
       );
     }
 
@@ -492,10 +505,10 @@ export default function InboxScreen() {
         ? Math.max(0, Math.round((closesAt.getTime() - Date.now()) / 3600000))
         : null;
       return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
         <View style={cardStyle}>
-          <View style={{ padding: 16, position: "relative" }}>
-            <XButton />
-            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{
                 width: 40, height: 40, borderRadius: 20,
                 backgroundColor: "rgba(252,211,77,0.12)",
@@ -521,8 +534,11 @@ export default function InboxScreen() {
                   {timeAgo(item.created_at)}
                 </Text>
               </View>
+
             </View>
           </View>
+        </View>
+        <XButton />
         </View>
       );
     }
