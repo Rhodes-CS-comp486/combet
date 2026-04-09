@@ -23,49 +23,52 @@ type FollowUser = {
   follow_requested: boolean;
 };
 
-export default function FollowersScreen() {
-  const { tab } = useLocalSearchParams<{ tab: TabKey }>();
+export default function UserFollowersScreen() {
+  const { userId, tab } = useLocalSearchParams<{ userId: string; tab: TabKey }>();
   const { theme, isDark } = useAppTheme();
 
   const [activeTab, setActiveTab] = useState<TabKey>(tab === "following" ? "following" : "followers");
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [myId, setMyId]           = useState<string | null>(null);
 
-  useEffect(() => { void fetchBoth(); }, []);
+  useEffect(() => { void fetchBoth(); }, [userId]);
 
   const fetchBoth = async () => {
     try {
       const sessionId = await getSessionId();
       const headers   = { "x-session-id": sessionId ?? "" };
-      const [followersRes, followingRes] = await Promise.all([
-        fetch(`${API_BASE}/users/me/followers`, { headers }),
-        fetch(`${API_BASE}/users/me/following`, { headers }),
+      // Fetch current user's id alongside the lists
+      const [meRes, followersRes, followingRes] = await Promise.all([
+        fetch(`${API_BASE}/users/me`, { headers }),
+        fetch(`${API_BASE}/users/${userId}/followers`, { headers }),
+        fetch(`${API_BASE}/users/${userId}/following`, { headers }),
       ]);
+      if (meRes.ok) { const me = await meRes.json(); setMyId(String(me.id)); }
       if (followersRes.ok) setFollowers(await followersRes.json());
       if (followingRes.ok) setFollowing(await followingRes.json());
     } catch (err) {
-      console.error("Followers fetch error:", err);
+      console.error("User followers fetch error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Follow — matches index.tsx followUser exactly ─────────────────────────
-  const followUser = async (userId: string) => {
+  const followUser = async (targetId: string) => {
     try {
       const sessionId = await getSessionId();
       const res = await fetch(`${API_BASE}/users/follows`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-        body: JSON.stringify({ followingId: userId }),
+        body: JSON.stringify({ followingId: targetId }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
 
       const update = (list: FollowUser[]) =>
         list.map((u) =>
-          u.id === userId
+          u.id === targetId
             ? {
                 ...u,
                 is_following_back: data.status === "following",
@@ -84,7 +87,7 @@ export default function FollowersScreen() {
 
   const renderItem = ({ item }: { item: FollowUser }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/user/${item.id}`)}
+      onPress={() => router.push(`/user/${item.id}` as any)}
       style={{
         flexDirection: "row", alignItems: "center",
         paddingVertical: 12, gap: 12,
@@ -111,43 +114,39 @@ export default function FollowersScreen() {
         </Text>
       </View>
 
-      {/* Follow button — only on followers tab, matches index.tsx exactly */}
-      {activeTab === "followers" && (
+      {/* Follow status button — hidden if this is the current user */}
+      {String(item.id) !== myId && (
         item.follow_requested ? (
-          <View style={{
-            backgroundColor: theme.colors.surface,
-            borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-            borderWidth: 0.5, borderColor: theme.colors.outline,
-            flexDirection: "row", alignItems: "center", gap: 4,
-          }}>
-            <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Requested</Text>
-          </View>
-        ) : item.is_following_back ? (
-          <View style={{
-            backgroundColor: theme.colors.surface,
-            borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-            borderWidth: 0.5, borderColor: theme.colors.outline,
-            flexDirection: "row", alignItems: "center", gap: 4,
-          }}>
-            <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation(); followUser(item.id); }}
-            style={{
-              backgroundColor: theme.colors.primary,
-              borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
-          </TouchableOpacity>
+        <View style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+          borderWidth: 0.5, borderColor: theme.colors.outline,
+          flexDirection: "row", alignItems: "center", gap: 4,
+        }}>
+          <Ionicons name="time-outline" size={12} color={theme.colors.onSurfaceVariant} />
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Requested</Text>
+        </View>
+      ) : item.is_following_back ? (
+        <View style={{
+          backgroundColor: theme.colors.surface,
+          borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+          borderWidth: 0.5, borderColor: theme.colors.outline,
+          flexDirection: "row", alignItems: "center", gap: 4,
+        }}>
+          <Ionicons name="checkmark" size={12} color={theme.colors.onSurfaceVariant} />
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>Following</Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={(e) => { e.stopPropagation(); void followUser(item.id); }}
+          style={{
+            backgroundColor: theme.colors.primary,
+            borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>Follow</Text>
+        </TouchableOpacity>
         )
-      )}
-
-      {activeTab === "following" && (
-        <Ionicons name="chevron-forward" size={16} color={theme.colors.onSurfaceVariant} />
       )}
     </TouchableOpacity>
   );

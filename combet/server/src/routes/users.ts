@@ -340,6 +340,87 @@ usersRouter.delete("/follows/:userId", requireAuth, async (req: AuthRequest, res
   }
 });
 
+// ─── Another user's followers list ───────────────────────────────────────────
+usersRouter.get("/:userId/followers", requireAuth, async (req: AuthRequest, res) => {
+  const { userId }    = req.params;
+  const currentUserId = req.userId;
+  try {
+    // Only allowed if public OR current user is following them
+    const access = await pool.query(
+      `SELECT is_private,
+              EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2) AS is_following
+       FROM users WHERE id = $2`,
+      [currentUserId, userId]
+    );
+    const { is_private, is_following } = access.rows[0] ?? {};
+    if (is_private && !is_following)
+      return res.status(403).json({ error: "This account is private" });
+
+    const result = await pool.query(
+      `SELECT
+         u.id, u.username, u.is_private,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon,
+         EXISTS (
+           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = u.id
+         ) AS is_following_back,
+         EXISTS (
+           SELECT 1 FROM follow_requests
+           WHERE requester_id = $1 AND requestee_id = u.id AND status = 'pending'
+         ) AS follow_requested
+       FROM follows f
+       JOIN users u ON u.id = f.follower_id
+       WHERE f.following_id = $2
+       ORDER BY u.username`,
+      [currentUserId, userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/:userId/followers error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Another user's following list ───────────────────────────────────────────
+usersRouter.get("/:userId/following", requireAuth, async (req: AuthRequest, res) => {
+  const { userId }    = req.params;
+  const currentUserId = req.userId;
+  try {
+    const access = await pool.query(
+      `SELECT is_private,
+              EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2) AS is_following
+       FROM users WHERE id = $2`,
+      [currentUserId, userId]
+    );
+    const { is_private, is_following } = access.rows[0] ?? {};
+    if (is_private && !is_following)
+      return res.status(403).json({ error: "This account is private" });
+
+    const result = await pool.query(
+      `SELECT
+         u.id, u.username, u.is_private,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon,
+         EXISTS (
+           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = u.id
+         ) AS is_following_back,
+         EXISTS (
+           SELECT 1 FROM follow_requests
+           WHERE requester_id = $1 AND requestee_id = u.id AND status = 'pending'
+         ) AS follow_requested
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       WHERE f.follower_id = $2
+       ORDER BY u.username`,
+      [currentUserId, userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/:userId/following error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Another User's Profile ───────────────────────────────────────────────
 usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;
