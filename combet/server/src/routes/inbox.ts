@@ -26,6 +26,7 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         -- Circle invite fields
         ci.invite_id,
         ci.status               AS invite_status,
+        ci_circle.circle_id     AS circle_id,
         ci_circle.name          AS circle_name,
         ci_circle.icon          AS circle_icon,
         ci_circle.icon_color    AS circle_icon_color,

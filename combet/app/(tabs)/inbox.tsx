@@ -19,6 +19,7 @@ type Notification = {
   actor_avatar_color: string | null;
   actor_avatar_icon: string | null;
   circle_name: string | null;
+  circle_id: string | null;
   invite_id: string | null;
   status: string | null;
   is_read: boolean;
@@ -246,7 +247,10 @@ export default function InboxScreen() {
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
                   <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
                   {" invited you to join "}
-                  <Text style={{ fontWeight: "700", color: theme.colors.primary }}>
+                  <Text
+                    onPress={() => item.circle_id && router.push(`/circle-profile/${item.circle_id}`)}
+                    style={{ fontWeight: "700", color: theme.colors.primary }}
+                  >
                     "{item.circle_name}"
                   </Text>
                 </Text>
