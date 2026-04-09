@@ -78,14 +78,26 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
 
     const result = await pool.query(
       `UPDATE users
-       SET first_name = $1, last_name = $2, bio = $3,
-           avatar_color = $4, avatar_icon = $5, is_private = $6,
-           show_bets_to_followers = $7
+       SET first_name            = COALESCE($1, first_name),
+           last_name             = COALESCE($2, last_name),
+           bio                   = COALESCE($3, bio),
+           avatar_color          = COALESCE($4, avatar_color),
+           avatar_icon           = COALESCE($5, avatar_icon),
+           is_private            = COALESCE($6, is_private),
+           show_bets_to_followers = COALESCE($7, show_bets_to_followers)
        WHERE id = $8
        RETURNING id, username, email, first_name, last_name, bio,
                  avatar_color, avatar_icon, coins, created_at, is_private, show_bets_to_followers`,
-      [first_name, last_name, bio ?? "", avatar_color ?? "#2563eb",
-       avatar_icon ?? "initials", is_private ?? false, show_bets_to_followers ?? false, req.userId]
+      [
+        first_name || null,
+        last_name  || null,
+        bio        ?? null,
+        avatar_color          ?? null,
+        avatar_icon           ?? null,
+        is_private            ?? null,
+        show_bets_to_followers ?? null,
+        req.userId,
+      ]
     );
 
     const user = result.rows[0];

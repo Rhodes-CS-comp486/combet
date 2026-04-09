@@ -3,7 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity } from "react-native";
 import { Text, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import PageHeader from "@/components/PageHeader";
@@ -88,12 +88,16 @@ export default function MembersScreen() {
   };
 
   const memberRow = (item: Member) => (
-    <View style={{
-      flexDirection: "row", alignItems: "center",
-      backgroundColor: "rgba(255,255,255,0.09)",
-      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-      borderRadius: 14, padding: 14, marginBottom: 10,
-    }}>
+    <TouchableOpacity
+      onPress={() => router.push(`/user/${item.id}`)}
+      activeOpacity={0.75}
+      style={{
+        flexDirection: "row", alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.09)",
+        borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+        borderRadius: 14, padding: 14, marginBottom: 10,
+      }}
+    >
       <View style={{ marginRight: 14 }}>
         <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
       </View>
@@ -119,7 +123,7 @@ export default function MembersScreen() {
           Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
         </Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   const requestRow = (item: Request) => (
@@ -129,11 +133,17 @@ export default function MembersScreen() {
       borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
       borderRadius: 14, padding: 14, marginBottom: 10, gap: 12,
     }}>
-      <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
-      <View style={{ flex: 1 }}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>{item.username}</Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Requested {timeAgo(item.created_at)}</Text>
-      </View>
+      <TouchableOpacity
+        onPress={() => router.push(`/user/${item.user_id}`)}
+        activeOpacity={0.75}
+        style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 12 }}
+      >
+        <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
+        <View style={{ flex: 1 }}>
+          <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>{item.username}</Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Requested {timeAgo(item.created_at)}</Text>
+        </View>
+      </TouchableOpacity>
       {actioning === item.request_id ? (
         <ActivityIndicator size="small" color={theme.colors.primary} />
       ) : (
