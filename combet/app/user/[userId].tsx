@@ -36,16 +36,19 @@ type UserProfile = {
 type TabKey = "bets" | "circle_bets";
 
 // ── Circle pill ───────────────────────────────────────────────────────────────
-function CirclePill({ circle, isMember }: { circle: any; isMember: boolean }) {
+function CirclePill({ circle, isMember, userId }: { circle: any; isMember: boolean; userId: string }) {
   const { theme } = useAppTheme();
   const isPrivate = circle.is_private ?? false;
 
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/circle-profile/${circle.circle_id}`)}
-      style={{ alignItems: "center", marginRight: 14, width: 68, opacity: isMember ? 1 : 0.38 }}
+      onPress={() => isMember
+        ? router.push({ pathname: `/circle-profile/${circle.circle_id}`, params: { from: "user", userId } } as any)
+        : router.push({ pathname: `/circle-preview/${circle.circle_id}`, params: { userId } } as any)
+      }
+      style={{ alignItems: "center", marginRight: 14, width: 68, opacity: isMember ? 1 : 0.45 }}
     >
-      <View style={{ width: 56, height: 56, position: "relative" }}>
+      <View style={{ width: 56, height: 56, position: "relative", overflow: "visible" }}>
         <View style={{
           width: 56, height: 56, borderRadius: 28,
           backgroundColor: circle.icon_color ?? theme.colors.primary,
@@ -301,8 +304,12 @@ export default function UserProfileScreen() {
 
         {/* ── Back ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, marginBottom: 8 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.onSurface} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ alignSelf: "flex-start", paddingHorizontal: 4, paddingVertical: 7 }}
+          >
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
           </TouchableOpacity>
         </View>
 
@@ -427,6 +434,7 @@ export default function UserProfileScreen() {
                       key={circle.circle_id}
                       circle={circle}
                       isMember={circle.isMember}
+                      userId={userId}
                     />
                   ))}
                 </ScrollView>
