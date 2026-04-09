@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { ScrollView, View, TouchableOpacity } from "react-native";
 import { Text, ActivityIndicator, Button, Divider, Portal, Modal } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -61,12 +62,12 @@ function CirclePill({ circle, isMember, userId }: { circle: any; isMember: boole
         <View style={{
           position: "absolute", bottom: -1, right: -1,
           width: 18, height: 18, borderRadius: 9,
-          backgroundColor: theme.colors.surface,
+          backgroundColor: "#1e3a4a",
           alignItems: "center", justifyContent: "center",
-          borderWidth: 0.5, borderColor: theme.colors.outline,
+          borderWidth: 1.5, borderColor: "rgba(255,255,255,0.18)",
         }}>
           <Ionicons
-            name={isPrivate ? "lock-closed-outline" : "globe-outline"}
+            name={isPrivate ? "lock-closed" : "globe-outline"}
             size={10}
             color={isPrivate ? "#e87060" : "#9dd4be"}
           />
@@ -98,7 +99,7 @@ export default function UserProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("bets");
   const [showUnfollowModal, setShowUnfollowModal] = useState(false);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!userId || userId === "undefined") return;
     // If viewing your own profile, redirect to the profile tab
     getSessionId().then(async (sessionId) => {
@@ -116,7 +117,7 @@ export default function UserProfileScreen() {
       } catch {}
       void fetchProfile();
     });
-  }, [userId]);
+  }, [userId]));
 
   const fetchProfile = async () => {
     try {
@@ -158,6 +159,7 @@ export default function UserProfileScreen() {
   };
 
   const handleUnfollow = async () => {
+    if (!profile) return;
     setShowUnfollowModal(false);
     setActioning(true);
     try {

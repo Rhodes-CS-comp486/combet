@@ -320,3 +320,18 @@ inboxRouter.post("/join-requests/:requestId/decline", requireAuth, async (req: A
     res.status(500).json({ error: "Server error" });
   }
 });
+// ─── Delete Notification ──────────────────────────────────────────────────────
+inboxRouter.delete("/:notificationId", requireAuth, async (req: AuthRequest, res) => {
+  const { notificationId } = req.params;
+  const userId = req.userId;
+  try {
+    await pool.query(
+      `DELETE FROM notifications WHERE notification_id = $1 AND recipient_id = $2`,
+      [notificationId, userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE notification error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
