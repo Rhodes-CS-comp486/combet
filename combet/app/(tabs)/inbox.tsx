@@ -175,6 +175,21 @@ export default function InboxScreen() {
     }
   };
 
+  const handleDelete = async (notificationId: string) => {
+    // Optimistically remove from UI
+    setNotifications((prev) => prev.filter((n) => n.notification_id !== notificationId));
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      await fetch(`${API_BASE}/inbox/${notificationId}`, {
+        method: "DELETE",
+        headers: { "x-session-id": sessionId },
+      });
+    } catch (err) {
+      console.error("Delete notification error:", err);
+    }
+  };
+
   // ── Filtered list ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     if (activeFilter === "all")     return notifications;
@@ -228,6 +243,22 @@ export default function InboxScreen() {
       overflow: "hidden" as const,
     };
 
+    const XButton = () => (
+      <TouchableOpacity
+        onPress={(e) => { e.stopPropagation(); handleDelete(item.notification_id); }}
+        style={{
+          position: "absolute", top: 10, right: 10,
+          width: 22, height: 22, borderRadius: 11,
+          backgroundColor: "rgba(255,255,255,0.1)",
+          alignItems: "center", justifyContent: "center",
+          zIndex: 10,
+        }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="close" size={12} color={theme.colors.onSurfaceVariant} />
+      </TouchableOpacity>
+    );
+
     const avatarEl = (
       <View style={{ marginRight: 12 }}>
         <UserAvatar
@@ -247,7 +278,8 @@ export default function InboxScreen() {
       const isAccepted = item.invite_status === "accepted";
       return (
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, position: "relative" }}>
+            <XButton />
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
@@ -310,7 +342,8 @@ export default function InboxScreen() {
       const isFollowAccepted = item.follow_request_status === "accepted";
       return (
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, position: "relative" }}>
+            <XButton />
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
@@ -365,7 +398,8 @@ export default function InboxScreen() {
     if (item.type === "follow_accepted") {
       return (
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ padding: 16, flexDirection: "row", alignItems: "center", position: "relative" }}>
+            <XButton />
             {avatarEl}
             <View style={{ flex: 1 }}>
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
@@ -396,7 +430,8 @@ export default function InboxScreen() {
       const isJoinAccepted = item.join_request_status === "accepted";
       return (
         <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, position: "relative" }}>
+            <XButton />
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               {avatarEl}
               <View style={{ flex: 1 }}>
@@ -458,7 +493,8 @@ export default function InboxScreen() {
         : null;
       return (
         <View style={cardStyle}>
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, position: "relative" }}>
+            <XButton />
             <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
               <View style={{
                 width: 40, height: 40, borderRadius: 20,
@@ -528,16 +564,6 @@ export default function InboxScreen() {
           <Text style={{ color: theme.colors.onSurface, fontSize: 24, fontWeight: "300", letterSpacing: 2 }}>
             Inbox
           </Text>
-          {pendingCount > 0 && (
-            <View style={{
-              backgroundColor: theme.colors.primary,
-              borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3,
-            }}>
-              <Text style={{ color: "white", fontWeight: "700", fontSize: 12 }}>
-                {pendingCount} pending
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* ── Filter tabs ── */}
