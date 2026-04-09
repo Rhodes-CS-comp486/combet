@@ -3,11 +3,12 @@ import { View, FlatList, TouchableOpacity, Modal, Pressable } from "react-native
 import { Text, ActivityIndicator } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import { useRouter } from "expo-router";
+import PageHeader from "@/components/PageHeader";
 
 type AdminCircle = {
   circle_id: string;
@@ -24,6 +25,7 @@ type AdminCircle = {
 
 export default function AdminCirclesScreen() {
   const { theme } = useAppTheme();
+  const router = useRouter();
   const [circles, setCircles]           = useState<AdminCircle[]>([]);
   const [loading, setLoading]           = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<AdminCircle | null>(null);
@@ -74,25 +76,17 @@ export default function AdminCirclesScreen() {
       borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
       borderRadius: 14, padding: 14, marginBottom: 10, gap: 12,
     }}>
-      {/* ── Circle icon ── */}
       <View style={{
         width: 44, height: 44, borderRadius: 22,
         backgroundColor: item.circle_color ?? "#2c4a5e",
         justifyContent: "center", alignItems: "center",
       }}>
-        <Ionicons
-          name={(item.icon as any) ?? "people"}
-          size={22}
-          color={item.icon_color ?? "#fff"}
-        />
+        <Ionicons name={(item.icon as any) ?? "people"} size={22} color={item.icon_color ?? "#fff"} />
       </View>
 
-      {/* ── Info ── */}
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 15 }}>
-            {item.name}
-          </Text>
+          <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 15 }}>{item.name}</Text>
           {item.is_private && (
             <View style={{
               backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 6,
@@ -103,14 +97,10 @@ export default function AdminCirclesScreen() {
             </View>
           )}
         </View>
-        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-          @{item.creator_username}
-        </Text>
+        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>@{item.creator_username}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
           <Ionicons name="people-outline" size={11} color={theme.colors.onSurfaceVariant} />
-          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>
-            {item.member_count} members
-          </Text>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11 }}>{item.member_count} members</Text>
           <Text style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>·</Text>
           <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>
             {new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -123,7 +113,6 @@ export default function AdminCirclesScreen() {
         ) : null}
       </View>
 
-      {/* ── Delete button ── */}
       <TouchableOpacity
         onPress={() => setDeleteTarget(item)}
         style={{
@@ -139,25 +128,8 @@ export default function AdminCirclesScreen() {
   );
 
   return (
-    <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
-      {/* ── Header ── */}
-      <TouchableOpacity
-        onPress={() => router.replace("/(tabs)/profile")}
-        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 20 }}
-      >
-        <Ionicons name="arrow-back" size={20} color={theme.colors.onSurfaceVariant} />
-        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>Profile</Text>
-      </TouchableOpacity>
-
-      <Text style={{
-        color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
-        letterSpacing: 2, marginBottom: 4,
-      }}>
-        All Circles
-      </Text>
-      <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, marginBottom: 20 }}>
-        {circles.length} total
-      </Text>
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="All Circles" subtitle={`${circles.length} total`} onBack={() => router.push("/(tabs)/profile")} />
 
       {loading ? (
         <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
@@ -174,23 +146,16 @@ export default function AdminCirclesScreen() {
           }
         />
       )}
-      {/* ── Delete Confirmation Modal ── */}
-      <Modal
-        visible={!!deleteTarget}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDeleteTarget(null)}
-      >
+
+      <Modal visible={!!deleteTarget} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
         <Pressable
           style={{ flex: 1, backgroundColor: "rgba(10,20,30,0.85)", justifyContent: "center", alignItems: "center", padding: 32 }}
           onPress={() => !deleting && setDeleteTarget(null)}
         >
           <Pressable onPress={(e) => e.stopPropagation()}>
             <View style={{
-              backgroundColor: "#1f3347",
-              borderRadius: 20, padding: 24,
-              borderWidth: 1, borderColor: "rgba(232,112,96,0.3)",
-              width: 300,
+              backgroundColor: "#1f3347", borderRadius: 20, padding: 24,
+              borderWidth: 1, borderColor: "rgba(232,112,96,0.3)", width: 300,
             }}>
               <View style={{ alignItems: "center", marginBottom: 16 }}>
                 <View style={{
@@ -201,43 +166,25 @@ export default function AdminCirclesScreen() {
                 }}>
                   <Ionicons name="trash-outline" size={24} color="#e87060" />
                 </View>
-                <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700", textAlign: "center" }}>
-                  Delete Circle
-                </Text>
+                <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700", textAlign: "center" }}>Delete Circle</Text>
                 <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, textAlign: "center", marginTop: 8, lineHeight: 18 }}>
                   Are you sure you want to delete{"\n"}
                   <Text style={{ color: "#fff", fontWeight: "600" }}>"{deleteTarget?.name}"</Text>?
                   {"\n"}This will remove all members, messages,{"\n"}and invites. This cannot be undone.
                 </Text>
               </View>
-
               <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
                 <TouchableOpacity
-                  onPress={() => setDeleteTarget(null)}
-                  disabled={deleting}
-                  style={{
-                    flex: 1, paddingVertical: 12, borderRadius: 12,
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                    alignItems: "center",
-                  }}
+                  onPress={() => setDeleteTarget(null)} disabled={deleting}
+                  style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", alignItems: "center" }}
                 >
                   <Text style={{ color: "rgba(255,255,255,0.7)", fontWeight: "600" }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={deleteCircle}
-                  disabled={deleting}
-                  style={{
-                    flex: 1, paddingVertical: 12, borderRadius: 12,
-                    backgroundColor: "rgba(232,112,96,0.2)",
-                    borderWidth: 1, borderColor: "rgba(232,112,96,0.5)",
-                    alignItems: "center",
-                  }}
+                  onPress={deleteCircle} disabled={deleting}
+                  style={{ flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: "rgba(232,112,96,0.2)", borderWidth: 1, borderColor: "rgba(232,112,96,0.5)", alignItems: "center" }}
                 >
-                  {deleting
-                    ? <ActivityIndicator size="small" color="#e87060" />
-                    : <Text style={{ color: "#e87060", fontWeight: "700" }}>Delete</Text>
-                  }
+                  {deleting ? <ActivityIndicator size="small" color="#e87060" /> : <Text style={{ color: "#e87060", fontWeight: "700" }}>Delete</Text>}
                 </TouchableOpacity>
               </View>
             </View>

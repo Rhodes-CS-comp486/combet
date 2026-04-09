@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Appbar, Text } from "react-native-paper";
 import {AppState, DeviceEventEmitter, View} from "react-native";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
 
@@ -10,6 +10,27 @@ import { API_BASE } from "@/constants/api";
 export default function CombetHeader() {
   const [coinBalance, setCoinBalance] = useState<number>(120);
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const prevPathname = useRef<string>(pathname);
+  const lastNonInboxPath = useRef<string>("/(tabs)/index");
+
+  // Track the last non-inbox path so we can return to it
+  useEffect(() => {
+    if (!pathname.includes("/inbox")) {
+      lastNonInboxPath.current = pathname;
+    }
+    prevPathname.current = pathname;
+  }, [pathname]);
+
+  const isOnInbox = pathname === "/inbox" || pathname.includes("/(tabs)/inbox");
+
+  const handleInboxPress = () => {
+    if (isOnInbox) {
+      router.replace(lastNonInboxPath.current as any);
+    } else {
+      router.push("/(tabs)/inbox");
+    }
+  };
 
   const fetchCoins = useCallback(async () => {
     try {
@@ -52,9 +73,9 @@ export default function CombetHeader() {
     >
       {/* Left */}
       <Appbar.Action
-        icon="menu"
+        icon={isOnInbox ? "arrow-left" : "bell-outline"}
         color="#FFFFFF"
-        onPress={() => router.push("/inbox")}
+        onPress={handleInboxPress}
       />
 
       {/* Center */}

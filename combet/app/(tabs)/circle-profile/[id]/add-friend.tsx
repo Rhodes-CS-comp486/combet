@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList } from "react-native";
-import { Text, Searchbar, Surface, Button, Chip } from "react-native-paper";
+import { Text, Searchbar, Button, Chip } from "react-native-paper";
 import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
-import BackHeader from "@/components/Backheader";
+import PageHeader from "@/components/PageHeader";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
-import UserAvatar from "@/components/UserAvatar"; // ← import UserAvatar
+import UserAvatar from "@/components/UserAvatar";
 
 type FriendResult = {
   id: string;
   username: string;
-  avatar_color?: string; // ← added
-  avatar_icon?: string;  // ← added
+  avatar_color?: string;
+  avatar_icon?: string;
   status: "pending" | "accepted" | null;
   invitedByMe?: boolean;
 };
@@ -116,77 +116,55 @@ export default function AddFriendToCircle() {
     );
   };
 
-  const cardBg = isDark ? "#0F2A44" : "#ffffff";
-
   return (
-      <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
-        <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="Add Friends" />
 
-        <Text style={{
-          color: theme.colors.onSurface,
-          fontSize: 28,
-          fontWeight: "300",
-          letterSpacing: 0.5,
-          marginBottom: 20,
-          marginTop: 8,
-        }}>
-          Add Friends
-        </Text>
-
-        <View style={{
-          backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
-          borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 16,
-        }}>
-          <Searchbar
-            placeholder="Search your friends..."
-            value={query}
-            onChangeText={setQuery}
-            style={{ borderRadius: 12, backgroundColor: "transparent", elevation: 0 }}
-            inputStyle={{ color: theme.colors.onSurface }}
-            iconColor={theme.colors.onSurfaceVariant}
-            placeholderTextColor={theme.colors.onSurfaceVariant}
-          />
-        </View>
-
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          ListEmptyComponent={
-            <Text style={{
-              color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 32, fontSize: 14,
-            }}>
-              {query.length > 0 ? "No friends found" : "Search to find friends to add"}
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <View style={{
-              flexDirection: "row", alignItems: "center",
-              backgroundColor: "rgba(255,255,255,0.09)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-              borderRadius: 14, padding: 14, marginBottom: 10,
-            }}>
-              <UserAvatar
-                user={{
-                  display_name: item.username,
-                  username: item.username,
-                  avatar_color: item.avatar_color,
-                  avatar_icon: item.avatar_icon,
-                }}
-                size={44}
-              />
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-                  {item.username}
-                </Text>
-                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-                  @{item.username}
-                </Text>
-              </View>
-              {renderAction(item)}
-            </View>
-          )}
+      <View style={{
+        backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
+        borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 16,
+      }}>
+        <Searchbar
+          placeholder="Search your friends..."
+          value={query}
+          onChangeText={setQuery}
+          style={{ borderRadius: 12, backgroundColor: "transparent", elevation: 0 }}
+          inputStyle={{ color: theme.colors.onSurface }}
+          iconColor={theme.colors.onSurfaceVariant}
+          placeholderTextColor={theme.colors.onSurfaceVariant}
         />
-      </GradientBackground>
-    );
+      </View>
+
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        ListEmptyComponent={
+          <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 32, fontSize: 14 }}>
+            {query.length > 0 ? "No friends found" : "Search to find friends to add"}
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <View style={{
+            flexDirection: "row", alignItems: "center",
+            backgroundColor: "rgba(255,255,255,0.09)",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+            borderRadius: 14, padding: 14, marginBottom: 10,
+          }}>
+            <UserAvatar
+              user={{ display_name: item.username, username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }}
+              size={44}
+            />
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
+                {item.username}
+              </Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>@{item.username}</Text>
+            </View>
+            {renderAction(item)}
+          </View>
+        )}
+      />
+    </GradientBackground>
+  );
 }

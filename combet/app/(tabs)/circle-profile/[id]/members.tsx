@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
-import BackHeader from "@/components/Backheader";
+import PageHeader from "@/components/PageHeader";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
@@ -25,12 +25,9 @@ export default function MembersScreen() {
   const [requests,  setRequests]  = useState<Request[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
 
-
-
   const loadAll = async () => {
     try {
       const sessionId = await getSessionId();
-
       const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId || "" },
       });
@@ -38,7 +35,6 @@ export default function MembersScreen() {
         const data = await histRes.json();
         setMembers(data.members ?? []);
       }
-
       if (isPrivate) {
         const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
           headers: { "x-session-id": sessionId || "" },
@@ -51,9 +47,9 @@ export default function MembersScreen() {
   };
 
   useFocusEffect(useCallback(() => {
-  setMembers([]);
-  setRequests([]);
-  void loadAll();
+    setMembers([]);
+    setRequests([]);
+    void loadAll();
   }, [circleId]));
 
   const handleAccept = async (requestId: string) => {
@@ -112,15 +108,11 @@ export default function MembersScreen() {
               borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
               borderWidth: 1, borderColor: "rgba(157,212,190,0.35)",
             }}>
-              <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600", letterSpacing: 0.5 }}>
-                Creator
-              </Text>
+              <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600", letterSpacing: 0.5 }}>Creator</Text>
             </View>
           )}
         </View>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-          @{item.username}
-        </Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>@{item.username}</Text>
       </View>
       {item.joined_at && (
         <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, opacity: 0.8 }}>
@@ -139,12 +131,8 @@ export default function MembersScreen() {
     }}>
       <UserAvatar user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }} size={44} />
       <View style={{ flex: 1 }}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>
-          {item.username}
-        </Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-          Requested {timeAgo(item.created_at)}
-        </Text>
+        <Text variant="bodyLarge" style={{ color: theme.colors.onSurface, fontWeight: "700" }}>{item.username}</Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Requested {timeAgo(item.created_at)}</Text>
       </View>
       {actioning === item.request_id ? (
         <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -152,19 +140,13 @@ export default function MembersScreen() {
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
             onPress={() => handleDecline(item.request_id)}
-            style={{
-              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
-            }}
+            style={{ borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}
           >
             <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13 }}>Decline</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleAccept(item.request_id)}
-            style={{
-              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-              backgroundColor: theme.colors.primary,
-            }}
+            style={{ borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: theme.colors.primary }}
           >
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Accept</Text>
           </TouchableOpacity>
@@ -174,17 +156,9 @@ export default function MembersScreen() {
   );
 
   return (
-      <GradientBackground style={{ paddingHorizontal: 20, paddingTop: 12 }}>
-      <BackHeader label="Circle Profile" href={`/circle-profile/${circleId}`} />
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="Members" />
 
-      <Text style={{
-        color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
-        letterSpacing: 2, marginBottom: 20,
-      }}>
-        Members
-      </Text>
-
-      {/* ── Tabs — only shown for private circles ── */}
       {isPrivate && (
         <View style={{ flexDirection: "row", marginBottom: 20 }}>
           {(["members", "requests"] as const).map((tab) => {
@@ -209,12 +183,9 @@ export default function MembersScreen() {
                   {tab === "requests" && requests.length > 0 && (
                     <View style={{
                       backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 10,
-                      minWidth: 18, height: 18, alignItems: "center", justifyContent: "center",
-                      paddingHorizontal: 4,
+                      minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
                     }}>
-                      <Text style={{ color: theme.colors.onSurface, fontSize: 11, fontWeight: "600" }}>
-                        {requests.length}
-                      </Text>
+                      <Text style={{ color: theme.colors.onSurface, fontSize: 11, fontWeight: "600" }}>{requests.length}</Text>
                     </View>
                   )}
                 </View>
@@ -224,7 +195,6 @@ export default function MembersScreen() {
         </View>
       )}
 
-      {/* ── Content ── */}
       {activeTab === "members" ? (
         <FlatList
           data={members}
@@ -232,9 +202,7 @@ export default function MembersScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
           renderItem={({ item }) => memberRow(item)}
           ListEmptyComponent={
-            <Text variant="bodyMedium" style={{
-              color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40,
-            }}>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40 }}>
               No members found
             </Text>
           }
@@ -248,9 +216,7 @@ export default function MembersScreen() {
           ListEmptyComponent={
             <View style={{ alignItems: "center", paddingTop: 40 }}>
               <Ionicons name="checkmark-circle-outline" size={40} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>
-                No pending requests
-              </Text>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>No pending requests</Text>
             </View>
           }
         />

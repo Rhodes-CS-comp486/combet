@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { View, ScrollView, Alert, TouchableOpacity, DeviceEventEmitter } from "react-native";
-import { Text, Surface, Button, Portal, Modal } from "react-native-paper";
+import { Text, Button, Portal, Modal } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,8 +10,6 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 
-
-
 type Member    = { id: string; username: string; joined_at: string };
 type BetOption = { id: string; label: string; option_text: string };
 type Bet = {
@@ -20,7 +18,6 @@ type Bet = {
   creator_username: string; my_response: "accepted" | "declined" | null;
   my_selected_option_id: string | null; options: BetOption[];
   is_creator?: boolean;
-
 };
 type Circle      = { circle_id: string; name: string; description?: string; icon?: string; icon_color?: string; created_at: string; is_private?: boolean };
 type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
@@ -31,12 +28,12 @@ export default function CircleProfile() {
   const { id }            = useLocalSearchParams();
   const circleId          = Array.isArray(id) ? id[0] : id;
 
-  const [circle, setCircle]         = useState<Circle | null>(null);
-  const [history, setHistory]       = useState<HistoryData | null>(null);
-  const [activeTab, setActiveTab] = useState<"new" | "open" | "history">("new");  const [responding, setResponding] = useState<string | null>(null);
+  const [circle, setCircle]             = useState<Circle | null>(null);
+  const [history, setHistory]           = useState<HistoryData | null>(null);
+  const [activeTab, setActiveTab]       = useState<"new" | "open" | "history">("new");
+  const [responding, setResponding]     = useState<string | null>(null);
   const [requestCount, setRequestCount] = useState(0);
   const [settlingBet, setSettlingBet]   = useState<any>(null);
-
 
   useFocusEffect(
     useCallback(() => { fetchAll(); }, [circleId])
@@ -125,10 +122,8 @@ export default function CircleProfile() {
 
   if (!circle) return null;
 
-  const cardBg = isDark ? "#0F223A" : "#ffffff";
-
   const actionButtons = [
-    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`),    showBadge: circle.is_private && requestCount > 0 },
+    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`), showBadge: circle.is_private && requestCount > 0 },
     { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),       showBadge: false },
     { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`), showBadge: false },
     { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                  showBadge: false },
@@ -139,12 +134,12 @@ export default function CircleProfile() {
       <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>Loading...</Text>
     );
     const resolvedBets = history.bets.filter((b) =>
-  ["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
-);
+      ["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+    );
     return (
       <View>
         {resolvedBets.map((bet) => (
-            <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
+          <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
         ))}
         {resolvedBets.length === 0 && (
           <View style={{
@@ -164,10 +159,10 @@ export default function CircleProfile() {
   };
 
   const tabs: { key: "new" | "open" | "history"; label: string }[] = [
-  { key: "new",     label: "New"     },
-  { key: "open",    label: "Open"    },
-  { key: "history", label: "History" },
-];
+    { key: "new",     label: "New"     },
+    { key: "open",    label: "Open"    },
+    { key: "history", label: "History" },
+  ];
 
   return (
     <GradientBackground>
@@ -176,13 +171,16 @@ export default function CircleProfile() {
         {/* ── Header row: Back + Chat button ── */}
         <View style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-          paddingHorizontal: 8, paddingTop: 12,
+          paddingHorizontal: 16, paddingTop: 12, marginBottom: 8,
         }}>
-          <Button icon="arrow-left" mode="text" compact
+          {/* Pill back button matching the rest of the app */}
+          <TouchableOpacity
             onPress={() => router.replace("/(tabs)/circles")}
-            labelStyle={{ color: theme.colors.onSurfaceVariant }}>
-            Back
-          </Button>
+            style={{ paddingHorizontal: 4, paddingVertical: 7 }}
+          >
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
             style={{
@@ -190,41 +188,33 @@ export default function CircleProfile() {
               backgroundColor: "rgba(255,255,255,0.08)",
               borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
               borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
-              marginRight: 8,
             }}
           >
             <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
-            <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>Chat</Text>
+            <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>Chat</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Hero ── */}
-        <View style={{ alignItems: "center", paddingTop: 8, paddingBottom: 24, paddingHorizontal: 20 }}>
-          <Surface elevation={2} style={{
-            width: 150, height: 150, borderRadius: 75,
-            backgroundColor: circle.icon_color ?? theme.colors.surface,
-            justifyContent: "center", alignItems: "center", marginBottom: 16,
+        {/* ── Circle hero ── */}
+        <View style={{ alignItems: "center", paddingTop: 16, paddingBottom: 20, paddingHorizontal: 20 }}>
+          <View style={{
+            width: 90, height: 90, borderRadius: 45,
+            backgroundColor: circle.icon_color ?? "#2c4a5e",
+            justifyContent: "center", alignItems: "center", marginBottom: 14,
           }}>
-            <Ionicons name={(circle.icon as any) || "people"} size={70} color="#fff" />
-          </Surface>
+            <Ionicons name={(circle.icon as any) ?? "people"} size={44} color="#fff" />
+          </View>
 
-          <Text variant="headlineSmall" style={{
-            color: theme.colors.onSurface, fontWeight: "300", marginBottom: 6, textAlign: "center",
-          }}>
+          <Text style={{ color: theme.colors.onSurface, fontSize: 22, fontWeight: "600", marginBottom: 6 }}>
             {circle.name}
           </Text>
 
-          {/* Private / Public pill */}
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 4,
             backgroundColor: "rgba(255,255,255,0.07)",
-            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-            marginBottom: 10,
+            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10,
           }}>
-            <Ionicons
-              name={circle.is_private ? "lock-closed" : "globe-outline"}
-              size={11} color={theme.colors.onSurfaceVariant}
-            />
+            <Ionicons name={circle.is_private ? "lock-closed" : "globe-outline"} size={11} color={theme.colors.onSurfaceVariant} />
             <Text style={{ fontSize: 11, fontWeight: "400", color: theme.colors.onSurfaceVariant }}>
               {circle.is_private ? "Private" : "Public"}
             </Text>
@@ -239,7 +229,6 @@ export default function CircleProfile() {
             </Text>
           ) : null}
 
-          {/* Created date */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, opacity: 0.6 }}>
             <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
             <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
@@ -247,7 +236,6 @@ export default function CircleProfile() {
             </Text>
           </View>
 
-          {/* ── Action buttons ── */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
             {actionButtons.map(({ label, icon, onPress, showBadge }) => (
               <TouchableOpacity
@@ -263,11 +251,7 @@ export default function CircleProfile() {
                 <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
                 <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
                 {showBadge && (
-                  <View style={{
-                    width: 7, height: 7, borderRadius: 4,
-                    backgroundColor: "rgba(255,255,255,0.5)",
-                    marginLeft: 2,
-                  }} />
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.5)", marginLeft: 2 }} />
                 )}
               </TouchableOpacity>
             ))}
@@ -301,73 +285,50 @@ export default function CircleProfile() {
 
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
-            {activeTab === "history" ? renderHistory() : (() => {
-              const newBets = history?.bets.filter((b) =>
-                b.my_response == null && b.status?.toUpperCase() === "PENDING"
-              ) ?? [];
+          {activeTab === "history" ? renderHistory() : (() => {
+            const newBets = history?.bets.filter((b) =>
+              b.my_response == null && b.status?.toUpperCase() === "PENDING"
+            ) ?? [];
+            const openBets = history?.bets.filter((b) =>
+              (b.my_response === "accepted" || b.is_creator) &&
+              !["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+            ) ?? [];
 
-              const openBets = history?.bets.filter((b) =>
-                (b.my_response === "accepted" || b.is_creator) &&
-                !["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
-              ) ?? [];
-
-              if (activeTab === "new") {
-                if (newBets.length === 0) return (
-                  <View style={{
-                    borderRadius: 16, padding: 28,
-                    backgroundColor: "rgba(255,255,255,0.07)",
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-                    alignItems: "center",
-                  }}>
-                    <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                    <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-                      No new bets right now
-                    </Text>
-                  </View>
-                );
-                return (
-                  <View>
-                    {newBets.map((bet) => (
-                      <BetCard
-                        key={bet.id} item={bet}
-                        mode="feed"
-                        accepting={responding} setAccepting={setResponding}
-                        onRemove={(id) => setHistory((prev) => prev ? {
-                          ...prev, bets: prev.bets.filter((b) => b.id !== id),
-                        } : prev)}
-                        onRefresh={fetchAll}
-                      />
-                    ))}
-                  </View>
-                );
-              }
-
-              if (openBets.length === 0) return (
-                <View style={{
-                  borderRadius: 16, padding: 28,
-                  backgroundColor: "rgba(255,255,255,0.07)",
-                  borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-                  alignItems: "center",
-                }}>
+            if (activeTab === "new") {
+              if (newBets.length === 0) return (
+                <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
                   <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                  <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-                    No open bets right now
-                  </Text>
+                  <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No new bets right now</Text>
                 </View>
               );
               return (
                 <View>
-                  {openBets.map((bet) => (
+                  {newBets.map((bet) => (
                     <BetCard
-                      key={bet.id} item={bet}
-                      mode="active"
+                      key={bet.id} item={bet} mode="feed"
+                      accepting={responding} setAccepting={setResponding}
+                      onRemove={(id) => setHistory((prev) => prev ? { ...prev, bets: prev.bets.filter((b) => b.id !== id) } : prev)}
                       onRefresh={fetchAll}
-                      onSettle={setSettlingBet}
                     />
                   ))}
                 </View>
               );
-            })()}
+            }
+
+            if (openBets.length === 0) return (
+              <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
+                <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+                <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No open bets right now</Text>
+              </View>
+            );
+            return (
+              <View>
+                {openBets.map((bet) => (
+                  <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
+                ))}
+              </View>
+            );
+          })()}
         </View>
       </ScrollView>
 
@@ -392,11 +353,7 @@ export default function CircleProfile() {
             <TouchableOpacity
               key={opt.id}
               onPress={() => handleSettle(opt)}
-              style={{
-                padding: 14, borderRadius: 12, marginBottom: 8,
-                backgroundColor: "rgba(157,212,190,0.07)",
-                borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-              }}
+              style={{ padding: 14, borderRadius: 12, marginBottom: 8, backgroundColor: "rgba(157,212,190,0.07)", borderWidth: 1, borderColor: "rgba(157,212,190,0.2)" }}
             >
               <Text style={{ color: theme.colors.onSurface, fontWeight: "500", fontSize: 14 }}>
                 {opt.label}. {opt.option_text ?? opt.text}
@@ -411,4 +368,3 @@ export default function CircleProfile() {
     </GradientBackground>
   );
 }
-

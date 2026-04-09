@@ -277,10 +277,11 @@ export default function CircleInboxScreen() {
         {/* ── Header ── */}
         <View style={[styles.header, { borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }]}>
           <TouchableOpacity
-            onPress={() => router.replace(`/circle-profile/${circleId}`)}
+            onPress={() => router.back()}
             style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={22} color={theme.colors.onSurface} />
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} style={{ marginRight: 5 }} />
