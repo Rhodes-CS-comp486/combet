@@ -335,11 +335,40 @@ circlesRouter.delete("/:circleId/leave", requireAuth, async (req: AuthRequest, r
     } else {
       // ── Clean up only this user's data ─────────────────────────────────
 
-      // 1. Remove from circle
+      // 1. Check if the leaving user is the creator
+      const creatorCheck = await client.query(
+        `SELECT is_creator FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
+        [circleId, userId]
+      );
+      const isCreator = creatorCheck.rows[0]?.is_creator === true || creatorCheck.rows[0]?.is_creator === 't';
+
+      // 2. Remove from circle
       await client.query(
         `DELETE FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
         [circleId, userId]
       );
+
+      // 3. If they were the creator, promote the next oldest member
+      if (isCreator) {
+        const nextMember = await client.query(
+          `SELECT user_id FROM circle_members
+           WHERE circle_id = $1 AND status = 'accepted'
+           ORDER BY joined_at ASC NULLS LAST
+           LIMIT 1`,
+          [circleId]
+        );
+        if (nextMember.rows.length) {
+          const newCreatorId = nextMember.rows[0].user_id;
+          await client.query(
+            `UPDATE circle_members SET is_creator = true WHERE circle_id = $1 AND user_id = $2`,
+            [circleId, newCreatorId]
+          );
+          await client.query(
+            `UPDATE circles SET creator_id = $1 WHERE circle_id = $2`,
+            [newCreatorId, circleId]
+          );
+        }
+      }
 
       // 2. Delete their messages in this circle
       await client.query(
