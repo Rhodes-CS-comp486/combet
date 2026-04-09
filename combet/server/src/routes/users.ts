@@ -312,6 +312,22 @@ usersRouter.get("/me/following", requireAuth, async (req, res) => {
   res.json(result.rows);
 });
 
+// ─── Unfollow a User ──────────────────────────────────────────────────────────
+usersRouter.delete("/follows/:userId", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.userId;
+  try {
+    await pool.query(
+      `DELETE FROM follows WHERE follower_id = $1 AND following_id = $2`,
+      [currentUserId, userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /users/follows/:userId error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Another User's Profile ───────────────────────────────────────────────
 usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;

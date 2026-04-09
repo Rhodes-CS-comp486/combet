@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, View, TouchableOpacity } from "react-native";
-import { Text, ActivityIndicator, Button, Divider } from "react-native-paper";
+import { Text, ActivityIndicator, Button, Divider, Portal, Modal } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -93,6 +93,7 @@ export default function UserProfileScreen() {
   const [loading, setLoading]     = useState(true);
   const [actioning, setActioning] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("bets");
+  const [showUnfollowModal, setShowUnfollowModal] = useState(false);
 
   useEffect(() => {
     if (!userId || userId === "undefined") return;
@@ -138,6 +139,27 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleUnfollow = async () => {
+    setShowUnfollowModal(false);
+    setActioning(true);
+    try {
+      const sessionId = await getSessionId();
+      await fetch(`${API_BASE}/users/follows/${profile.id}`, {
+        method: "DELETE",
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      setProfile((prev) => prev ? {
+        ...prev,
+        is_following: false,
+        follow_request_status: null,
+      } : prev);
+    } catch (err) {
+      console.error("Unfollow error:", err);
+    } finally {
+      setActioning(false);
+    }
+  };
+
   if (loading) return (
     <GradientBackground>
       <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 80 }} />
@@ -157,15 +179,19 @@ export default function UserProfileScreen() {
 
   const renderFollowButton = () => {
     if (profile.is_following) return (
-      <View style={{
-        flexDirection: "row", alignItems: "center", gap: 4,
-        backgroundColor: "rgba(157,212,190,0.12)",
-        borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-        borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-      }}>
+      <TouchableOpacity
+        onPress={() => setShowUnfollowModal(true)}
+        style={{
+          flexDirection: "row", alignItems: "center", gap: 4,
+          backgroundColor: "rgba(157,212,190,0.12)",
+          borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
+          borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+        }}
+      >
         <Ionicons name="checkmark" size={12} color="#9dd4be" />
         <Text style={{ color: "#9dd4be", fontSize: 13, fontWeight: "600" }}>Following</Text>
-      </View>
+        <Ionicons name="chevron-down" size={12} color="#9dd4be" style={{ marginLeft: 2 }} />
+      </TouchableOpacity>
     );
     if (profile.follow_request_status === "pending") return (
       <View style={{
@@ -207,6 +233,60 @@ export default function UserProfileScreen() {
 
   return (
     <GradientBackground>
+      <Portal>
+        <Modal
+          visible={showUnfollowModal}
+          onDismiss={() => setShowUnfollowModal(false)}
+          contentContainerStyle={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            backgroundColor: "#1f3347",
+            borderWidth: 1,
+            borderColor: "rgba(157,212,190,0.2)",
+            paddingBottom: 36,
+          }}
+        >
+          <View style={{ padding: 24 }}>
+            {/* Drag handle */}
+            <View style={{
+              width: 36, height: 4, borderRadius: 2,
+              backgroundColor: "rgba(255,255,255,0.2)",
+              alignSelf: "center", marginBottom: 20,
+            }} />
+            <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700", marginBottom: 6, textAlign: "center" }}>
+              Unfollow @{profile.username}?
+            </Text>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginBottom: 24, lineHeight: 20, textAlign: "center" }}>
+              You'll no longer see their updates and will need to follow them again.
+            </Text>
+            <TouchableOpacity
+              onPress={handleUnfollow}
+              style={{
+                backgroundColor: "rgba(232,112,96,0.15)",
+                borderRadius: 12, paddingVertical: 14, alignItems: "center",
+                borderWidth: 1, borderColor: "rgba(232,112,96,0.4)",
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ color: "#e87060", fontSize: 15, fontWeight: "700" }}>Unfollow</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowUnfollowModal(false)}
+              style={{
+                borderRadius: 12, paddingVertical: 14, alignItems: "center",
+                backgroundColor: "rgba(255,255,255,0.07)",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+              }}
+            >
+              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, fontWeight: "600" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      </Portal>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* ── Back ── */}
