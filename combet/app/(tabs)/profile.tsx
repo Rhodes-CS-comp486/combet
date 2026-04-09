@@ -283,12 +283,12 @@ export default function ProfileScreen() {
           <Text variant="bodyMedium" style={s.username}>@{profile?.username}</Text>
 
           <View style={s.followRow}>
-            <TouchableOpacity style={s.followItem}>
+            <TouchableOpacity style={s.followItem} onPress={() => router.push("/user/followers?tab=followers")}>
               <Text variant="bodyMedium" style={s.followCount}>{profile?.followers_count ?? 0}</Text>
               <Text variant="bodySmall" style={s.followLabel}> Followers</Text>
             </TouchableOpacity>
             <View style={s.followDot} />
-            <TouchableOpacity style={s.followItem}>
+            <TouchableOpacity style={s.followItem} onPress={() => router.push("/user/followers?tab=following")}>
               <Text variant="bodyMedium" style={s.followCount}>{profile?.following_count ?? 0}</Text>
               <Text variant="bodySmall" style={s.followLabel}> Following</Text>
             </TouchableOpacity>
