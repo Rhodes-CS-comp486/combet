@@ -195,6 +195,13 @@ export default function InboxScreen() {
   ).length;
   const inviteCount = notifications.filter((n) => n.type === "circle_invite").length;
 
+  const getBadge = (key: FilterKey) => {
+    if (key === "all")           return notifications.length;
+    if (key === "pending")       return pendingCount;
+    if (key === "circle_invite") return inviteCount;
+    return 0;
+  };
+
   const cardBg = "rgba(255,255,255,0.09)";
 
   // ── Notification card ─────────────────────────────────────────────────────
@@ -284,9 +291,9 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDecline(item.invite_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
@@ -341,9 +348,9 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDeclineFollow(item.follow_request_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
@@ -430,9 +437,9 @@ export default function InboxScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => handleDeclineJoinRequest(item.request_id!)}
-                  style={{ flex: 1, borderRadius: 10, borderColor: theme.colors.error }}
+                  style={{ flex: 1, borderRadius: 10, borderColor: "rgba(232,112,96,0.4)", backgroundColor: "rgba(232,112,96,0.12)" }}
                   contentStyle={{ paddingVertical: 2 }}
-                  labelStyle={{ fontWeight: "700", fontSize: 13, color: theme.colors.error }}
+                  labelStyle={{ fontWeight: "700", fontSize: 13, color: "#e87060" }}
                 >
                   Decline
                 </Button>
@@ -537,6 +544,7 @@ export default function InboxScreen() {
         <View style={{ flexDirection: "row" }}>
           {FILTERS.map(({ key, label }) => {
             const active = activeFilter === key;
+            const count  = getBadge(key);
             return (
               <TouchableOpacity
                 key={key}
@@ -553,6 +561,20 @@ export default function InboxScreen() {
                 }}>
                   {label}
                 </Text>
+                {count > 0 && (
+                  <View style={{
+                    marginTop: 4,
+                    backgroundColor: active ? theme.colors.primary : "rgba(255,255,255,0.10)",
+                    borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
+                  }}>
+                    <Text style={{
+                      fontSize: 10, fontWeight: "600",
+                      color: active ? "#fff" : theme.colors.onSurfaceVariant,
+                    }}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}
