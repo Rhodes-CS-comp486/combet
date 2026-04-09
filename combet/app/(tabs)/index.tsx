@@ -10,6 +10,8 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import { router } from "expo-router";
+import ScratchCard from "@/components/Scratchcard";
+
 
 type UserResult   = { type: "user";   id: string; label: string; subtitle: string; isFriend: boolean; avatar_color?: string; avatar_icon?: string; follow_status?: string | null; is_private?: boolean; };
 type CircleResult = { type: "circle"; id: string; label: string; subtitle: string; isFriend: null; joinStatus?: "pending" | "joined" | null; is_private?: boolean; icon?: string; icon_color?: string; };type SearchResult = UserResult | CircleResult;
@@ -37,6 +39,12 @@ export default function HomeScreen() {
   const [settlingBet, setSettlingBet] = useState<any | null>(null);
   const [recentResults, setRecentResults] = useState<any[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [spinModalVisible, setSpinModalVisible] = useState(false);
+  const [spinPrize, setSpinPrize]               = useState<number | null>(null);
+  const [hasSpun, setHasSpun]                   = useState(false);
+   const hasCheckedSpin = useRef(false);
+   const [pendingBalance, setPendingBalance] = useState<number | null>(null);
+
 
   useFocusEffect(useCallback(() => {
       void fetchFeed();
@@ -70,6 +78,33 @@ export default function HomeScreen() {
       void fetchRecentResults();
     }
   }, [activeTab]);
+
+
+useFocusEffect(useCallback(() => {
+  if (hasCheckedSpin.current) return;
+  hasCheckedSpin.current = true;
+  console.log("checking daily spin");
+
+  async function checkDailySpin() {
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/spin`, {
+        method: "POST",
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      const data = await res.json();
+      console.log("spin response:", res.status, data);
+      if (res.ok && data.prize) {
+          setSpinPrize(data.prize);
+            setPendingBalance(data.newBalance);
+            setSpinModalVisible(true);
+        }
+    } catch (err) {
+      console.error("Spin check error:", err);
+    }
+  }
+  void checkDailySpin();
+}, []));
 
   async function fetchActiveBets() {
     try {
@@ -706,6 +741,55 @@ export default function HomeScreen() {
       )}
 
       </View>
+
+        <Portal>
+          <PaperModal
+            visible={spinModalVisible}
+            onDismiss={() => { if (hasSpun) setSpinModalVisible(false); }}
+            contentContainerStyle={{
+              marginHorizontal: 24, marginVertical: 40, borderRadius: 20, padding: 24,
+              backgroundColor: "#3c4a56",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+              alignItems: "center", gap: 8,
+            }}
+          >
+            <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>
+              Daily reward
+            </Text>
+            <Text style={{ color: "rgba(255,255,255,0.38)", fontSize: 13, marginBottom: 20 }}>
+              Scratch to reveal your coins
+            </Text>
+
+            <ScratchCard
+              prize={spinPrize}
+              onRevealComplete={() => {
+                setHasSpun(true);
+                if (pendingBalance !== null) setCoins(pendingBalance);
+              }}
+            />
+
+            {hasSpun && (
+              <>
+                <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 12, marginBottom: 12 }}>
+                  Come back tomorrow
+                </Text>
+                <TouchableOpacity
+                  onPress={() => { setSpinModalVisible(false); void fetchCoins(); }}
+                  style={{
+                    width: "100%", padding: 14, borderRadius: 12,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#e8edf2", fontWeight: "500", fontSize: 15 }}>Claim</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </PaperModal>
+        </Portal>
+
+
 
       <Portal>
         <PaperModal
