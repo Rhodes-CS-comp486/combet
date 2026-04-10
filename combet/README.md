@@ -1,50 +1,136 @@
-# Welcome to your Expo app 👋
+# Combet 
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> A social betting app — make bets, join circles, and settle the score with friends.
 
-## Get started
+Live at [combet.live](https://combet.live)
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Table of Contents
 
-2. Start the app
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Setup & Installation](#setup--installation)
+- [Running the App](#running-the-app)
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Overview
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Combet is a mobile social betting platform where users make friendly bets, organize into circles, follow each other, and track their wins and losses over time. Built with Expo/React Native on the frontend and Express + PostgreSQL on the backend.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## Features
 
-When you're ready, run:
+-  **Bets** — Create, accept, and settle bets with other users
+-  **Circles** — Group friends into themed circles with custom icons and colors
+-  **Profiles** — View bet history across five tabs: All, My Turn, In Progress, Settled, and Circles
+-  **Follow System** — Follow other users; private accounts require follow request approval
+-  **Notifications** — Get notified about circle invites, follow requests, join requests, and bet deadline reminders
+-  **Wins & Losses** — Profile stats that reflect real settled bet outcomes
+-  **Leaderboard** - See how you rank against others across your circles
 
-```bash
-npm run reset-project
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Mobile Frontend | Expo, React Native, TypeScript |
+| Backend | Node.js, Express, TypeScript |
+| Database | PostgreSQL |
+
+---
+
+## Architecture
+
+```
+combet/
+├── frontend/               # Expo/React Native app
+│   ├── app/                # File-based routing (Expo Router)
+│   ├── components/         # Shared UI components (BetCard, etc.)
+│   └── constants/          # AVATAR_ICONS map and other constants
+│
+└── backend/                # Express API server
+    ├── routes/             # Route handlers (users, bets, circles, inbox)
+    ├── db/                 # PostgreSQL pool and query helpers
+    └── jobs/               # Cron jobs (bet deadline reminders)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## Setup & Installation
 
-To learn more about developing your project with Expo, look at the following resources:
+### Prerequisites
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- [Node.js](https://nodejs.org/) v18+
+- [Expo CLI](https://docs.expo.dev/get-started/installation/) — `npm install -g expo-cli`
+- [PostgreSQL](https://www.postgresql.org/) v14+
+- A physical device or simulator (iOS Simulator / Android Emulator)
 
-## Join the community
+### 1. Clone the repository
 
-Join our community of developers creating universal apps.
+```bash
+git clone https://github.com/your-org/combet.git
+cd combet
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 2. Install dependencies
+
+**Backend:**
+```bash
+cd backend
+npm install
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+```
+
+### 3. Configure environment variables
+
+**Backend — create `backend/.env`:**
+```env
+DATABASE_URL=postgresql://your_user:your_password@localhost:5432/combet
+JWT_SECRET=your_jwt_secret
+PORT=3000
+```
+
+**Frontend — create `frontend/.env`:**
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+### 4. Set up the database
+
+```bash
+# Create the database
+createdb combet
+
+# Run migrations
+cd backend
+npm run migrate
+```
+
+---
+
+## Running the App
+
+**Start the backend:**
+```bash
+cd backend
+npm run dev
+```
+
+**Start the frontend (in a separate terminal):**
+```bash
+cd frontend
+npx expo start
+```
+
+Then press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with the [Expo Go](https://expo.dev/go) app on your phone.
