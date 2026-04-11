@@ -31,8 +31,7 @@ Combet is a mobile social betting platform where users make friendly bets, organ
 -  **Follow System** — Follow other users; private accounts require follow request approval
 -  **Notifications** — Get notified about circle invites, follow requests, join requests, and bet deadline reminders
 -  **Wins & Losses** — Profile stats that reflect real settled bet outcomes
--  **Leaderboard** - See how you rank against others across your circles
-
+- **Leaderboard** — See how you rank against others across your circles
 ---
 
 ## Tech Stack
@@ -57,7 +56,7 @@ combet/
 └── backend/                # Express API server
     ├── routes/             # Route handlers (users, bets, circles, inbox)
     ├── db/                 # PostgreSQL pool and query helpers
-    └── jobs/               # Cron jobs (bet deadline reminders)
+    └── jobs/               # Cron jobs (bet deadline reminders, etc.)
 ```
 
 ---
