@@ -53,8 +53,6 @@ messagesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Get All DM Conversations ─────────────────────────────────────────────────
-// GET /messages
-// Returns one row per conversation partner with their latest message
 messagesRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
   const userId = req.userId!;
   try {
@@ -62,15 +60,20 @@ messagesRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
       `
       SELECT DISTINCT ON (other_user_id)
         other_user_id,
-        u.username          AS other_username,
-        u.avatar_color      AS other_avatar_color,
-        u.avatar_icon       AS other_avatar_icon,
-        u.display_name      AS other_display_name,
-        m.content           AS last_message,
-        m.sender_id         AS last_sender_id,
-        m.created_at        AS last_message_at,
+        u.username        AS other_username,
+        u.avatar_color    AS other_avatar_color,
+        u.avatar_icon     AS other_avatar_icon,
+        m.content         AS last_message,
+        m.sender_id       AS last_sender_id,
+        m.created_at      AS last_message_at,
         m.is_read,
-        COUNT(*) FILTER (WHERE m2.is_read = false AND m2.recipient_id = $1) AS unread_count
+        (
+          SELECT COUNT(*) FROM direct_messages unread
+          WHERE unread.sender_id = m.other_user_id
+            AND unread.recipient_id = $1
+            AND unread.is_read = false
+            AND unread.is_request = false
+        ) AS unread_count
       FROM (
         SELECT
           CASE WHEN sender_id = $1 THEN recipient_id ELSE sender_id END AS other_user_id,
@@ -78,16 +81,9 @@ messagesRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         FROM direct_messages
         WHERE (sender_id = $1 OR recipient_id = $1)
           AND (is_request = false OR sender_id = $1)
+        ORDER BY created_at DESC
       ) m
       JOIN users u ON u.id = m.other_user_id
-      LEFT JOIN messages m2
-        ON m2.is_read = false AND m2.recipient_id = $1
-        AND (
-          (m2.sender_id = m.other_user_id AND m2.recipient_id = $1) OR
-          (m2.sender_id = $1 AND m2.recipient_id = m.other_user_id)
-        )
-      GROUP BY other_user_id, u.username, u.avatar_color, u.avatar_icon, u.display_name,
-               m.content, m.sender_id, m.created_at, m.is_read
       ORDER BY other_user_id, m.created_at DESC
       `,
       [userId]
@@ -114,7 +110,6 @@ messagesRouter.get("/requests", requireAuth, async (req: AuthRequest, res) => {
         m.is_read,
         u.id            AS sender_id,
         u.username      AS sender_username,
-        u.display_name  AS sender_display_name,
         u.avatar_color  AS sender_avatar_color,
         u.avatar_icon   AS sender_avatar_icon
       FROM direct_messages m
