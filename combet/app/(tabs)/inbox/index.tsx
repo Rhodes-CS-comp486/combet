@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity } from "react-native";
 import { Text, Button, ActivityIndicator } from "react-native-paper";
@@ -42,25 +42,60 @@ type Notification = {
   bet_closes_at: string | null;
 };
 
-// ── Filter config ────────────────────────────────────────────────────────────
-const FILTERS = [
-  { key: "all",          label: "All",     icon: "notifications-outline" },
-  { key: "pending",      label: "Pending", icon: "time-outline"          },
-  { key: "circle_invite",label: "Invites", icon: "people-outline"        },
+// ── Tab config ───────────────────────────────────────────────────────────────
+const TABS = [
+  { key: "notifications", label: "Notifications" },
+  { key: "messages",      label: "Messages"      },
 ] as const;
 
-type FilterKey = typeof FILTERS[number]["key"];
+type TabKey = typeof TABS[number]["key"];
 
 export default function InboxScreen() {
   const { theme, isDark } = useAppTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading]             = useState(true);
-  const [activeFilter, setActiveFilter]   = useState<FilterKey>("all");
+  const [activeTab, setActiveTab]         = useState<TabKey>("notifications");
   const [actioning, setActioning]         = useState<string | null>(null);
+  const [requestCount, setRequestCount]   = useState(0);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [convoLoading, setConvoLoading]   = useState(false);
 
   useFocusEffect(useCallback(() => {
     void fetchInbox();
+    void fetchRequestCount();
+    void fetchConversations();
   }, []));
+
+  const fetchConversations = async () => {
+    setConvoLoading(true);
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      const res = await fetch(`${API_BASE}/messages`, {
+        headers: { "x-session-id": sessionId },
+      });
+      const data = await res.json();
+      setConversations(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Fetch conversations error:", err);
+    } finally {
+      setConvoLoading(false);
+    }
+  };
+
+  const fetchRequestCount = async () => {
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      const res = await fetch(`${API_BASE}/messages/requests`, {
+        headers: { "x-session-id": sessionId },
+      });
+      const data = await res.json();
+      setRequestCount(Array.isArray(data) ? data.length : 0);
+    } catch (err) {
+      console.error("Fetch request count error:", err);
+    }
+  };
 
   const fetchInbox = async () => {
     try {
@@ -191,32 +226,8 @@ export default function InboxScreen() {
     }
   };
 
-  // ── Filtered list ─────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (activeFilter === "all")     return notifications;
-    if (activeFilter === "pending") return notifications.filter((n) =>
-      (n.type === "circle_invite"       && n.status === "pending") ||
-      (n.type === "follow_request"      && n.follow_request_status === "pending") ||
-      (n.type === "circle_join_request" && n.join_request_status === "pending") ||
-      (n.type === "bet_deadline")
-    );
-    if (activeFilter === "circle_invite") return notifications.filter((n) => n.type === "circle_invite");
-    return notifications;
-  }, [notifications, activeFilter]);
-
-  const pendingCount = notifications.filter((n) =>
-    (n.type === "circle_invite"       && n.status === "pending") ||
-    (n.type === "follow_request"      && n.follow_request_status === "pending") ||
-    (n.type === "circle_join_request" && n.join_request_status === "pending")
-  ).length;
-  const inviteCount = notifications.filter((n) => n.type === "circle_invite").length;
-
-  const getBadge = (key: FilterKey) => {
-    if (key === "all")           return notifications.length;
-    if (key === "pending")       return pendingCount;
-    if (key === "circle_invite") return inviteCount;
-    return 0;
-  };
+  // ── Notifications tab shows all notifications ─────────────────────────────
+  const filtered = notifications;
 
   const cardBg = "rgba(255,255,255,0.09)";
 
@@ -582,15 +593,14 @@ export default function InboxScreen() {
           </Text>
         </View>
 
-        {/* ── Filter tabs ── */}
+        {/* ── Tabs ── */}
         <View style={{ flexDirection: "row" }}>
-          {FILTERS.map(({ key, label }) => {
-            const active = activeFilter === key;
-            const count  = getBadge(key);
+          {TABS.map(({ key, label }) => {
+            const active = activeTab === key;
             return (
               <TouchableOpacity
                 key={key}
-                onPress={() => setActiveFilter(key)}
+                onPress={() => setActiveTab(key)}
                 style={{
                   flex: 1, paddingVertical: 12, alignItems: "center",
                   borderBottomWidth: 2,
@@ -603,28 +613,126 @@ export default function InboxScreen() {
                 }}>
                   {label}
                 </Text>
-                {count > 0 && (
-                  <View style={{
-                    marginTop: 4,
-                    backgroundColor: active ? theme.colors.primary : "rgba(255,255,255,0.10)",
-                    borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1,
-                  }}>
-                    <Text style={{
-                      fontSize: 10, fontWeight: "600",
-                      color: active ? "#fff" : theme.colors.onSurfaceVariant,
-                    }}>
-                      {count}
-                    </Text>
-                  </View>
-                )}
               </TouchableOpacity>
             );
           })}
         </View>
       </View>
 
-      {/* ── Content ── */}
-      {loading ? (
+      {/* ── Tab content ── */}
+      {activeTab === "messages" ? (
+        <View style={{ flex: 1 }}>
+          {/* Requests button row */}
+          <View style={{
+            flexDirection: "row", justifyContent: "flex-end",
+            paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4,
+          }}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/inbox/message-requests")}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 6,
+                borderWidth: 1, borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)",
+                borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "600", color: theme.colors.onSurface }}>
+                Requests
+              </Text>
+              {requestCount > 0 && (
+                <View style={{
+                  backgroundColor: "#e87060", borderRadius: 10,
+                  paddingHorizontal: 6, paddingVertical: 1,
+                }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>{requestCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Conversation list */}
+          {convoLoading ? (
+            <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 40 }} />
+          ) : conversations.length === 0 ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="chatbubble-outline" size={48} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+              <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+                No messages yet
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={conversations}
+              keyExtractor={(item) => item.other_user_id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              renderItem={({ item }) => {
+                const timeAgo = (dateStr: string) => {
+                  const diff  = Date.now() - new Date(dateStr).getTime();
+                  const mins  = Math.floor(diff / 60000);
+                  const hours = Math.floor(diff / 3600000);
+                  const days  = Math.floor(diff / 86400000);
+                  if (mins < 1)   return "now";
+                  if (mins < 60)  return `${mins}m`;
+                  if (hours < 24) return `${hours}h`;
+                  return `${days}d`;
+                };
+                return (
+                  <TouchableOpacity
+                    onPress={() => router.push({
+                      pathname: "/(tabs)/inbox/dm",
+                      params: { userId: item.other_user_id, username: item.other_username },
+                    } as any)}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 12,
+                      paddingHorizontal: 16, paddingVertical: 14,
+                      borderBottomWidth: 1,
+                      borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <UserAvatar
+                      user={{
+                        username:     item.other_username,
+                        avatar_color: item.other_avatar_color,
+                        avatar_icon:  item.other_avatar_icon,
+                      }}
+                      size={48}
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <Text style={{
+                          color: theme.colors.onSurface, fontSize: 15,
+                          fontWeight: item.unread_count > 0 ? "700" : "500",
+                        }}>
+                          @{item.other_username}
+                        </Text>
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+                          {timeAgo(item.last_message_at)}
+                        </Text>
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          color: item.unread_count > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                          fontSize: 13, marginTop: 2,
+                          fontWeight: item.unread_count > 0 ? "600" : "400",
+                        }}
+                      >
+                        {item.last_message}
+                      </Text>
+                    </View>
+                    {item.unread_count > 0 && (
+                      <View style={{
+                        width: 10, height: 10, borderRadius: 5,
+                        backgroundColor: theme.colors.primary,
+                      }} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          )}
+        </View>
+      ) : loading ? (
         <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 60 }} />
       ) : filtered.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -635,7 +743,7 @@ export default function InboxScreen() {
             style={{ marginBottom: 12 }}
           />
           <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            {activeFilter === "all" ? "No notifications yet" : `No ${activeFilter.replace("_", " ")}s`}
+            No notifications yet
           </Text>
         </View>
       ) : (

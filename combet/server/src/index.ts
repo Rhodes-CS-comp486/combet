@@ -11,6 +11,7 @@ import { homefeedRouter }  from "./routes/homefeed";
 import { leaderboardRouter } from "./routes/leaderboard";
 import { adminRouter } from "./routes/admin";
 import { spinRouter } from "./routes/spin";
+import { messagesRouter } from "./routes/messages";
 
 
 
@@ -36,6 +37,7 @@ app.use("/api/homefeed", homefeedRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/spin", spinRouter);
+app.use("/api/messages", messagesRouter);
 
 
 

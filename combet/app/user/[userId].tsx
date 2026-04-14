@@ -389,9 +389,21 @@ export default function UserProfileScreen() {
             </View>
           </View>
 
-          {/* Follow button — below stats */}
-          <View style={{ marginTop: 16 }}>
+          {/* Follow + Message buttons */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 }}>
             {renderFollowButton()}
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/(tabs)/inbox/dm", params: { userId: profile.id, username: profile.username } } as any)}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: "rgba(255,255,255,0.08)",
+                borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+              }}
+            >
+              <Ionicons name="chatbubble-outline" size={14} color={theme.colors.onSurface} />
+              <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "600" }}>Message</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
