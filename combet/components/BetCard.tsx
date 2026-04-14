@@ -42,6 +42,12 @@ export default function BetCard({
 
   const circleIconName  = item.icon       ?? "people-outline";
   const circleIconColor = item.circle_icon_color ?? item.icon_color ?? "rgba(255,255,255,0.08)";
+  const coinName  = item.circle_coin_name ?? null;
+    const coinSymbol = item.circle_coin_symbol ?? "coins";
+    const coinColor  = item.circle_coin_color ?? "#f0c070";
+    const coinIcon   = item.circle_coin_icon ?? null;
+    const coinBg     = coinColor + "1a";
+    const coinBorder = coinColor + "33";
 
   // ── PROFILE (compact) mode ─────────────────────────────────────────────────
   if (mode === "profile") {
@@ -84,13 +90,17 @@ export default function BetCard({
 
           <View style={{ alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
             <View style={{
-              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : "rgba(240,192,112,0.12)",
-              borderColor:     item.custom_stake ? "rgba(99,102,241,0.25)" : "rgba(240,192,112,0.2)",
+              backgroundColor: item.custom_stake ? "rgba(99,102,241,0.1)" : coinBg,
+              borderColor:     item.custom_stake ? "rgba(99,102,241,0.25)" : coinBorder,
               borderWidth: 1, borderRadius: 20,
               paddingHorizontal: 8, paddingVertical: 3,
+              flexDirection: "row", alignItems: "center", gap: 4,
             }}>
-              <Text style={{ color: item.custom_stake ? "#a5b4fc" : DesignTokens.gold, fontWeight: "600", fontSize: 11 }}>
-                {item.custom_stake ?? `${stake} coins`}
+              {!item.custom_stake && coinIcon && (
+                <Ionicons name={coinIcon as any} size={10} color={coinColor} />
+              )}
+              <Text style={{ color: item.custom_stake ? "#a5b4fc" : coinColor, fontWeight: "600", fontSize: 11 }}>
+                {item.custom_stake ?? `${stake} ${coinSymbol}`}
               </Text>
             </View>
             <View style={{
@@ -216,18 +226,21 @@ export default function BetCard({
               </View>
             ) : (
               <View style={{
-                width: 62, height: 62, borderRadius: 31,
-                backgroundColor: "rgba(240,192,112,0.1)",
-                borderWidth: 1, borderColor: "rgba(240,192,112,0.2)",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                <Text style={{ color: DesignTokens.gold, fontWeight: "600", fontSize: 18, lineHeight: 21 }}>
-                  {stake}
-                </Text>
-                <Text style={{ color: "rgba(240,192,112,0.6)", fontSize: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  coins
-                </Text>
-              </View>
+                  width: 62, height: 62, borderRadius: 31,
+                  backgroundColor: coinBg,
+                  borderWidth: 1, borderColor: coinBorder,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  {coinIcon && (
+                    <Ionicons name={coinIcon as any} size={14} color={coinColor} style={{ marginBottom: 1 }} />
+                  )}
+                  <Text style={{ color: coinColor, fontWeight: "600", fontSize: coinIcon ? 14 : 18, lineHeight: 21 }}>
+                    {stake}
+                  </Text>
+                  <Text style={{ color: coinColor + "99", fontSize: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {coinSymbol}
+                  </Text>
+                </View>
             )}
           </View>
         </View>
@@ -244,11 +257,11 @@ export default function BetCard({
           {item.custom_stake ? (
             <Text style={{ fontSize: 14, fontWeight: "500", color: "#a5b4fc" }}>Custom</Text>
           ) : (
-            <Text style={{ fontSize: 20, fontWeight: "300", color: DesignTokens.gold }}>{pot}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "300", color: coinColor }}>{pot}</Text>
           )}
           <Text style={{ fontSize: 9, fontWeight: "500", color: theme.colors.onSurfaceVariant, letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>
-            {item.custom_stake ? "Stakes" : "Coin pot"}
-          </Text>
+              {item.custom_stake ? "Stakes" : coinName ? `${coinSymbol} pot` : "Coin pot"}
+            </Text>
         </View>
         <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.07)", marginVertical: 4 }} />
         <View style={{ flex: 1, alignItems: "center" }}>
@@ -293,7 +306,7 @@ export default function BetCard({
                   </Text>
                   {potentialWin !== null && (
                     <Text style={{ fontSize: 16, fontWeight: "500", color: colors.bar }}>
-                      + {potentialWin} coins
+                      + {potentialWin} {coinSymbol}
                     </Text>
                   )}
                 </View>
@@ -394,18 +407,21 @@ export default function BetCard({
                 </View>
                 {stake > 0 && (
                   <View style={{
-                    width: 64, height: 64, borderRadius: 32,
-                    backgroundColor: iWon ? "rgba(240,192,112,0.1)" : "rgba(232,112,96,0.1)",
-                    borderWidth: 1, borderColor: iWon ? "rgba(240,192,112,0.25)" : "rgba(232,112,96,0.25)",
-                    alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    <Text style={{ color: iWon ? "#f0c070" : "#e87060", fontWeight: "400", fontSize: 18 }}>
-                      {iWon ? `+${payout}` : `-${stake}`}
-                    </Text>
-                    <Text style={{ color: iWon ? "rgba(240,192,112,0.6)" : "rgba(232,112,96,0.6)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                      coins
-                    </Text>
-                  </View>
+                      width: 64, height: 64, borderRadius: 32,
+                      backgroundColor: iWon ? coinBg : "rgba(232,112,96,0.1)",
+                      borderWidth: 1, borderColor: iWon ? coinBorder : "rgba(232,112,96,0.25)",
+                      alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      {iWon && coinIcon && (
+                        <Ionicons name={coinIcon as any} size={12} color={coinColor} style={{ marginBottom: 1 }} />
+                      )}
+                      <Text style={{ color: iWon ? coinColor : "#e87060", fontWeight: "400", fontSize: 18 }}>
+                        {iWon ? `+${payout}` : `-${stake}`}
+                      </Text>
+                      <Text style={{ color: iWon ? coinColor + "99" : "rgba(232,112,96,0.6)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        {iWon ? coinSymbol : "coins"}
+                      </Text>
+                    </View>
                 )}
               </View>
             {!isCreator && !iWon && (

@@ -28,7 +28,8 @@ export default function AddBet() {
   const [options, setOptions]                       = useState<string[]>(["", ""]);
 
   const [stake, setStake]                           = useState("");
-  const [stakeType, setStakeType]                   = useState<"coins" | "custom">("coins");
+  const [stakeType, setStakeType] = useState<"coins" | "circle_coin" | "custom">("coins");
+
   const [customStake, setCustomStake]               = useState("");
 
   const [closeAt, setCloseAt]                       = useState<Date | null>(null);
@@ -48,6 +49,14 @@ export default function AddBet() {
 
   const [selectedTargetColor, setSelectedTargetColor] = useState<string | null>(null);
     const [selectedTargetIcon, setSelectedTargetIcon] = useState<string | null>(null);
+const [circleCoin, setCircleCoin] = useState<{ name: string; symbol: string; color: string; icon: string } | null>(null);
+const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
+
+    useEffect(() => {
+      if (!circleCoin && stakeType === "circle_coin") {
+        setStakeType("coins");
+      }
+    }, [circleCoin]);
 
     useEffect(() => {
       const fetchBalance = async () => {
@@ -102,9 +111,12 @@ export default function AddBet() {
     const canProceedStep2 = options.filter((o) => o.trim()).length >= 2;
 
     const canShowSummary = canProceedStep1 && canProceedStep2 && !!selectedTargetId &&
-    (stakeType === "coins" ? !!stake : !!customStake.trim());
+        (stakeType === "custom" ? !!customStake.trim() : !!stake);
 
-    const stakeExceedsBalance = stakeType === "coins" && coinBalance !== null && Number(stake) > coinBalance;
+    const stakeExceedsBalance =
+      stakeType === "coins"       ? (coinBalance !== null && Number(stake) > coinBalance) :
+      stakeType === "circle_coin" ? (circleCoinBalance !== null && Number(stake) > circleCoinBalance) :
+      false;
     const canSubmit = canShowSummary && creatorOptionIndex !== null && !stakeExceedsBalance;
 
   const handleCreateBet = async () => {
@@ -122,9 +134,10 @@ export default function AddBet() {
         body: JSON.stringify({
           title, description,
 
-            stake:      stakeType === "coins" ? Number(stake) : 0,
+            stake: stakeType !== "custom" ? Number(stake) : 0,
           customStake: stakeType === "custom" ? customStake.trim() : null,
-          closesAt: closeAt ? closeAt.toISOString() : null,
+          useCircleCoin: stakeType === "circle_coin",
+            closesAt: closeAt ? closeAt.toISOString() : null,
           options:    cleanedOptions,
           targetType: postTo === "circles" ? "circle" : "user",
           targetId:   selectedTargetId,
@@ -133,7 +146,11 @@ export default function AddBet() {
       });
 
       const data = await response.json();
-      if (!response.ok) { Alert.alert("Error", data.error || "Failed to create bet"); return; }
+        if (!response.ok) {
+          const errMsg = data.error || "Failed to create bet";
+          typeof window !== "undefined" ? window.alert(errMsg) : Alert.alert("Error", errMsg);
+          return;
+        }
 
       setTitle(""); setDescription(""); setOptions(["", ""]); setStake("");
       setCloseAt(null); setPostTo("circles"); setSelectedTargetId(null); setStep(1);
@@ -404,7 +421,7 @@ export default function AddBet() {
                     </Text>
                   </View>
                   <Pressable
-                      onPress={() => { setSelectedTargetId(null); setSelectedTargetName(null); }}>
+                      onPress={() => { setSelectedTargetId(null); setSelectedTargetName(null); setCircleCoin(null); setCircleCoinBalance(null); }}>
                     <Ionicons name="close-circle-outline" size={20} color={theme.colors.onSurfaceVariant} />
                   </Pressable>
                 </View>
@@ -434,7 +451,17 @@ export default function AddBet() {
                               setSelectedTargetName(name);
                               setSelectedTargetColor(item.icon_color ?? item.avatar_color ?? null);
                               setSelectedTargetIcon(item.icon ?? item.avatar_icon ?? null);
-                              setSearchQuery("");
+                              setCircleCoin(item.coin_name ? {
+                              name: item.coin_name,
+                              symbol: item.coin_symbol ?? item.coin_name,
+                              color: item.coin_color ?? "#f0c070",
+                              icon: item.coin_icon ?? "ellipse",
+                            } : null);
+
+                              console.log("SELECTED TARGET:", item.name ?? item.username, "my_coin_balance:", item.my_coin_balance);
+
+                            setCircleCoinBalance(item.coin_name ? (item.my_coin_balance ?? 0) : null);
+                            setSearchQuery("");
                             }}
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center",
@@ -496,45 +523,64 @@ export default function AddBet() {
                 STAKE & DEADLINE
               </Text>
 
-             <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
-                  {(["coins", "custom"] as const).map((type) => (
-                    <Pressable
-                      key={type}
-                      onPress={() => setStakeType(type)}
-                      style={{
-                        paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-                        backgroundColor: stakeType === type ? "rgba(157,212,190,0.15)" : "transparent",
-                        borderWidth: 1,
-                        borderColor: stakeType === type ? "rgba(157,212,190,0.3)" : "rgba(255,255,255,0.1)",
-                      }}
-                    >
-                      <Text style={{
-                        fontSize: 12, fontWeight: stakeType === type ? "600" : "400",
-                        color: stakeType === type ? theme.colors.primary : theme.colors.onSurfaceVariant,
-                      }}>
-                        {type === "coins" ? "Coins" : "Custom"}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+             {/* Build pills dynamically so circle coin appears as a 3rd option when available */}
+        {(() => {
+          type StakeMode = "coins" | "circle_coin" | "custom";
+          const modes: { key: StakeMode; label: string; icon?: string; color?: string }[] = [
+            { key: "coins", label: "Coins" },
+            ...(circleCoin ? [{ key: "circle_coin" as StakeMode, label: circleCoin.name, icon: circleCoin.icon, color: circleCoin.color }] : []),
+            { key: "custom", label: "Custom" },
+          ];
+          return (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+              {modes.map(({ key, label, icon, color }) => {
+                const active = stakeType === key;
+                const pillColor = color ?? theme.colors.primary;
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => setStakeType(key)}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 5,
+                      paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                      backgroundColor: active ? (color ? `${color}22` : "rgba(157,212,190,0.15)") : "transparent",
+                      borderWidth: 1,
+                      borderColor: active ? (color ? `${color}55` : "rgba(157,212,190,0.3)") : "rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {icon && <Ionicons name={icon as any} size={12} color={active ? pillColor : theme.colors.onSurfaceVariant} />}
+                    <Text style={{ fontSize: 12, fontWeight: active ? "600" : "400", color: active ? pillColor : theme.colors.onSurfaceVariant }}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          );
+        })()}
 
-                {stakeType === "coins" ? (
+                {(stakeType === "coins" || stakeType === "circle_coin") ? (
                   <>
                     <View style={{
                       backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
                       borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 12,
                     }}>
-                      <TextInput label="Stake (coins)" value={stake} onChangeText={setStake}
-                        mode="flat" keyboardType="numeric"
-                        style={{ backgroundColor: "transparent" }}
-                        underlineColor="transparent"
-                        activeUnderlineColor={theme.colors.primary}
-                        theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
-                        left={<TextInput.Icon icon="cash" />} />
+                      <TextInput
+                      label={stakeType === "circle_coin" && circleCoin ? `Stake (${circleCoin.symbol})` : "Stake (coins)"}
+                      value={stake}
+                      onChangeText={setStake}
+                      mode="flat" keyboardType="numeric"
+                      style={{ backgroundColor: "transparent" }}
+                      underlineColor="transparent"
+                      activeUnderlineColor={stakeType === "circle_coin" && circleCoin ? circleCoin.color : theme.colors.primary}
+                      theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
+                      left={<TextInput.Icon icon="cash" />} />
                     </View>
                     {stakeExceedsBalance && (
                       <HelperText type="error" visible>
-                        You only have {coinBalance} coins
+                        {stakeType === "circle_coin"
+                          ? `You only have ${circleCoinBalance} ${circleCoin?.symbol} in this circle`
+                          : `You only have ${coinBalance} coins`}
                       </HelperText>
                     )}
                   </>
@@ -651,27 +697,41 @@ export default function AddBet() {
                     <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>{title}</Text>
                     <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant, marginTop: 2 }}>{selectedTargetName}</Text>
                   </View>
-                  {stakeType === "coins" ? (
-                    <View style={{
-                      width: 72, height: 72, borderRadius: 36,
-                      backgroundColor: "rgba(240,192,112,0.12)",
-                      borderColor: "rgba(240,192,112,0.2)",
-                      borderWidth: 1,
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Text style={{ color: "#f0c070", fontWeight: "700", fontSize: 22 }}>{stake}</Text>
-                      <Text style={{ color: "#f0c070", fontWeight: "400", fontSize: 10, letterSpacing: 1.5 }}>COINS</Text>
-                    </View>
-                  ) : (
-                    <View style={{
-                      backgroundColor: "rgba(240,192,112,0.12)",
-                      borderColor: "rgba(240,192,112,0.2)",
-                      borderWidth: 1, borderRadius: 20,
-                      paddingHorizontal: 12, paddingVertical: 5,
-                    }}>
-                      <Text style={{ color: "#f0c070", fontWeight: "600", fontSize: 12 }}>{customStake}</Text>
-                    </View>
-                  )}
+                  {stakeType === "circle_coin" && circleCoin ? (
+                      <View style={{
+                        width: 72, height: 72, borderRadius: 36,
+                        backgroundColor: `${circleCoin.color}22`,
+                        borderColor: `${circleCoin.color}44`,
+                        borderWidth: 1,
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Ionicons name={circleCoin.icon as any} size={18} color={circleCoin.color} style={{ marginBottom: 2 }} />
+                        <Text style={{ color: circleCoin.color, fontWeight: "700", fontSize: 16 }}>{stake}</Text>
+                        <Text style={{ color: circleCoin.color, fontWeight: "400", fontSize: 10, letterSpacing: 1.5 }}>
+                          {circleCoin.symbol.toUpperCase()}
+                        </Text>
+                      </View>
+                    ) : stakeType === "coins" ? (
+                      <View style={{
+                        width: 72, height: 72, borderRadius: 36,
+                        backgroundColor: "rgba(240,192,112,0.12)",
+                        borderColor: "rgba(240,192,112,0.2)",
+                        borderWidth: 1,
+                        alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Text style={{ color: "#f0c070", fontWeight: "700", fontSize: 22 }}>{stake}</Text>
+                        <Text style={{ color: "#f0c070", fontWeight: "400", fontSize: 10, letterSpacing: 1.5 }}>COINS</Text>
+                      </View>
+                    ) : (
+                      <View style={{
+                          backgroundColor: "rgba(99,102,241,0.1)",
+                          borderColor: "rgba(99,102,241,0.25)",
+                          borderWidth: 1, borderRadius: 20,
+                          paddingHorizontal: 12, paddingVertical: 5,
+                        }}>
+                          <Text style={{ color: "#a5b4fc", fontWeight: "600", fontSize: 12 }}>{customStake}</Text>
+                        </View>
+                    )}
                 </View>
 
                 <Text style={{ fontSize: 12, fontWeight: "400", color: theme.colors.onSurfaceVariant, letterSpacing: 1.2, textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>

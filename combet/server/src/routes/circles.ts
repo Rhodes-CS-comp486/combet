@@ -42,10 +42,12 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
-      `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private
-       FROM circles c
-       JOIN circle_members m ON m.circle_id = c.circle_id
-       WHERE m.user_id = $1`,
+      `SELECT c.circle_id, c.name, c.icon, c.icon_color, c.is_private,
+        c.coin_name, c.coin_symbol, c.coin_description, c.coin_color, c.coin_icon,
+        m.is_creator, m.coin_balance AS my_coin_balance
+         FROM circles c
+         JOIN circle_members m ON m.circle_id = c.circle_id
+         WHERE m.user_id = $1 AND m.status = 'accepted'`,
       [req.userId]
     );
     res.json(result.rows);
@@ -107,7 +109,7 @@ circlesRouter.get("/:id/members", async (req, res) => {
   const circleId = req.params.id;
   try {
     const result = await pool.query(
-      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.is_creator
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.is_creator, cm.coin_balance
        FROM circle_members cm
        JOIN users u ON cm.user_id = u.id
        WHERE cm.circle_id = $1 AND cm.status = 'accepted'`,
@@ -479,15 +481,20 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
   const userId        = req.userId;
 
   try {
-    const circleResult = await pool.query(
-      `SELECT circle_id, name, description, icon, icon_color, created_at FROM circles WHERE circle_id = $1`,
-      [circleId]
-    );
+      const circleResult = await pool.query(
+  `SELECT c.circle_id, c.name, c.description, c.icon, c.icon_color, c.is_private, c.created_at,
+        c.coin_name, c.coin_symbol, c.coin_description, c.coin_color, c.coin_icon,
+        cm.is_creator, cm.coin_balance AS my_coin_balance
+         FROM circles c
+         JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.user_id = $2
+         WHERE c.circle_id = $1`,
+          [circleId, userId]
+        );
     if (!circleResult.rows.length) return res.status(404).json({ error: "Circle not found" });
     const circle = circleResult.rows[0];
 
     const membersResult = await pool.query(
-      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.joined_at, cm.is_creator
+      `SELECT u.id, u.username, u.avatar_color, u.avatar_icon, cm.joined_at, cm.is_creator, cm.coin_balance
        FROM circle_members cm
        JOIN users u ON cm.user_id = u.id
        WHERE cm.circle_id = $1 AND cm.status = 'accepted'
@@ -507,12 +514,17 @@ circlesRouter.get("/:circleId/history", requireAuth, async (req: AuthRequest, re
          b.proposed_winner_option_id,
          (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted')::int AS total_joined,
          br.selected_option_id AS my_option_id,
-         br.status AS my_response,
-         br.selected_option_id AS my_selected_option_id
+             br.status AS my_response,
+        b.custom_stake,
+            CASE WHEN b.use_circle_coin THEN c.coin_name  END AS circle_coin_name,
+            CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+            CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+            CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon
        FROM bets b
        JOIN bet_targets bt ON bt.bet_id = b.id
        JOIN users u ON u.id = b.creator_user_id
        LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $2
+        LEFT JOIN circles c ON c.circle_id = $1
        WHERE bt.target_type = 'circle' AND bt.target_id = $1
        ORDER BY b.created_at DESC`,
       [circleId, userId]
@@ -888,6 +900,153 @@ circlesRouter.get("/:circleId", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("GET circle error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Get Circle Coin ──────────────────────────────────────────────────────────
+circlesRouter.get("/:circleId/coin", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+  try {
+    const member = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!member.rows.length) return res.status(403).json({ error: "Not a member" });
+
+    const result = await pool.query(
+      `SELECT coin_name, coin_symbol, coin_description, coin_color, coin_icon FROM circles WHERE circle_id = $1`,
+      [circleId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Circle not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET COIN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Create Circle Coin ───────────────────────────────────────────────────────
+circlesRouter.post("/:circleId/coin", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+  const { coin_name, coin_symbol, coin_description, coin_color, coin_icon } = req.body;
+
+  if (!coin_name?.trim() || !coin_symbol?.trim())
+    return res.status(400).json({ error: "Name and symbol are required" });
+
+  try {
+    const creator = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND is_creator = true AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!creator.rows.length) return res.status(403).json({ error: "Only the circle creator can mint a coin" });
+
+    const existing = await pool.query(
+      `SELECT coin_name FROM circles WHERE circle_id = $1`,
+      [circleId]
+    );
+    if (existing.rows[0]?.coin_name)
+      return res.status(400).json({ error: "A coin already exists for this circle" });
+
+    const result = await pool.query(
+      `UPDATE circles
+       SET coin_name = $1, coin_symbol = $2, coin_description = $3, coin_color = $4, coin_icon = $5
+       WHERE circle_id = $6
+       RETURNING coin_name, coin_symbol, coin_description, coin_color, coin_icon`,
+      [coin_name.trim(), coin_symbol.trim().toUpperCase(), coin_description?.trim() ?? null, coin_color, coin_icon, circleId]
+    );
+    console.log("COIN CREATE RESULT:", result.rows[0]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("CREATE COIN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Update Circle Coin ───────────────────────────────────────────────────────
+circlesRouter.put("/:circleId/coin", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+  const { coin_name, coin_symbol, coin_description, coin_color, coin_icon } = req.body;
+
+  if (!coin_name?.trim() || !coin_symbol?.trim())
+    return res.status(400).json({ error: "Name and symbol are required" });
+
+  try {
+    const creator = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND is_creator = true AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!creator.rows.length) return res.status(403).json({ error: "Only the circle creator can edit the coin" });
+
+    const result = await pool.query(
+      `UPDATE circles
+       SET coin_name = $1, coin_symbol = $2, coin_description = $3, coin_color = $4, coin_icon = $5
+       WHERE circle_id = $6
+       RETURNING coin_name, coin_symbol, coin_description, coin_color, coin_icon`,
+      [coin_name.trim(), coin_symbol.trim().toUpperCase(), coin_description?.trim() ?? null, coin_color, coin_icon, circleId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Circle not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("UPDATE COIN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Delete Circle Coin ───────────────────────────────────────────────────────
+circlesRouter.delete("/:circleId/coin", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const userId = req.userId;
+  try {
+    const creator = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND is_creator = true AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!creator.rows.length) return res.status(403).json({ error: "Only the circle creator can delete the coin" });
+
+    await pool.query(
+      `UPDATE circle_members SET coin_balance = 0 WHERE circle_id = $1`,
+      [circleId]
+    );
+    await pool.query(
+      `UPDATE circles SET coin_name = NULL, coin_symbol = NULL, coin_description = NULL, coin_color = NULL, coin_icon = NULL WHERE circle_id = $1`,
+      [circleId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE COIN ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Update Member Coin Balance ───────────────────────────────────────────────
+circlesRouter.put("/:circleId/members/:userId/balance", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId, userId: targetUserId } = req.params;
+  const userId = req.userId;
+  const { balance } = req.body;
+
+  if (typeof balance !== "number" || balance < 0)
+    return res.status(400).json({ error: "Invalid balance" });
+
+  try {
+    const creator = await pool.query(
+      `SELECT 1 FROM circle_members WHERE circle_id = $1 AND user_id = $2 AND is_creator = true AND status = 'accepted'`,
+      [circleId, userId]
+    );
+    if (!creator.rows.length) return res.status(403).json({ error: "Only the circle creator can update balances" });
+
+    const result = await pool.query(
+      `UPDATE circle_members SET coin_balance = $1 WHERE circle_id = $2 AND user_id = $3 RETURNING coin_balance`,
+      [balance, circleId, targetUserId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Member not found" });
+    res.json({ coin_balance: result.rows[0].coin_balance });
+  } catch (err) {
+    console.error("UPDATE BALANCE ERROR:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

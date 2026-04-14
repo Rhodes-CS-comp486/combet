@@ -31,6 +31,10 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
         c.name         AS circle_name,
         c.icon         AS icon,
         c.icon_color   AS icon_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_name  END AS circle_coin_name,
+        CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+        CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
         CASE WHEN b.post_to = 'circle' THEN 'circle' ELSE 'user' END AS target_type,
         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', tu.first_name, tu.last_name)), ''), tu.username) AS target_name,
         tu.avatar_color AS target_avatar_color,
@@ -63,8 +67,7 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
            SELECT 1 FROM bet_responses
            WHERE bet_id = b.id AND user_id = $1
          )
-    GROUP BY b.id, br.status, br.selected_option_id, u.first_name, u.last_name, u.username,               u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, b.post_to,
-               tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
+      GROUP BY b.id, br.status, br.selected_option_id, u.first_name, u.last_name, u.username, u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, b.post_to, tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
       ORDER BY b.created_at DESC
       `,
       [req.userId]
@@ -81,7 +84,8 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   const client = await pool.connect();
 
   try {
-      const { title, description, stake, customStake, closesAt, options, targetType, targetId, creatorOptionIndex } = req.body;
+      const { title, description, stake, customStake, useCircleCoin, closesAt, options, targetType, targetId, creatorOptionIndex } = req.body;
+
         const idempotencyKey = req.headers["x-idempotency-key"] as string | undefined;
 
         if (idempotencyKey) {
@@ -97,14 +101,26 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 
     if (!targetType || !targetId) return res.status(400).json({ error: "Target required" });
     if (!title || !options || options.length < 2) return res.status(400).json({ error: "Missing required fields" });
+
     if (!stake && !customStake) return res.status(400).json({ error: "Stake or custom stake required" });
 
-    await client.query("BEGIN");
+    if (stake > 0 && targetType === "circle" && useCircleCoin) {
 
+      const balanceResult = await pool.query(
+        `SELECT coin_balance FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
+        [targetId, creatorUserId]
+      );
+      const coinBalance = balanceResult.rows[0]?.coin_balance ?? 0;
+      if (coinBalance < stake) {
+        return res.status(400).json({ error: "Not enough circle coins", coins: coinBalance });
+      }
+    }
+
+    await client.query("BEGIN");
     const betResult = await client.query(
-      `INSERT INTO bets (title, description, stake_amount, custom_stake, closes_at, creator_user_id, status, post_to, target_id, idempotency_key)
-     VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9) RETURNING id`,
-    [title, description, stake ?? 0, customStake ?? null, closesAt, creatorUserId, targetType, targetId, idempotencyKey ?? null]
+      `INSERT INTO bets (title, description, stake_amount, custom_stake, closes_at, creator_user_id, status, post_to, target_id, idempotency_key, use_circle_coin)
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9, $10) RETURNING id`,
+        [title, description, stake ?? 0, customStake ?? null, closesAt, creatorUserId, targetType, targetId, idempotencyKey ?? null, useCircleCoin ?? false]
     );
 
     const betId = betResult.rows[0].id;
@@ -128,13 +144,22 @@ betsRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
       );
       const optionId = optionResult.rows[0]?.id;
       if (optionId) {
-        if (stake > 0) {
-          await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, creatorUserId]);
-          await client.query(
-            `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
-            [creatorUserId, betId, -stake]
-          );
-        }
+
+          if (stake > 0) {
+              if (!useCircleCoin) {
+                await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, creatorUserId]);
+                await client.query(
+                  `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
+                  [creatorUserId, betId, -stake]
+                );
+              }
+              if (targetType === "circle" && useCircleCoin) {
+                await client.query(
+                  `UPDATE circle_members SET coin_balance = coin_balance - $1 WHERE circle_id = $2 AND user_id = $3`,
+                  [stake, targetId, creatorUserId]
+                );
+              }
+            }
         await client.query(
           `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)
            VALUES ($1, $2, 'accepted', $3)`,
@@ -164,6 +189,7 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
   try {
     await client.query("BEGIN");
 
+
     const betResult = await client.query(`SELECT stake_amount, status FROM bets WHERE id = $1`, [betId]);
     if (!betResult.rows[0]) {
       await client.query("ROLLBACK");
@@ -177,16 +203,29 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
     const userResult = await client.query(`SELECT coins FROM users WHERE id = $1`, [req.userId]);
     const coins = userResult.rows[0]?.coins ?? 0;
 
+    const targetResult = await client.query(
+      `SELECT target_type, target_id FROM bet_targets WHERE bet_id = $1`,
+      [betId]
+    );
+    const isCircleBet = targetResult.rows[0]?.target_type === "circle";
+    const circleId    = targetResult.rows[0]?.target_id;
+
     if (stake > 0) {
       if (coins < stake) {
         await client.query("ROLLBACK");
         return res.status(400).json({ error: "Not enough coins", coins });
       }
-      await client.query(`UPDATE users SET coins = coins - $1 WHERE id = $2`, [stake, req.userId]);
-      await client.query(
-  `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
-  [req.userId, betId, -stake]
-);
+      if (isCircleBet) {
+        const balanceResult = await client.query(
+          `SELECT coin_balance FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
+          [circleId, req.userId]
+        );
+        const coinBalance = balanceResult.rows[0]?.coin_balance ?? 0;
+        if (coinBalance < stake) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ error: "Not enough circle coins", coins: coinBalance });
+        }
+      }
 
     }
 
@@ -291,17 +330,28 @@ betsRouter.post("/:betId/settle", requireAuth, async (req: AuthRequest, res) => 
 
       if (winnerCount > 0) {
         const payout = Math.floor(totalPot / winnerCount);
+        const settleTarget = await client.query(
+  `SELECT target_type, target_id FROM bet_targets WHERE bet_id = $1`,
+          [betId]
+        );
+        const isCircleBet = settleTarget.rows[0]?.target_type === "circle";
+        const circleId    = settleTarget.rows[0]?.target_id;
+
         for (const winner of winners) {
           await client.query(
             `UPDATE users SET coins = coins + $1 WHERE id = $2`,
             [payout, winner.user_id]
           );
-
           await client.query(
-  `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'payout')`,
-              [winner.user_id, betId, payout]
+            `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'payout')`,
+            [winner.user_id, betId, payout]
+          );
+          if (isCircleBet) {
+            await client.query(
+              `UPDATE circle_members SET coin_balance = coin_balance + $1 WHERE circle_id = $2 AND user_id = $3`,
+              [payout, circleId, winner.user_id]
             );
-
+          }
         }
       }
     }
@@ -382,13 +432,26 @@ betsRouter.post("/:betId/cancel", requireAuth, async (req: AuthRequest, res) => 
 
     if (!custom_stake && stake_amount > 0) {
       await client.query(
-        `UPDATE users SET coins = coins + $1
-         WHERE id IN (
-           SELECT user_id FROM bet_responses
-           WHERE bet_id = $2 AND status = 'accepted'
+  `UPDATE users SET coins = coins + $1
+       WHERE id IN (
+         SELECT user_id FROM bet_responses
+         WHERE bet_id = $2 AND status = 'accepted'
+       )`,
+      [stake_amount, betId]
+    );
+    const cancelTarget = await client.query(
+      `SELECT target_type, target_id FROM bet_targets WHERE bet_id = $1`,
+      [betId]
+    );
+    if (cancelTarget.rows[0]?.target_type === "circle") {
+      await client.query(
+        `UPDATE circle_members SET coin_balance = coin_balance + $1
+         WHERE circle_id = $2 AND user_id IN (
+           SELECT user_id FROM bet_responses WHERE bet_id = $3 AND status = 'accepted'
          )`,
-        [stake_amount, betId]
+        [stake_amount, cancelTarget.rows[0].target_id, betId]
       );
+    }
 
       const participants = await client.query(
         `SELECT user_id FROM bet_responses WHERE bet_id = $1 AND status = 'accepted'`,
