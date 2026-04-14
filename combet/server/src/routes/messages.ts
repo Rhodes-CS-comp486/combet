@@ -19,12 +19,24 @@ messagesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: "Cannot message yourself" });
 
   try {
-    // Check if sender follows recipient
-    const followCheck = await pool.query(
-      `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
-      [senderId, recipientId]
+    // is_request = true only if recipient is private AND sender doesn't follow them
+    const recipientCheck = await pool.query(
+      `SELECT is_private FROM users WHERE id = $1`,
+      [recipientId]
     );
-    const isRequest = followCheck.rows.length === 0;
+    if (!recipientCheck.rows.length)
+      return res.status(404).json({ error: "Recipient not found" });
+
+    const isPrivate = recipientCheck.rows[0].is_private;
+    let isRequest = false;
+
+    if (isPrivate) {
+      const followCheck = await pool.query(
+        `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
+        [senderId, recipientId]
+      );
+      isRequest = followCheck.rows.length === 0;
+    }
 
     const result = await pool.query(
       `INSERT INTO direct_messages (sender_id, recipient_id, content, is_request, is_read, created_at)
@@ -65,7 +77,7 @@ messagesRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
           message_id, content, sender_id, recipient_id, created_at, is_read
         FROM direct_messages
         WHERE (sender_id = $1 OR recipient_id = $1)
-          AND is_request = false
+          AND (is_request = false OR sender_id = $1)
       ) m
       JOIN users u ON u.id = m.other_user_id
       LEFT JOIN messages m2
@@ -136,7 +148,7 @@ messagesRouter.get("/:otherUserId", requireAuth, async (req: AuthRequest, res) =
         m.is_read,
         m.created_at
       FROM direct_messages m
-      WHERE is_request = false
+      WHERE (is_request = false OR m.sender_id = $1)
         AND (
           (m.sender_id = $1 AND m.recipient_id = $2) OR
           (m.sender_id = $2 AND m.recipient_id = $1)
