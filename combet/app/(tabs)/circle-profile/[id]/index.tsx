@@ -19,7 +19,13 @@ type Bet = {
   my_selected_option_id: string | null; options: BetOption[];
   is_creator?: boolean;
 };
-type Circle      = { circle_id: string; name: string; description?: string; icon?: string; icon_color?: string; created_at: string; is_private?: boolean };
+
+type Circle = {
+  circle_id: string; name: string; description?: string; icon?: string;
+  icon_color?: string; created_at: string; is_private?: boolean; is_creator?: boolean;
+  coin_name?: string; coin_symbol?: string; coin_color?: string; coin_icon?: string;
+  my_coin_balance?: number;
+};
 type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 
 export default function CircleProfile() {
@@ -54,9 +60,12 @@ export default function CircleProfile() {
         headers: { "x-session-id": sessionId ?? "" },
       });
       if (histRes.ok) {
-        setHistory(await histRes.json());
-        setIsMember(true);
-      } else {
+          const histData = await histRes.json();
+          setHistory(histData);
+          setCircle(histData.circle);
+          setIsMember(true);
+        }
+       else {
         setIsMember(false);
       }
 
@@ -136,12 +145,19 @@ export default function CircleProfile() {
   if (!circle) return null;
 
   const allActionButtons = [
-    { label: "Members",  icon: "people",       onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}`), showBadge: circle.is_private && requestCount > 0, memberOnly: false },
-    { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),       showBadge: false, memberOnly: true },
-    { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`), showBadge: false, memberOnly: true },
-    { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                  showBadge: false, memberOnly: true },
+
+      { label: "Members", icon: "people", onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}&isCreator=${circle.is_creator ? "1" : "0"}&hasCoin=${circle.coin_name ? "1" : "0"}&coinName=${encodeURIComponent(circle.coin_name ?? "")}&coinColor=${encodeURIComponent(circle.coin_color ?? "")}&coinIcon=${encodeURIComponent(circle.coin_icon ?? "")}&coinSymbol=${encodeURIComponent(circle.coin_symbol ?? "")}`), showBadge: circle.is_private && requestCount > 0, memberOnly: false, creatorOnly: false, privateOnly: false },
+        { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),        showBadge: false, memberOnly: true, creatorOnly: false,  privateOnly: false },
+        { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`),  showBadge: false, memberOnly: true, creatorOnly: false, privateOnly: false },
+        { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                   showBadge: false, memberOnly: true, creatorOnly: false, privateOnly: false },
+        { label: "Coin",     icon: "cash-outline", onPress: () => router.push(`/circle-profile/${circleId}/coin`),        showBadge: false, memberOnly: true, creatorOnly: true,  privateOnly: true  },
   ];
-  const actionButtons = allActionButtons.filter(b => !b.memberOnly || isMember);
+
+  const actionButtons = allActionButtons.filter(b =>
+  (!b.memberOnly || isMember) &&
+  (!b.creatorOnly || circle?.is_creator) &&
+  (!b.privateOnly || circle?.is_private)
+);
 
   const renderHistory = () => {
     if (!history) return (
@@ -249,12 +265,31 @@ export default function CircleProfile() {
             </Text>
           ) : null}
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, opacity: 0.6 }}>
-            <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
-            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              Created {circle.created_at ? formatDate(circle.created_at) : ""}
-            </Text>
-          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12, opacity: 0.6 }}>
+  <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
+  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+    Created {circle.created_at ? formatDate(circle.created_at) : ""}
+  </Text>
+</View>
+
+{circle.coin_name && (
+  <TouchableOpacity
+    activeOpacity={0.75}
+    onPress={() => circle.is_creator ? router.push(`/circle-profile/${circleId}/coin`) : null}
+    style={{
+      flexDirection: "row", alignItems: "center", gap: 6,
+      backgroundColor: (circle.coin_color ?? "#f0c070") + "1a",
+      borderWidth: 1, borderColor: (circle.coin_color ?? "#f0c070") + "44",
+      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+      marginBottom: 20,
+    }}
+  >
+    <Ionicons name={(circle.coin_icon ?? "ellipse") as any} size={13} color={circle.coin_color ?? "#f0c070"} />
+    <Text style={{ color: circle.coin_color ?? "#f0c070", fontSize: 13, fontWeight: "600" }}>
+      {circle.coin_name}  •  {circle.my_coin_balance ?? 0} {circle.coin_symbol}
+    </Text>
+  </TouchableOpacity>
+)}
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
             {isMember === null ? null : (

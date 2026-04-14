@@ -674,8 +674,8 @@ useFocusEffect(useCallback(() => {
                               borderWidth: 1, borderColor: "rgba(240,192,112,0.3)",
                               alignItems: "center", justifyContent: "center",
                             }}>
-                              <Text style={{ color: DesignTokens.gold, fontWeight: "400", fontSize: 13, lineHeight: 18 }}>+{payout}</Text>
-                              <Text style={{ color: "rgba(240,192,112,0.6)", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>coins</Text>
+                               <Text style={{ color: item.circle_coin_color ?? DesignTokens.gold, fontWeight: "400", fontSize: 13, lineHeight: 18 }}>+{payout}</Text>
+                               <Text style={{ color: (item.circle_coin_color ?? "rgba(240,192,112,0.6)") + "99", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{item.circle_coin_symbol ?? "coins"}</Text>
                             </View>
                           ) : !iWon && stake > 0 ? (
                            <View style={{
@@ -685,7 +685,7 @@ useFocusEffect(useCallback(() => {
                               alignItems: "center", justifyContent: "center",
                             }}>
                               <Text style={{ color: "#e87060", fontWeight: "400", fontSize: 13, lineHeight: 18 }}>-{stake}</Text>
-                              <Text style={{ color: "rgba(232,112,96,0.6)", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>coins</Text>
+                               <Text style={{ color: "rgba(232,112,96,0.6)", fontSize: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{item.circle_coin_symbol ?? "coins"}</Text>
                             </View>
                           ) : item.custom_stake ? (
                             <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }} numberOfLines={1}>{item.custom_stake}</Text>

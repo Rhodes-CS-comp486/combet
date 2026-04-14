@@ -24,6 +24,10 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
           ELSE 'ellipse-outline'
         END AS icon,
         c.icon_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_name  END AS circle_coin_name,
+        CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+        CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
         creator.username          AS creator_username,
         creator.avatar_color      AS creator_avatar_color,
         creator.avatar_icon       AS creator_avatar_icon,
@@ -87,6 +91,10 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         c.name,
         c.icon,
         c.icon_color,
+        c.coin_name,
+        c.coin_symbol,
+        c.coin_color,
+        c.coin_icon,
         target_user.username
       ORDER BY b.created_at DESC
       `,
@@ -129,6 +137,10 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
         target_user.avatar_color AS target_avatar_color,
         target_user.avatar_icon AS target_avatar_icon,
         c.icon_color AS circle_icon_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_name  END AS circle_coin_name,
+        CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+        CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
         bt.target_type,
         CASE
           WHEN bt.target_type = 'circle' THEN c.name
@@ -186,6 +198,10 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
         c.name,
         c.icon,
         c.icon_color,
+        c.coin_name,
+        c.coin_symbol,
+        c.coin_color,
+        c.coin_icon,
         target_user.avatar_color,
         target_user.avatar_icon,
         target_user.username,
@@ -228,6 +244,10 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
         target_user.avatar_icon AS target_avatar_icon,
         COALESCE(c.icon, 'people') AS circle_icon,
         c.icon_color AS circle_icon_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_name  END AS circle_coin_name,
+        CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+        CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
         CASE
           WHEN bt.target_type = 'circle' THEN c.name
           WHEN bt.target_type = 'user' THEN target_user.username
@@ -248,7 +268,7 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
       WHERE
         (b.creator_user_id = $1 OR my_response.user_id = $1)
         AND b.status = 'SETTLED'
-      GROUP BY b.id, b.creator_user_id, my_response.selected_option_id, creator.username, creator.avatar_color, creator.avatar_icon, bt.target_type, c.name, c.icon, c.icon_color, target_user.username, target_user.avatar_color, target_user.avatar_icon
+      GROUP BY b.id, b.creator_user_id, my_response.selected_option_id, creator.username, creator.avatar_color, creator.avatar_icon, bt.target_type, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, target_user.username, target_user.avatar_color, target_user.avatar_icon
       ORDER BY b.updated_at DESC
       LIMIT 5
       `,

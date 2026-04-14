@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, FlatList, TouchableOpacity } from "react-native";
-import { Text, ActivityIndicator } from "react-native-paper";
+import { View, FlatList, TouchableOpacity, Alert} from "react-native";
+import { Text, ActivityIndicator, TextInput } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
@@ -11,7 +11,7 @@ import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
 
-type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string; is_creator?: boolean };
+type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string; is_creator?: boolean; coin_balance?: number };
 type Request = { request_id: string; user_id: string; username: string; created_at: string; avatar_color?: string; avatar_icon?: string };
 
 export default function MembersScreen() {
@@ -19,6 +19,17 @@ export default function MembersScreen() {
   const params    = useLocalSearchParams();
   const circleId  = params.id as string;
   const isPrivate = params.isPrivate === "1";
+
+  const isCreator  = params.isCreator === "1";
+    const hasCoin    = params.hasCoin === "1";
+    const coinName   = decodeURIComponent(params.coinName as string ?? "");
+    const coinColor  = decodeURIComponent(params.coinColor as string ?? "#f0c070");
+    const coinIcon   = decodeURIComponent(params.coinIcon as string ?? "ellipse");
+    const coinSymbol = decodeURIComponent(params.coinSymbol as string ?? "");
+
+    const [editingMemberId,  setEditingMemberId]  = useState<string | null>(null);
+    const [editingBalance,   setEditingBalance]   = useState<string>("");
+    const [savingBalance,    setSavingBalance]    = useState(false);
 
   const [activeTab, setActiveTab] = useState<"members" | "requests">("members");
   const [members,   setMembers]   = useState<Member[]>([]);
@@ -76,6 +87,35 @@ export default function MembersScreen() {
     finally { setActioning(null); }
   };
 
+  const handleBalanceSave = async (memberId: string) => {
+      const newBalance = parseInt(editingBalance);
+      if (isNaN(newBalance) || newBalance < 0) {
+        Alert.alert("Invalid", "Please enter a valid balance.");
+        return;
+      }
+      setSavingBalance(true);
+      try {
+        const sessionId = await getSessionId();
+        const res = await fetch(`${API_BASE}/circles/${circleId}/members/${memberId}/balance`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "x-session-id": sessionId || "" },
+          body: JSON.stringify({ balance: newBalance }),
+        });
+        if (res.ok) {
+          setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, coin_balance: newBalance } : m));
+          setEditingMemberId(null);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          Alert.alert("Error", data.error || "Could not update balance");
+        }
+      } catch {
+        Alert.alert("Network Error", "Could not connect to server");
+      } finally {
+        setSavingBalance(false);
+      }
+    };
+
+
   const timeAgo = (dateStr: string) => {
     const diff  = Date.now() - new Date(dateStr).getTime();
     const mins  = Math.floor(diff / 60000);
@@ -87,7 +127,12 @@ export default function MembersScreen() {
     return `${days}d ago`;
   };
 
-  const memberRow = (item: Member) => (
+  const memberRow = (item: Member) => {
+  const isEditing = editingMemberId === item.id;
+  const coinBg     = coinColor + "1a";
+  const coinBorder = coinColor + "44";
+
+  return (
     <TouchableOpacity
       onPress={() => router.push(`/user/${item.id}`)}
       activeOpacity={0.75}
@@ -118,13 +163,74 @@ export default function MembersScreen() {
         </View>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>@{item.username}</Text>
       </View>
-      {item.joined_at && (
-        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, opacity: 0.8 }}>
-          Joined {new Date(item.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-        </Text>
+
+      {hasCoin && (
+        <View style={{ alignItems: "flex-end", gap: 6 }}>
+          {isEditing ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{
+                backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 8,
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                width: 70, height: 36, justifyContent: "center",
+              }}>
+                <TextInput
+                  value={editingBalance}
+                  onChangeText={setEditingBalance}
+                  keyboardType="numeric"
+                  mode="flat"
+                  style={{ backgroundColor: "transparent", height: 36, fontSize: 13, textAlign: "center" }}
+                  underlineColor="transparent"
+                  activeUnderlineColor={coinColor}
+                  textColor={theme.colors.onSurface}
+                  theme={{ colors: { primary: coinColor } }}
+                  autoFocus
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => handleBalanceSave(item.id)}
+                disabled={savingBalance}
+                style={{
+                  backgroundColor: coinBg, borderWidth: 1, borderColor: coinBorder,
+                  borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+                }}
+              >
+                {savingBalance
+                  ? <ActivityIndicator size={12} color={coinColor} />
+                  : <Text style={{ color: coinColor, fontSize: 12, fontWeight: "600" }}>Save</Text>
+                }
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingMemberId(null)}>
+                <Ionicons name="close-circle-outline" size={20} color={theme.colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={(e) => {
+                if (isCreator) {
+                  e.stopPropagation?.();
+                  setEditingMemberId(item.id);
+                  setEditingBalance(String(item.coin_balance ?? 0));
+                }
+              }}
+              activeOpacity={isCreator ? 0.7 : 1}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 5,
+                backgroundColor: coinBg, borderWidth: 1, borderColor: coinBorder,
+                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+              }}
+            >
+              <Ionicons name={coinIcon as any} size={12} color={coinColor} />
+              <Text style={{ color: coinColor, fontSize: 12, fontWeight: "600" }}>
+                {item.coin_balance ?? 0}
+              </Text>
+              {isCreator && <Ionicons name="pencil" size={10} color={coinColor} style={{ opacity: 0.6 }} />}
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </TouchableOpacity>
   );
+};
 
   const requestRow = (item: Request) => (
     <View style={{
