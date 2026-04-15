@@ -102,10 +102,11 @@ export default function TabLayout() {
         />
 
         {/* ── Hidden screens (no tab button) ─────────────────────────── */}
-        <Tabs.Screen name="inbox"                          options={{ href: null, headerShown: false }} />
-        <Tabs.Screen name="inbox/index"                    options={{ href: null, headerShown: false }} />
-        <Tabs.Screen name="inbox/message-requests"         options={{ href: null, headerShown: false }} />
-        <Tabs.Screen name="inbox/dm"                       options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="inbox"                              options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="inbox/index"                        options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="inbox/dm"                           options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="inbox/message-requests"             options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="inbox/message-request-thread"       options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="add-bet"                        options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="circle-profile/[id]/index"      options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="circle-profile/[id]/edit"       options={{ href: null, headerShown: false }} />

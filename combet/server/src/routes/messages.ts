@@ -141,8 +141,12 @@ messagesRouter.get("/:otherUserId", requireAuth, async (req: AuthRequest, res) =
         m.recipient_id,
         m.content,
         m.is_read,
-        m.created_at
+        m.created_at,
+        u.username      AS sender_username,
+        u.avatar_color  AS sender_avatar_color,
+        u.avatar_icon   AS sender_avatar_icon
       FROM direct_messages m
+      JOIN users u ON u.id = m.sender_id
       WHERE (is_request = false OR m.sender_id = $1)
         AND (
           (m.sender_id = $1 AND m.recipient_id = $2) OR
