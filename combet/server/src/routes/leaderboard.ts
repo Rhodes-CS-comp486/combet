@@ -9,12 +9,17 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
   const userId = req.userId;
   const period = (req.query.period as string) ?? "week";
 
-  const intervalMap: Record<string, string> = {
-    week:    "7 days",
-    month:   "30 days",
-    alltime: "100 years",
-  };
-  const interval = intervalMap[period] ?? "7 days";
+  const periodStart = period === "week"
+      ? `DATE_TRUNC('week', NOW())`
+      : period === "month"
+      ? `DATE_TRUNC('month', NOW())`
+      : `NOW() - INTERVAL '100 years'`;
+
+  const prevPeriodStart = period === "week"
+      ? `DATE_TRUNC('week', NOW()) - INTERVAL '7 days'`
+      : period === "month"
+      ? `DATE_TRUNC('month', NOW()) - INTERVAL '1 month'`
+      : `NOW() - INTERVAL '200 years'`;
 
   try {
     // ── Scoped user pool: people who share a circle with the current user ──
@@ -33,8 +38,8 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
           ct.user_id,
           COALESCE(SUM(ct.amount) FILTER (WHERE ct.type = 'payout'), 0) AS prev_coins_won
         FROM coin_transactions ct
-        WHERE ct.created_at >= NOW() - INTERVAL '${interval}' * 2
-          AND ct.created_at <  NOW() - INTERVAL '${interval}'
+        WHERE ct.created_at >= ${prevPeriodStart}
+        AND ct.created_at <  ${periodStart}
           AND ct.user_id IN (SELECT user_id FROM circle_peers)
         GROUP BY ct.user_id
       )
@@ -44,13 +49,13 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         u.avatar_color,
         u.avatar_icon,
         COALESCE(SUM(ct.amount) FILTER (WHERE ct.type = 'payout'), 0) AS coins_won,
-        COALESCE(SUM(ABS(ct.amount)) FILTER (WHERE ct.type = 'stake'), 0) AS coins_staked,
+        COALESCE(SUM(ABS(ct.amount)) FILTER (WHERE ct.type = 'stake'), 0) - COALESCE(SUM(ct.amount) FILTER (WHERE ct.type = 'refund'), 0) AS coins_staked,
         COALESCE(pp.prev_coins_won, 0) AS prev_coins_won
       FROM users u
       JOIN circle_peers cp ON cp.user_id = u.id
       LEFT JOIN coin_transactions ct
         ON ct.user_id = u.id
-        AND ct.created_at >= NOW() - INTERVAL '${interval}'
+          AND ct.created_at >= ${periodStart}
       LEFT JOIN prev_period pp ON pp.user_id = u.id
       GROUP BY u.id, u.first_name, u.last_name, u.username,
                u.avatar_color, u.avatar_icon, pp.prev_coins_won
@@ -79,7 +84,7 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         WHERE b.status = 'SETTLED'
           AND br.status = 'accepted'
           AND br.user_id IN (SELECT user_id FROM circle_peers)
-          AND b.updated_at >= NOW() - INTERVAL '${interval}'
+        AND b.updated_at >= ${periodStart}
       ),
       streak_calc AS (
         SELECT
@@ -92,7 +97,7 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
       current_streaks AS (
         SELECT user_id, result, COUNT(*) AS streak
         FROM streak_calc
-        WHERE rn = grp
+        WHERE rn <= grp
         GROUP BY user_id, result
       )
       SELECT
@@ -123,7 +128,7 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
       JOIN bets b ON b.id = br.bet_id
       WHERE br.status = 'accepted'
         AND br.user_id IN (SELECT user_id FROM circle_peers)
-        AND b.created_at >= NOW() - INTERVAL '${interval}'
+        AND b.created_at >= ${periodStart}      
       GROUP BY br.user_id
       ORDER BY bets_placed DESC
       LIMIT 1
@@ -151,7 +156,7 @@ leaderboardRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
       JOIN circle_members my_mem ON my_mem.circle_id = c.circle_id AND my_mem.user_id = $1
       LEFT JOIN bets b ON b.target_id::uuid = c.circle_id
         AND b.post_to = 'circle'
-        AND b.created_at >= NOW() - INTERVAL '${interval}'
+      AND b.created_at >= ${periodStart}
       GROUP BY c.circle_id, c.name, c.icon, c.icon_color
       ORDER BY coins_wagered DESC, bet_count DESC, member_count DESC
       `,

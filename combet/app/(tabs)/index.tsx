@@ -3,7 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity, ScrollView, Pressable } from "react-native";
 import { Text, Searchbar, ActivityIndicator, Button, Divider, Portal, Modal as PaperModal } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { getSessionId } from "@/components/sessionStore";
+import { getSessionId, getLastSpinDate, setLastSpinDate } from "@/components/sessionStore";
 import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
@@ -79,32 +79,35 @@ export default function HomeScreen() {
     }
   }, [activeTab]);
 
+    useFocusEffect(useCallback(() => {
+      if (hasCheckedSpin.current) return;
+      hasCheckedSpin.current = true;
 
-useFocusEffect(useCallback(() => {
-  if (hasCheckedSpin.current) return;
-  hasCheckedSpin.current = true;
-  console.log("checking daily spin");
+      async function checkDailySpin() {
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          const lastSpin = await getLastSpinDate();
+          if (lastSpin === today) return;
 
-  async function checkDailySpin() {
-    try {
-      const sessionId = await getSessionId();
-      const res = await fetch(`${API_BASE}/spin`, {
-        method: "POST",
-        headers: { "x-session-id": sessionId ?? "" },
-      });
-      const data = await res.json();
-      console.log("spin response:", res.status, data);
-      if (res.ok && data.prize) {
-          setSpinPrize(data.prize);
+          const sessionId = await getSessionId();
+          const res = await fetch(`${API_BASE}/spin`, {
+            method: "POST",
+            headers: { "x-session-id": sessionId ?? "" },
+          });
+          const data = await res.json();
+          if (res.ok && data.prize) {
+            await setLastSpinDate(today);
+            setSpinPrize(data.prize);
             setPendingBalance(data.newBalance);
             setSpinModalVisible(true);
+          }
+        } catch (err) {
+          console.error("Spin check error:", err);
         }
-    } catch (err) {
-      console.error("Spin check error:", err);
-    }
-  }
-  void checkDailySpin();
-}, []));
+      }
+      void checkDailySpin();
+    }, []));
+
 
   async function fetchActiveBets() {
     try {
