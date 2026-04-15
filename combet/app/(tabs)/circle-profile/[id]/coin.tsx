@@ -9,6 +9,8 @@ import { useAppTheme } from "@/context/ThemeContext";
 import PageHeader from "@/components/PageHeader";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import { Filter } from "bad-words";
+const filter = new Filter();
 
 const COIN_COLORS = [
   "#FF0A54", "#FF4D6D", "#FF006E", "#FB5607", "#FFD60A",
@@ -46,6 +48,8 @@ export default function CoinScreen() {
   const [color,       setColor]       = useState(COIN_COLORS[4]);
   const [icon,        setIcon]        = useState(COIN_ICONS[0]);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   useFocusEffect(useCallback(() => {
     void loadCoin();
   }, [circleId]));
@@ -81,6 +85,16 @@ export default function CoinScreen() {
       Alert.alert("Missing fields", "Please add a name and symbol.");
       return;
     }
+
+    if (
+      filter.isProfane(name.trim().replace(/[^a-zA-Z\s]/g, " ")) ||
+      filter.isProfane(symbol.trim().replace(/[^a-zA-Z\s]/g, " ")) ||
+      (description && filter.isProfane(description.trim().replace(/[^a-zA-Z\s]/g, " ")))
+    ) {
+      setErrorMsg("Please remove inappropriate language before saving.");
+      return;
+    }
+
     setSaving(true);
     try {
       const sessionId = await getSessionId();
@@ -385,6 +399,13 @@ export default function CoinScreen() {
             ))}
           </View>
         </View>
+
+          {errorMsg && (
+              <Text style={{ color: "#e87060", marginBottom: 8, textAlign: "center", fontSize: 13 }}>
+                {errorMsg}
+              </Text>
+            )}
+
 
         {/* ── ACTIONS ── */}
         <Button

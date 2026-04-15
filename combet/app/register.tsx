@@ -7,6 +7,8 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { View } from "react-native";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
+import { Filter } from "bad-words";
+const filter = new Filter();
 
 
 
@@ -27,6 +29,25 @@ export default function Register() {
 
     if (!first_name || !last_name || !username || !email || !password) {
       setErrorMsg("Please fill out all fields.");
+      return;
+    }
+
+    console.log("checking profanity for:", username.trim());
+    console.log("result:", filter.isProfane(username.trim()));
+
+    if (filter.isProfane(username.trim().replace(/[^a-zA-Z\s]/g, " "))) {
+      setErrorMsg("Username contains inappropriate language.");
+      return;
+    }
+
+    if (filter.isProfane(username.trim().replace(/[^a-zA-Z\s]/g, " "))) {
+      setErrorMsg("Username contains inappropriate language.");
+      return;
+    }
+
+    if (filter.isProfane(first_name.trim().replace(/[^a-zA-Z\s]/g, " ")) ||
+        filter.isProfane(last_name.trim().replace(/[^a-zA-Z\s]/g, " "))) {
+      setErrorMsg("Name contains inappropriate language.");
       return;
     }
 

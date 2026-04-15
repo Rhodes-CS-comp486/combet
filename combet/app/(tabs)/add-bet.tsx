@@ -17,7 +17,8 @@ import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
-
+import { Filter } from "bad-words";
+const filter = new Filter();
 
 export default function AddBet() {
   const { theme, isDark } = useAppTheme();
@@ -122,6 +123,13 @@ const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
   const handleCreateBet = async () => {
     try {
       setLoading(true);
+      const textToCheck = [title, description, customStake, ...options].filter(Boolean);
+        if (textToCheck.some((t) => filter.isProfane(t))) {
+          Alert.alert("Inappropriate Content", "Please remove any inappropriate language from your bet.");
+          setLoading(false);
+          return;
+        }
+
       const sessionId = await getSessionId();
       if (!sessionId) { Alert.alert("Error", "Not logged in"); return; }
 

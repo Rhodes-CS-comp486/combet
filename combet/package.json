@@ -17,6 +17,8 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "bad-words": "^4.0.0",
+    "bad-words-next": "^3.2.0",
     "dayjs": "^1.11.20",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
@@ -49,6 +51,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/bad-words": "^3.0.3",
     "@types/node-cron": "^3.0.11",
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
