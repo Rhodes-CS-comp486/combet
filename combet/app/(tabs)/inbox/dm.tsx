@@ -9,18 +9,24 @@ import { router, useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
+import UserAvatar from "@/components/UserAvatar";
 import { API_BASE } from "@/constants/api";
 
 type Message = {
-  message_id: string;
-  sender_id:  string;
-  content:    string;
-  is_read:    boolean;
-  created_at: string;
+  message_id:          string;
+  sender_id:           string;
+  content:             string;
+  is_read:             boolean;
+  created_at:          string;
+  sender_username:     string;
+  sender_avatar_color: string;
+  sender_avatar_icon:  string;
 };
 
 export default function DMScreen() {
-  const { userId: otherUserId, username } = useLocalSearchParams<{ userId: string; username: string }>();
+  const { userId: otherUserId, username, avatarColor, avatarIcon } = useLocalSearchParams<{
+    userId: string; username: string; avatarColor?: string; avatarIcon?: string;
+  }>();
   const { theme, isDark } = useAppTheme();
 
   const [messages, setMessages]     = useState<Message[]>([]);
@@ -116,12 +122,14 @@ export default function DMScreen() {
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMe = item.sender_id === myId;
     const prevItem = messages[index - 1];
-    const showTime = !prevItem ||
+    const nextItem = messages[index + 1];
+    const isLastInGroup  = !nextItem || nextItem.sender_id !== item.sender_id;
+    const showTimestamp  = !prevItem ||
       (new Date(item.created_at).getTime() - new Date(prevItem.created_at).getTime()) > 5 * 60 * 1000;
 
     return (
-      <View>
-        {showTime && (
+      <View style={{ marginBottom: 2 }}>
+        {showTimestamp && (
           <Text style={{
             textAlign: "center", fontSize: 11,
             color: theme.colors.onSurfaceVariant,
@@ -133,24 +141,66 @@ export default function DMScreen() {
         <View style={{
           flexDirection: "row",
           justifyContent: isMe ? "flex-end" : "flex-start",
-          marginBottom: 4, paddingHorizontal: 16,
+          alignItems: "flex-end",
+          paddingHorizontal: 12,
+          marginBottom: isLastInGroup ? 8 : 2,
         }}>
-          <View style={{
-            maxWidth: "75%",
-            backgroundColor: isMe
-              ? theme.colors.primary
-              : isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.07)",
-            borderRadius: 18,
-            borderBottomRightRadius: isMe ? 4 : 18,
-            borderBottomLeftRadius:  isMe ? 18 : 4,
-            paddingHorizontal: 14, paddingVertical: 10,
-          }}>
-            <Text style={{
-              color: isMe ? "#fff" : theme.colors.onSurface,
-              fontSize: 14, lineHeight: 20,
+          {/* Avatar + username below — left side only, last message in group */}
+          {!isMe && (
+            <View style={{ width: 38, marginRight: 6, alignItems: "center", justifyContent: "flex-end" }}>
+              {isLastInGroup ? (
+                <TouchableOpacity
+                  onPress={() => router.push(`/user/${item.sender_id}` as any)}
+                  style={{ alignItems: "center" }}
+                >
+                  <UserAvatar
+                    user={{
+                      username:     item.sender_username,
+                      avatar_color: item.sender_avatar_color,
+                      avatar_icon:  item.sender_avatar_icon,
+                    }}
+                    size={28}
+                  />
+                  <Text numberOfLines={1} style={{
+                    fontSize: 9, color: theme.colors.onSurfaceVariant,
+                    marginTop: 2, textAlign: "center", width: 38,
+                  }}>
+                    @{item.sender_username}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 28, height: 28 }} />
+              )}
+            </View>
+          )}
+
+          {/* Bubble + time */}
+          <View style={{ maxWidth: "72%" }}>
+            <View style={{
+              backgroundColor: isMe
+                ? theme.colors.primary
+                : isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.07)",
+              borderRadius: 18,
+              borderBottomRightRadius: isMe ? 4 : 18,
+              borderBottomLeftRadius:  isMe ? 18 : 4,
+              paddingHorizontal: 14, paddingVertical: 10,
             }}>
-              {item.content}
-            </Text>
+              <Text style={{
+                color: isMe ? "#fff" : theme.colors.onSurface,
+                fontSize: 14, lineHeight: 20,
+              }}>
+                {item.content}
+              </Text>
+            </View>
+            {isLastInGroup && (
+              <Text style={{
+                fontSize: 10, color: theme.colors.onSurfaceVariant,
+                marginTop: 3,
+                textAlign: isMe ? "right" : "left",
+              }}>
+                {timeAgo(item.created_at)}
+              </Text>
+            )}
           </View>
         </View>
       </View>
@@ -177,9 +227,24 @@ export default function DMScreen() {
           >
             <Ionicons name="arrow-back" size={22} color={theme.colors.onSurface} />
           </TouchableOpacity>
-          <Text style={{ fontSize: 17, fontWeight: "600", color: theme.colors.onSurface }}>
-            @{username}
-          </Text>
+          <TouchableOpacity
+            onPress={() => router.push(`/user/${otherUserId}` as any)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}
+          >
+            <UserAvatar
+              user={{
+                username:     username,
+                avatar_color: avatarColor ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_color,
+                avatar_icon:  avatarIcon  ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_icon,
+              }}
+              size={36}
+            />
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>
+                @{username}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* ── Messages ── */}

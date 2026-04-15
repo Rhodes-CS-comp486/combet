@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, FlatList, TouchableOpacity } from "react-native";
+import { View, FlatList, TouchableOpacity, Animated, PanResponder } from "react-native";
 import { Text, Button, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -94,6 +94,19 @@ export default function InboxScreen() {
       setRequestCount(Array.isArray(data) ? data.length : 0);
     } catch (err) {
       console.error("Fetch request count error:", err);
+    }
+  };
+
+  const handleDeleteConversation = async (otherUserId: string) => {
+    setConversations((prev) => prev.filter((c) => c.other_user_id !== otherUserId));
+    try {
+      const sessionId = await getSessionId();
+      await fetch(`${API_BASE}/messages/conversation/${otherUserId}`, {
+        method: "DELETE",
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+    } catch (err) {
+      console.error("Delete conversation error:", err);
     }
   };
 
@@ -230,6 +243,119 @@ export default function InboxScreen() {
   const filtered = notifications;
 
   const cardBg = "rgba(255,255,255,0.09)";
+
+  // ── Swipeable conversation row ────────────────────────────────────────────
+  const SwipeableConversation = ({ item }: { item: any }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const isSwiping  = useRef(false);
+    const THRESHOLD  = 70;
+
+    const timeAgo = (dateStr: string) => {
+      const diff  = Date.now() - new Date(dateStr).getTime();
+      const mins  = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days  = Math.floor(diff / 86400000);
+      if (mins < 1)   return "now";
+      if (mins < 60)  return `${mins}m`;
+      if (hours < 24) return `${hours}h`;
+      return `${days}d`;
+    };
+
+    const panResponder = useRef(PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 8 && Math.abs(g.dy) < 20,
+      onPanResponderGrant: () => {
+        isSwiping.current = false;
+      },
+      onPanResponderMove: (_, g) => {
+        if (g.dx < 0) {
+          if (Math.abs(g.dx) > 8) isSwiping.current = true;
+          translateX.setValue(Math.max(g.dx, -90));
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -THRESHOLD) {
+          // Past threshold — auto delete, no tap fires
+          Animated.timing(translateX, {
+            toValue: -90, duration: 100, useNativeDriver: true,
+          }).start(() => {
+            handleDeleteConversation(item.other_user_id);
+          });
+        } else if (isSwiping.current) {
+          // Partial swipe — snap back, block the tap
+          isSwiping.current = false;
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })).current;
+
+    return (
+      <View style={{ overflow: "hidden" }}>
+        <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+          <TouchableOpacity
+            onPress={() => {
+              if (isSwiping.current) return;
+              router.push({
+                pathname: "/(tabs)/inbox/dm",
+                params: {
+                  userId:      item.other_user_id,
+                  username:    item.other_username,
+                  avatarColor: item.other_avatar_color,
+                  avatarIcon:  item.other_avatar_icon,
+                },
+              } as any);
+            }}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12,
+              paddingHorizontal: 16, paddingVertical: 14,
+              borderBottomWidth: 1,
+              borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+            }}
+          >
+            <UserAvatar
+              user={{
+                username:     item.other_username,
+                avatar_color: item.other_avatar_color,
+                avatar_icon:  item.other_avatar_icon,
+              }}
+              size={48}
+            />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{
+                  color: theme.colors.onSurface, fontSize: 15,
+                  fontWeight: item.unread_count > 0 ? "700" : "500",
+                }}>
+                  @{item.other_username}
+                </Text>
+                <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
+                  {timeAgo(item.last_message_at)}
+                </Text>
+              </View>
+              <Text numberOfLines={1} style={{
+                color: item.unread_count > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                fontSize: 13, marginTop: 2,
+                fontWeight: item.unread_count > 0 ? "600" : "400",
+              }}>
+                {item.last_message}
+              </Text>
+            </View>
+            {item.unread_count > 0 && (
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.primary }} />
+            )}
+          </TouchableOpacity>
+          {/* Trash sits just outside the right edge, slides into view on swipe */}
+          <View style={{
+            position: "absolute", top: 0, bottom: 0, right: -90,
+            width: 90, backgroundColor: "#e87060",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Ionicons name="trash" size={22} color="#fff" />
+          </View>
+        </Animated.View>
+      </View>
+    );
+  };
 
   // ── Notification card ─────────────────────────────────────────────────────
   const renderItem = ({ item }: { item: Notification }) => {
@@ -665,70 +791,7 @@ export default function InboxScreen() {
               keyExtractor={(item) => item.other_user_id}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 120 }}
-              renderItem={({ item }) => {
-                const timeAgo = (dateStr: string) => {
-                  const diff  = Date.now() - new Date(dateStr).getTime();
-                  const mins  = Math.floor(diff / 60000);
-                  const hours = Math.floor(diff / 3600000);
-                  const days  = Math.floor(diff / 86400000);
-                  if (mins < 1)   return "now";
-                  if (mins < 60)  return `${mins}m`;
-                  if (hours < 24) return `${hours}h`;
-                  return `${days}d`;
-                };
-                return (
-                  <TouchableOpacity
-                    onPress={() => router.push({
-                      pathname: "/(tabs)/inbox/dm",
-                      params: { userId: item.other_user_id, username: item.other_username },
-                    } as any)}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 12,
-                      paddingHorizontal: 16, paddingVertical: 14,
-                      borderBottomWidth: 1,
-                      borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                    }}
-                  >
-                    <UserAvatar
-                      user={{
-                        username:     item.other_username,
-                        avatar_color: item.other_avatar_color,
-                        avatar_icon:  item.other_avatar_icon,
-                      }}
-                      size={48}
-                    />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                        <Text style={{
-                          color: theme.colors.onSurface, fontSize: 15,
-                          fontWeight: item.unread_count > 0 ? "700" : "500",
-                        }}>
-                          @{item.other_username}
-                        </Text>
-                        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>
-                          {timeAgo(item.last_message_at)}
-                        </Text>
-                      </View>
-                      <Text
-                        numberOfLines={1}
-                        style={{
-                          color: item.unread_count > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
-                          fontSize: 13, marginTop: 2,
-                          fontWeight: item.unread_count > 0 ? "600" : "400",
-                        }}
-                      >
-                        {item.last_message}
-                      </Text>
-                    </View>
-                    {item.unread_count > 0 && (
-                      <View style={{
-                        width: 10, height: 10, borderRadius: 5,
-                        backgroundColor: theme.colors.primary,
-                      }} />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
+              renderItem={({ item }) => <SwipeableConversation item={item} />}
             />
           )}
         </View>

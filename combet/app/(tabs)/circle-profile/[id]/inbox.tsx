@@ -202,11 +202,12 @@ export default function CircleInboxScreen() {
     }
   };
 
-  // ── Bubble ──
   const renderItem = ({ item, index }: { item: Message; index: number }) => {
     const isMe = item.user_id === myUserId;
     const prevMsg = index > 0 ? messages[index - 1] : null;
-    const showHeader = !prevMsg || prevMsg.user_id !== item.user_id;
+    const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+    const isLastInGroup = !nextMsg || nextMsg.user_id !== item.user_id;
+    const isFirstInGroup = !prevMsg || prevMsg.user_id !== item.user_id;
 
     const bubbleBg = isMe
       ? theme.colors.primary
@@ -214,32 +215,34 @@ export default function CircleInboxScreen() {
         ? "rgba(255,255,255,0.08)"
         : "rgba(0,0,0,0.06)";
 
-    const bubbleText = isMe
-      ? "#fff"
-      : theme.colors.onSurface;
+    const bubbleText = isMe ? "#fff" : theme.colors.onSurface;
 
     return (
       <View style={[
         styles.messageRow,
         isMe ? styles.messageRowMe : styles.messageRowThem,
-        { marginTop: showHeader ? 12 : 2 },
+        { marginTop: isFirstInGroup ? 12 : 2 },
       ]}>
-        {/* Avatar — only show for others, only on first bubble in a group */}
+        {/* Avatar + username below — left side, last message in group only */}
         {!isMe && (
-          <View style={{ width: 32, marginRight: 8, alignSelf: "flex-end" }}>
-            {showHeader
-              ? <Avatar color={item.avatar_color} icon={item.avatar_icon} size={32} />
-              : <View style={{ width: 32 }} />
-            }
+          <View style={{ width: 38, marginRight: 6, alignItems: "center", justifyContent: "flex-end" }}>
+            {isLastInGroup ? (
+              <>
+                <Avatar color={item.avatar_color} icon={item.avatar_icon} size={30} />
+                <Text numberOfLines={1} style={{
+                  fontSize: 9, color: theme.colors.onSurfaceVariant,
+                  marginTop: 2, textAlign: "center", width: 38,
+                }}>
+                  {item.username}
+                </Text>
+              </>
+            ) : (
+              <View style={{ width: 30, height: 30 }} />
+            )}
           </View>
         )}
 
         <View style={{ maxWidth: "72%", alignItems: isMe ? "flex-end" : "flex-start" }}>
-          {showHeader && !isMe && (
-            <Text style={{ fontSize: 11, color: theme.colors.onSurfaceVariant, marginBottom: 3, marginLeft: 2 }}>
-              {item.username}
-            </Text>
-          )}
           <View style={[
             styles.bubble,
             {
@@ -252,11 +255,11 @@ export default function CircleInboxScreen() {
               {item.content}
             </Text>
           </View>
-          {showHeader || index === messages.length - 1 ? (
+          {isLastInGroup && (
             <Text style={{ fontSize: 10, color: theme.colors.onSurfaceVariant, marginTop: 3, marginHorizontal: 4 }}>
               {formatTime(item.created_at)}
             </Text>
-          ) : null}
+          )}
         </View>
 
         {isMe && <View style={{ width: 8 }} />}
