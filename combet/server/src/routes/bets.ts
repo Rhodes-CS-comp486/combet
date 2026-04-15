@@ -476,3 +476,23 @@ betsRouter.post("/:betId/cancel", requireAuth, async (req: AuthRequest, res) => 
     client.release();
   }
 });
+
+// ─── Report Bet ───────────────────────────────────────────────────────────────
+betsRouter.post("/:betId/report", requireAuth, async (req: AuthRequest, res) => {
+  const { betId } = req.params;
+  const { reason } = req.body;
+  if (!reason) return res.status(400).json({ error: "Reason required" });
+  try {
+    const bet = await pool.query(`SELECT id FROM bets WHERE id = $1`, [betId]);
+    if (!bet.rows.length) return res.status(404).json({ error: "Bet not found" });
+    await pool.query(
+      `INSERT INTO reports (reporter_id, target_type, target_id, reason)
+       VALUES ($1, 'bet', $2, $3)`,
+      [req.userId, betId, reason]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /bets/:betId/report error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});

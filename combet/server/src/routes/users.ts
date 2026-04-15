@@ -312,7 +312,8 @@ usersRouter.get("/me/followers", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // GET /users/me/following
-usersRouter.get("/me/following", requireAuth, async (req, res) => {
+usersRouter.get("/me/following", requireAuth, async (req: AuthRequest, res) => {
+
   const result = await pool.query(
     `SELECT u.id, u.username,
        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
@@ -579,4 +580,25 @@ usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Server error" });
   }
 
+});
+
+// ─── Report User ──────────────────────────────────────────────────────────────
+usersRouter.post("/:userId/report", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const { reason } = req.body;
+  if (!reason) return res.status(400).json({ error: "Reason required" });
+  if (userId === req.userId) return res.status(400).json({ error: "Cannot report yourself" });
+  try {
+    const user = await pool.query(`SELECT id FROM users WHERE id = $1`, [userId]);
+    if (!user.rows.length) return res.status(404).json({ error: "User not found" });
+    await pool.query(
+      `INSERT INTO reports (reporter_id, target_type, target_id, reason)
+       VALUES ($1, 'user', $2, $3)`,
+      [req.userId, userId, reason]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /users/:userId/report error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });

@@ -116,7 +116,8 @@ export default function TabLayout() {
         <Tabs.Screen name="admin/view_users"               options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="admin/view_bets"                options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="admin/view_circles"             options={{ href: null, headerShown: false }} />
-        <Tabs.Screen name="circle-profile/[id]"            options={{ href: null, headerShown: false }} />
+        <Tabs.Screen name="admin/view_reports" options={{ href: null, headerShown: false }} />
+          <Tabs.Screen name="circle-profile/[id]"            options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="admin"                          options={{ href: null }} />
         <Tabs.Screen name="circle-preview/[id]/index"      options={{ href: null, headerShown: false }} />
         <Tabs.Screen name="circle-preview/[id]/_layout"      options={{ href: null, headerShown: false }} />

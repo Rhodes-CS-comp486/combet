@@ -35,6 +35,8 @@ type UserProfile = {
   avatar_color?: string;
   avatar_icon?: string;
   is_admin?: boolean;
+  is_private?: boolean;
+  show_bets_to_followers?: boolean;
 };
 
 type Bet = {
@@ -367,6 +369,8 @@ export default function ProfileScreen() {
               { label: "All Users",   icon: "people-outline",   route: "/(tabs)/admin/view_users"   },
               { label: "All Bets",    icon: "trophy-outline",   route: "/(tabs)/admin/view_bets"    },
               { label: "All Circles", icon: "people-circle-outline", route: "/(tabs)/admin/view_circles" },
+                { label: "Reports",     icon: "flag-outline",           route: "/(tabs)/admin/view_reports" },
+
             ].map(({ label, icon, route }) => (
               <TouchableOpacity
                 key={route}

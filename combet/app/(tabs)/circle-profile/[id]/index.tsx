@@ -9,6 +9,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
+import ReportModal from "@/components/ReportModal";
 
 type Member    = { id: string; username: string; joined_at: string };
 type BetOption = { id: string; label: string; option_text: string };
@@ -30,6 +31,7 @@ type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 
 export default function CircleProfile() {
   const router            = useRouter();
+  const [reportVisible, setReportVisible] = useState(false);
   const { theme, isDark } = useAppTheme();
   const { id, from, userId } = useLocalSearchParams();
   const circleId          = Array.isArray(id) ? id[0] : id;
@@ -198,38 +200,52 @@ export default function CircleProfile() {
     <GradientBackground>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
-        {/* ── Header row: Back + Chat button ── */}
-        <View style={{
-          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-          paddingHorizontal: 16, paddingTop: 12, marginBottom: 8,
-        }}>
-          {/* Pill back button matching the rest of the app */}
-          <TouchableOpacity
-            onPress={() => {
-              if ((fromUser || fromPreview) && fromUserId) {
-                router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
-              } else {
-                router.replace("/(tabs)/circles");
-              }
-            }}
-            style={{ paddingHorizontal: 4, paddingVertical: 7 }}
-          >
-            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
-          </TouchableOpacity>
+          {/* ── Header row: Back + Chat + Report button ── */}
+            <View style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 16, paddingTop: 12, marginBottom: 8,
+            }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if ((fromUser || fromPreview) && fromUserId) {
+                    router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+                  } else {
+                    router.replace("/(tabs)/circles");
+                  }
+                }}
+                style={{ paddingHorizontal: 4, paddingVertical: 7 }}
+              >
+                <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 5,
-              backgroundColor: "rgba(255,255,255,0.08)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
-            }}
-          >
-            <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
-            <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>Chat</Text>
-          </TouchableOpacity>
-        </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {circle && !circle.is_creator && (
+                  <TouchableOpacity
+                    onPress={() => setReportVisible(true)}
+                    style={{
+                      width: 34, height: 34, borderRadius: 17,
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                      justifyContent: "center", alignItems: "center",
+                    }}
+                  >
+                    <Ionicons name="flag-outline" size={15} color="rgba(255,255,255,0.3)" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 5,
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+                  }}
+                >
+                  <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>Chat</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
         {/* ── Circle hero ── */}
         <View style={{ alignItems: "center", paddingTop: 16, paddingBottom: 20, paddingHorizontal: 20 }}>
@@ -454,6 +470,12 @@ export default function CircleProfile() {
           </Button>
         </Modal>
       </Portal>
+        <ReportModal
+          visible={reportVisible}
+          onDismiss={() => setReportVisible(false)}
+          targetType="circle"
+          targetId={circleId}
+        />
     </GradientBackground>
   );
 }
