@@ -19,24 +19,14 @@ messagesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: "Cannot message yourself" });
 
   try {
-    // is_request = true only if recipient is private AND sender doesn't follow them
-    const recipientCheck = await pool.query(
-      `SELECT is_private FROM users WHERE id = $1`,
-      [recipientId]
+    // is_request = true if the recipient doesn't follow the sender
+    // (i.e. sender hasn't been approved/accepted by recipient via following)
+    // Simple rule: if sender doesn't follow recipient → goes to requests
+    const followCheck = await pool.query(
+      `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
+      [senderId, recipientId]
     );
-    if (!recipientCheck.rows.length)
-      return res.status(404).json({ error: "Recipient not found" });
-
-    const isPrivate = recipientCheck.rows[0].is_private;
-    let isRequest = false;
-
-    if (isPrivate) {
-      const followCheck = await pool.query(
-        `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
-        [senderId, recipientId]
-      );
-      isRequest = followCheck.rows.length === 0;
-    }
+    const isRequest = followCheck.rows.length === 0;
 
     const result = await pool.query(
       `INSERT INTO direct_messages (sender_id, recipient_id, content, is_request, is_read, created_at)
@@ -207,6 +197,43 @@ messagesRouter.delete("/requests/:messageId", requireAuth, async (req: AuthReque
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE message request error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Delete Entire Conversation ──────────────────────────────────────────────
+// DELETE /messages/conversation/:otherUserId
+messagesRouter.delete("/conversation/:otherUserId", requireAuth, async (req: AuthRequest, res) => {
+  const { otherUserId } = req.params;
+  const userId          = req.userId!;
+  try {
+    await pool.query(
+      `DELETE FROM direct_messages
+       WHERE (sender_id = $1 AND recipient_id = $2)
+          OR (sender_id = $2 AND recipient_id = $1)`,
+      [userId, otherUserId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE conversation error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Delete a Single DM ───────────────────────────────────────────────────────
+// DELETE /messages/:messageId
+// Only the sender can delete their own message
+messagesRouter.delete("/:messageId", requireAuth, async (req: AuthRequest, res) => {
+  const { messageId } = req.params;
+  const userId        = req.userId!;
+  try {
+    await pool.query(
+      `DELETE FROM direct_messages WHERE message_id = $1 AND sender_id = $2`,
+      [messageId, userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE message error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

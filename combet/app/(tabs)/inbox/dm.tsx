@@ -24,7 +24,9 @@ type Message = {
 };
 
 export default function DMScreen() {
-  const { userId: otherUserId, username } = useLocalSearchParams<{ userId: string; username: string }>();
+  const { userId: otherUserId, username, avatarColor, avatarIcon } = useLocalSearchParams<{
+    userId: string; username: string; avatarColor?: string; avatarIcon?: string;
+  }>();
   const { theme, isDark } = useAppTheme();
 
   const [messages, setMessages]     = useState<Message[]>([]);
@@ -225,9 +227,24 @@ export default function DMScreen() {
           >
             <Ionicons name="arrow-back" size={22} color={theme.colors.onSurface} />
           </TouchableOpacity>
-          <Text style={{ fontSize: 17, fontWeight: "600", color: theme.colors.onSurface }}>
-            @{username}
-          </Text>
+          <TouchableOpacity
+            onPress={() => router.push(`/user/${otherUserId}` as any)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}
+          >
+            <UserAvatar
+              user={{
+                username:     username,
+                avatar_color: avatarColor ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_color,
+                avatar_icon:  avatarIcon  ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_icon,
+              }}
+              size={36}
+            />
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: theme.colors.onSurface }}>
+                @{username}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* ── Messages ── */}
