@@ -10,7 +10,8 @@ import IconCarousel, { ICONS } from "@/components/IconCarousel";
 import { API_BASE } from "@/constants/api";
 import { AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
-
+import { Filter } from "bad-words";
+const filter = new Filter();
 
 
 export default function CreateCircle() {
@@ -33,6 +34,9 @@ export default function CreateCircle() {
     setDescError(null);
     if (name.length < 5 || name.length > 15) { setNameError("Name must be 5–15 characters"); return; }
     if (description.length > 100)            { setDescError("Description max 100 characters"); return; }
+
+    if (filter.isProfane(name)) { setNameError("Circle name contains inappropriate language."); return; }
+    if (description && filter.isProfane(description)) { setDescError("Description contains inappropriate language."); return; }
 
     try {
       setLoading(true);
