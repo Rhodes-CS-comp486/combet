@@ -10,6 +10,7 @@ import UserAvatar from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
+import ReportModal from "@/components/ReportModal";
 
 type UserProfile = {
   id:                     string;
@@ -98,6 +99,7 @@ export default function UserProfileScreen() {
   const [actioning, setActioning] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("bets");
   const [showUnfollowModal, setShowUnfollowModal] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (!userId || userId === "undefined") return;
@@ -388,23 +390,33 @@ export default function UserProfileScreen() {
               <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>Losses</Text>
             </View>
           </View>
-
-          {/* Follow + Message buttons */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 }}>
-            {renderFollowButton()}
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: "/(tabs)/inbox/dm", params: { userId: profile.id, username: profile.username } } as any)}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 6,
-                backgroundColor: "rgba(255,255,255,0.08)",
-                borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-              }}
-            >
-              <Ionicons name="chatbubble-outline" size={14} color={theme.colors.onSurface} />
-              <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "600" }}>Message</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Follow + Message + Report buttons */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 }}>
+              {renderFollowButton()}
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: "/(tabs)/inbox/dm", params: { userId: profile.id, username: profile.username } } as any)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                }}
+              >
+                <Ionicons name="chatbubble-outline" size={14} color={theme.colors.onSurface} />
+                <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "600" }}>Message</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setReportVisible(true)}
+                style={{
+                  width: 34, height: 34, borderRadius: 17,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                  justifyContent: "center", alignItems: "center",
+                }}
+              >
+                <Ionicons name="flag-outline" size={15} color="rgba(255,255,255,0.3)" />
+              </TouchableOpacity>
+            </View>
         </View>
 
         <Divider style={{ backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
@@ -540,6 +552,12 @@ export default function UserProfileScreen() {
           </>
         )}
       </ScrollView>
+        <ReportModal
+          visible={reportVisible}
+          onDismiss={() => setReportVisible(false)}
+          targetType="user"
+          targetId={profile.id}
+        />
     </GradientBackground>
   );
 }

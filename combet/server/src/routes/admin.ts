@@ -219,3 +219,52 @@ adminRouter.get("/circles", requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// ─── Admin: Get All Reports ───────────────────────────────────────────────────
+adminRouter.get("/reports", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const adminCheck = await pool.query(`SELECT is_admin FROM users WHERE id = $1`, [req.userId]);
+    if (!adminCheck.rows[0]?.is_admin) return res.status(403).json({ error: "Forbidden" });
+
+    const result = await pool.query(
+      `SELECT
+         r.id, r.target_type, r.target_id, r.reason, r.status, r.created_at,
+         u.username AS reporter_username,
+         u.avatar_color AS reporter_avatar_color,
+         u.avatar_icon AS reporter_avatar_icon,
+         CASE WHEN r.target_type = 'bet' THEN b.title ELSE tu.username END AS target_label
+       FROM reports r
+       LEFT JOIN users u ON u.id = r.reporter_id
+       LEFT JOIN bets b ON r.target_type = 'bet' AND b.id::text = r.target_id
+       LEFT JOIN users tu ON r.target_type = 'user' AND tu.id::text = r.target_id
+       ORDER BY r.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /admin/reports error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Admin: Update Report Status ──────────────────────────────────────────────
+adminRouter.patch("/reports/:reportId", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const adminCheck = await pool.query(`SELECT is_admin FROM users WHERE id = $1`, [req.userId]);
+    if (!adminCheck.rows[0]?.is_admin) return res.status(403).json({ error: "Forbidden" });
+
+    const { reportId } = req.params;
+    const { status } = req.body;
+    if (!["resolved", "dismissed"].includes(status))
+      return res.status(400).json({ error: "Invalid status" });
+
+    const result = await pool.query(
+      `UPDATE reports SET status = $1 WHERE id = $2 RETURNING id, status`,
+      [status, reportId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: "Report not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("PATCH /admin/reports/:reportId error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});

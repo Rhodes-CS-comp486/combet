@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, TouchableOpacity, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { Text, Button, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 
 import { API_BASE } from "@/constants/api";
+import ReportModal from "@/components/ReportModal";
 
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -32,7 +33,7 @@ export default function BetCard({
   onSettle,
 }: BetCardProps) {
   const { theme, isDark } = useAppTheme();
-
+  const [reportVisible, setReportVisible] = useState(false);
   const options     = item.options ?? [];
   const totalJoined = Number(item.total_joined ?? 0);
   const stake       = item.stake_amount ?? 0;
@@ -162,7 +163,15 @@ export default function BetCard({
             </View>
           );
         })()}
-      </View>
+          {!isCreator && (
+            <TouchableOpacity
+              onPress={() => setReportVisible(true)}
+              style={{ alignSelf: "flex-end", padding: 10 }}
+            >
+              <Ionicons name="flag-outline" size={13} color="rgba(255,255,255,0.25)" />
+            </TouchableOpacity>
+          )}
+        </View>
     );
   }
 
@@ -450,26 +459,31 @@ export default function BetCard({
 
       {/* FEED ACTIONS */}
       {mode === "feed" && (
-        <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
-          <TouchableOpacity
-            onPress={async () => {
-              const sessionId = await getSessionId();
-              await fetch(`${API_BASE}/bets/${item.id}/decline`, {
-                method: "POST",
-                headers: { "x-session-id": sessionId ?? "" },
-              });
-              onRemove?.(item.id);
-            }}
-            style={{
-              backgroundColor: "rgba(232,112,96,0.1)",
-              borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
-              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
-            }}
-          >
-            <Text style={{ fontSize: 12, color: "#e87060", fontWeight: "500" }}>Pass</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          <View style={{ paddingVertical: 10, paddingHorizontal: 16, flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 10 }}>
+            {!isCreator && (
+              <TouchableOpacity onPress={() => setReportVisible(true)}>
+                <Ionicons name="flag-outline" size={14} color="rgba(255,255,255,0.25)" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={async () => {
+                const sessionId = await getSessionId();
+                await fetch(`${API_BASE}/bets/${item.id}/decline`, {
+                  method: "POST",
+                  headers: { "x-session-id": sessionId ?? "" },
+                });
+                onRemove?.(item.id);
+              }}
+              style={{
+                backgroundColor: "rgba(232,112,96,0.1)",
+                borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
+                borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: "#e87060", fontWeight: "500" }}>Pass</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
       {/* ACTIVE ACTIONS */}
       {mode === "active" && (() => {
@@ -534,8 +548,20 @@ export default function BetCard({
           </View>
         );
 
-        return null;
+        return (
+          <View style={{ paddingVertical: 10, paddingHorizontal: 16, alignItems: "flex-end" }}>
+            <TouchableOpacity onPress={() => setReportVisible(true)}>
+              <Ionicons name="flag-outline" size={14} color="rgba(255,255,255,0.25)" />
+            </TouchableOpacity>
+          </View>
+        );
       })()}
+         <ReportModal
+        visible={reportVisible}
+        onDismiss={() => setReportVisible(false)}
+        targetType="bet"
+        targetId={item.id}
+      />
     </View>
   );
 }

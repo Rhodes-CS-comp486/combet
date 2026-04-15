@@ -1050,3 +1050,23 @@ circlesRouter.put("/:circleId/members/:userId/balance", requireAuth, async (req:
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// ─── Report Circle ────────────────────────────────────────────────────────────
+circlesRouter.post("/:circleId/report", requireAuth, async (req: AuthRequest, res) => {
+  const { circleId } = req.params;
+  const { reason } = req.body;
+  if (!reason) return res.status(400).json({ error: "Reason required" });
+  try {
+    const circle = await pool.query(`SELECT circle_id FROM circles WHERE circle_id = $1`, [circleId]);
+    if (!circle.rows.length) return res.status(404).json({ error: "Circle not found" });
+    await pool.query(
+      `INSERT INTO reports (reporter_id, target_type, target_id, reason)
+       VALUES ($1, 'circle', $2, $3)`,
+      [req.userId, circleId, reason]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /circles/:circleId/report error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
