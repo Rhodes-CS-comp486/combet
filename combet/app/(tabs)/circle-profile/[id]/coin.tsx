@@ -21,7 +21,7 @@ const COIN_ICONS = [
   "trophy", "flash", "flame", "skull", "star", "diamond",
   "football", "basketball", "baseball", "american-football",
   "tennisball", "medal", "ribbon", "shield", "rocket",
-  "hammer", "beer", "bonfire", "planet", "bandage",
+  "hammer", "beer", "bonfire", "planet", "bandage", "golf", "heart",
 ];
 
 type Coin = {
@@ -187,58 +187,57 @@ export default function CoinScreen() {
 
         {/* ── PREVIEW ── */}
         <View style={{
-          alignItems: "center", marginBottom: 24,
+          alignItems: "center", marginBottom: 20,
           backgroundColor: "rgba(255,255,255,0.09)",
           borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-          borderRadius: 20, padding: 24,
+          borderRadius: 20, paddingVertical: 20, paddingHorizontal: 24,
+          flexDirection: "row", gap: 16,
         }}>
           <View style={{
-            width: 100, height: 100, borderRadius: 50,
+            width: 72, height: 72, borderRadius: 36,
             backgroundColor: coinBg,
             borderWidth: 2, borderColor: coinBorder,
             alignItems: "center", justifyContent: "center",
-            marginBottom: 12,
+            flexShrink: 0,
           }}>
-            <Ionicons name={icon as any} size={38} color={color} />
+            <Ionicons name={icon as any} size={30} color={color} />
           </View>
+          <View style={{ flex: 1, justifyContent: "center" }}>
 
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            maxLength={20}
-            mode="flat"
-            placeholder="Coin Name"
-            style={{
-              backgroundColor: "transparent",
-              fontSize: 18,
-              fontWeight: "600",
-              textAlign: "center",
-              minWidth: 120,
-            }}
-            underlineColor="transparent"
-            activeUnderlineColor={color}
-            selectionColor={color}
-            theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: color } }}
-            textColor={theme.colors.onSurface}
-          />
-
-          <Text style={{
-            fontFamily: "monospace", fontSize: 12,
-            color: color, letterSpacing: 2,
-            marginTop: 2, textTransform: "uppercase",
-          }}>
-            {symbol.trim() || "SYM"}
-          </Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              maxLength={20}
+              mode="flat"
+              placeholder="Coin Name"
+              style={{
+                backgroundColor: "transparent",
+                fontSize: 17,
+                fontWeight: "600",
+              }}
+              underlineColor="transparent"
+              activeUnderlineColor={color}
+              selectionColor={color}
+              theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: color } }}
+              textColor={theme.colors.onSurface}
+            />
+            <Text style={{
+              fontFamily: "monospace", fontSize: 12,
+              color: color, letterSpacing: 2,
+              textTransform: "uppercase",
+            }}>
+              {symbol.trim() || "SYM"}
+            </Text>
 
           {description.trim() ? (
-            <Text style={{
-              fontSize: 12, color: theme.colors.onSurfaceVariant,
-              textAlign: "center", marginTop: 8, lineHeight: 18,
-              paddingHorizontal: 12,
-            }}>
-              {description}
-            </Text>
-          ) : null}
+              <Text style={{
+                fontSize: 12, color: theme.colors.onSurfaceVariant,
+                marginTop: 4, lineHeight: 18,
+              }}>
+                {description}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
         {/* ── DISCLAIMER ── */}
@@ -260,7 +259,7 @@ export default function CoinScreen() {
               flexShrink: 0, marginTop: 1,
             }} />
             <Text style={{ flex: 1, fontSize: 12, color: "rgba(55,134,255,0.9)", lineHeight: 18 }}>
-              Coins are managed entirely by you as circle creator — Combet doesn't handle any real-world value they may represent. Only bet with people you trust. Tap to acknowledge.
+              Coins are managed entirely by you as circle creator — Tap to acknowledge.
             </Text>
           </TouchableOpacity>
         ) : (
