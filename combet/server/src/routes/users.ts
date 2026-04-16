@@ -602,3 +602,67 @@ usersRouter.post("/:userId/report", requireAuth, async (req: AuthRequest, res) =
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// ─── Block a User ─────────────────────────────────────────────────────────────
+usersRouter.post("/:userId/block", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.userId;
+  if (userId === currentUserId) return res.status(400).json({ error: "Cannot block yourself" });
+  try {
+    // Insert block
+    await pool.query(
+      `INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [currentUserId, userId]
+    );
+    // Also remove any follows between the two users
+    await pool.query(
+      `DELETE FROM follows WHERE (follower_id = $1 AND following_id = $2) OR (follower_id = $2 AND following_id = $1)`,
+      [currentUserId, userId]
+    );
+    // Remove any pending follow requests
+    await pool.query(
+      `DELETE FROM follow_requests WHERE (requester_id = $1 AND requestee_id = $2) OR (requester_id = $2 AND requestee_id = $1)`,
+      [currentUserId, userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /users/:userId/block error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Unblock a User ───────────────────────────────────────────────────────────
+usersRouter.delete("/:userId/block", requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.userId;
+  try {
+    await pool.query(
+      `DELETE FROM blocks WHERE blocker_id = $1 AND blocked_id = $2`,
+      [currentUserId, userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /users/:userId/block error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Get My Block List ────────────────────────────────────────────────────────
+usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon
+       FROM blocks b
+       JOIN users u ON u.id = b.blocked_id
+       WHERE b.blocker_id = $1
+       ORDER BY b.created_at DESC`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/blocked error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});

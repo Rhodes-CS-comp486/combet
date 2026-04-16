@@ -11,6 +11,7 @@ import GradientBackground from "@/components/GradientBackground";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import ReportModal from "@/components/ReportModal";
+import ConfirmModal from "@/components/Confirmmodal";
 
 type UserProfile = {
   id:                     string;
@@ -100,6 +101,9 @@ export default function UserProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("bets");
   const [showUnfollowModal, setShowUnfollowModal] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [isBlocked, setIsBlocked]                 = useState(false);
+  const [showBlockModal, setShowBlockModal]        = useState(false);
+  const [showBlockedScreen, setShowBlockedScreen] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (!userId || userId === "undefined") return;
@@ -123,7 +127,15 @@ export default function UserProfileScreen() {
 
   const fetchProfile = async () => {
     try {
-      const sessionId = await getSessionId();
+        const sessionId = await getSessionId();
+
+        const blockedRes = await fetch(`${API_BASE}/users/blocked`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        if (blockedRes.ok) {
+          const blocked = await blockedRes.json();
+          setIsBlocked(blocked.some((u: any) => u.id === userId));
+        }
       const res = await fetch(`${API_BASE}/users/${userId}`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
@@ -182,6 +194,39 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleBlockConfirmed = async () => {
+      if (!profile) return;
+      setShowBlockModal(false);
+      try {
+        const sessionId = await getSessionId();
+        await fetch(`${API_BASE}/users/${profile.id}/block`, {
+          method: "POST",
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        setIsBlocked(true);
+        setShowBlockedScreen(true);
+      } catch (err) {
+        console.error("Block error:", err);
+      }
+    };
+
+    const handleUnblock = async () => {
+      if (!profile) return;
+      try {
+        const sessionId = await getSessionId();
+        await fetch(`${API_BASE}/users/${profile.id}/block`, {
+          method: "DELETE",
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        setIsBlocked(false);
+        setShowBlockedScreen(false);
+      } catch (err) {
+        console.error("Unblock error:", err);
+      }
+    };
+
+
+
   if (loading) return (
     <GradientBackground>
       <ActivityIndicator animating color={theme.colors.primary} style={{ marginTop: 80 }} />
@@ -195,6 +240,40 @@ export default function UserProfileScreen() {
       </Text>
     </GradientBackground>
   );
+
+  if (showBlockedScreen) return (
+      <GradientBackground style={{ paddingHorizontal: 20 }}>
+        <View style={{ paddingTop: 16, marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ alignSelf: "flex-start", paddingHorizontal: 4, paddingVertical: 7 }}>
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 80 }}>
+          <View style={{
+            width: 72, height: 72, borderRadius: 36,
+            backgroundColor: "rgba(232,112,96,0.1)",
+            borderWidth: 1, borderColor: "rgba(232,112,96,0.2)",
+            alignItems: "center", justifyContent: "center", marginBottom: 20,
+          }}>
+            <Ionicons name="ban-outline" size={32} color="#e87060" />
+          </View>
+          <Text style={{ color: theme.colors.onSurface, fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
+            @{profile.username} blocked
+          </Text>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, textAlign: "center", lineHeight: 20, marginBottom: 32, paddingHorizontal: 32 }}>
+            They won't be able to message you or see your profile.
+          </Text>
+          <TouchableOpacity onPress={handleUnblock} style={{
+            borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24,
+            backgroundColor: "rgba(255,255,255,0.07)",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+          }}>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>Unblock</Text>
+          </TouchableOpacity>
+        </View>
+      </GradientBackground>
+    );
 
   const isPrivateAndNotFollowing = profile.is_private && !profile.is_following;
   const canSeeBets = !profile.is_private || (profile.is_following && profile.show_bets_to_followers);
@@ -304,7 +383,19 @@ export default function UserProfileScreen() {
           </View>
         </Modal>
       </Portal>
+
+            <ConfirmModal
+            visible={showBlockModal}
+            title={`Block @${profile.username}?`}
+            message="They won't be able to message you, follow you, or see your profile. You can unblock them at any time."
+            confirmLabel="Block"
+            cancelLabel="Cancel"
+            destructive
+            onConfirm={handleBlockConfirmed}
+            onCancel={() => setShowBlockModal(false)}
+          />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+
 
         {/* ── Back ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, marginBottom: 8 }}>
@@ -406,6 +497,7 @@ export default function UserProfileScreen() {
                 <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "600" }}>Message</Text>
               </TouchableOpacity>
               <TouchableOpacity
+
                 onPress={() => setReportVisible(true)}
                 style={{
                   width: 34, height: 34, borderRadius: 17,
@@ -416,6 +508,17 @@ export default function UserProfileScreen() {
               >
                 <Ionicons name="flag-outline" size={15} color="rgba(255,255,255,0.3)" />
               </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={isBlocked ? handleUnblock : () => setShowBlockModal(true)}
+                  style={{
+                    width: 34, height: 34, borderRadius: 17,
+                    backgroundColor: isBlocked ? "rgba(232,112,96,0.1)" : "rgba(255,255,255,0.05)",
+                    borderWidth: 1, borderColor: isBlocked ? "rgba(232,112,96,0.3)" : "rgba(255,255,255,0.12)",
+                    justifyContent: "center", alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="ban-outline" size={15} color={isBlocked ? "#e87060" : "rgba(255,255,255,0.3)"} />
+                </TouchableOpacity>
             </View>
         </View>
 
