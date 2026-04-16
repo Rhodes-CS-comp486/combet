@@ -11,7 +11,7 @@ import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import ReportModal from "@/components/ReportModal";
 
-type Member    = { id: string; username: string; joined_at: string };
+type Member    = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string; is_creator?: boolean; };
 type BetOption = { id: string; label: string; option_text: string };
 type Bet = {
   id: string; title: string; description: string; stake_amount: number;
@@ -32,20 +32,22 @@ type HistoryData = { circle: Circle; members: Member[]; bets: Bet[] };
 export default function CircleProfile() {
   const router            = useRouter();
   const [reportVisible, setReportVisible] = useState(false);
-  const { theme, isDark } = useAppTheme();
+  const { theme }         = useAppTheme();
   const { id, from, userId } = useLocalSearchParams();
-  const circleId          = Array.isArray(id) ? id[0] : id;
+  const circleId          = Array.isArray(id)     ? id[0]     : id;
   const fromUserId        = Array.isArray(userId) ? userId[0] : userId;
   const fromUser          = from === "user";
   const fromPreview       = from === "preview";
 
-  const [circle, setCircle]             = useState<Circle | null>(null);
-  const [history, setHistory]           = useState<HistoryData | null>(null);
-  const [activeTab, setActiveTab]       = useState<"new" | "open" | "history">("new");
-  const [responding, setResponding]     = useState<string | null>(null);
+  const [circle,       setCircle]       = useState<Circle | null>(null);
+  const [history,      setHistory]      = useState<HistoryData | null>(null);
+  const [publicMembers, setPublicMembers] = useState<Member[]>([]);
+  const [publicBets,   setPublicBets]   = useState<Bet[]>([]);
+  const [activeTab,    setActiveTab]    = useState<"new" | "open" | "history">("new");
+  const [responding,   setResponding]   = useState<string | null>(null);
   const [requestCount, setRequestCount] = useState(0);
-  const [settlingBet, setSettlingBet]   = useState<any>(null);
-  const [isMember, setIsMember]         = useState<boolean | null>(null);
+  const [settlingBet,  setSettlingBet]  = useState<any>(null);
+  const [isMember,     setIsMember]     = useState<boolean | null>(null);
 
   useFocusEffect(
     useCallback(() => { fetchAll(); }, [circleId])
@@ -53,33 +55,67 @@ export default function CircleProfile() {
 
   const fetchAll = async () => {
     try {
-      const sessionId  = await getSessionId();
-      const circleRes  = await fetch(`${API_BASE}/circles/${circleId}`);
-      const circleData = await circleRes.json();
-      setCircle(circleData);
+      const sessionId = await getSessionId();
 
+      // Always fetch basic circle info
+      const circleRes = await fetch(`${API_BASE}/circles/${circleId}`);
+      if (circleRes.ok) setCircle(await circleRes.json());
+
+      // Try member history endpoint
       const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
+
       if (histRes.ok) {
-          const histData = await histRes.json();
-          setHistory(histData);
-          setCircle(histData.circle);
-          setIsMember(true);
-        }
-       else {
+        const histData = await histRes.json();
+        setHistory(histData);
+        setCircle(histData.circle);
+        setIsMember(true);
+      } else {
+        // Not a member — fetch public data
         setIsMember(false);
+        const [membersRes, betsRes] = await Promise.all([
+          fetch(`${API_BASE}/circles/${circleId}/members`),
+          fetch(`${API_BASE}/circles/${circleId}/bets`, {
+            headers: { "x-session-id": sessionId ?? "" },
+          }),
+        ]);
+        if (membersRes.ok) setPublicMembers(await membersRes.json());
+        if (betsRes.ok)    setPublicBets(await betsRes.json());
       }
 
       const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
         headers: { "x-session-id": sessionId ?? "" },
       });
-      if (reqRes.ok) {
-        const reqs = await reqRes.json();
-        setRequestCount(reqs.length);
-      }
+      if (reqRes.ok) setRequestCount((await reqRes.json()).length);
     } catch (err) {
       console.error("fetchAll error:", err);
+    }
+  };
+
+  const handleJoin = async () => {
+    try {
+      const sessionId = await getSessionId();
+      const endpoint  = circle?.is_private
+        ? `${API_BASE}/circles/${circleId}/request-join`
+        : `${API_BASE}/circles/${circleId}/join`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (res.ok) {
+        if (circle?.is_private) {
+          alert("Join request sent!");
+        } else {
+          alert(`You have successfully joined ${circle?.name}!`);
+          fetchAll();
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not join circle");
+      }
+    } catch {
+      alert("Could not connect to server");
     }
   };
 
@@ -113,13 +149,17 @@ export default function CircleProfile() {
         return;
       }
       if (fromUserId) {
-        router.replace({ pathname: `/circle-preview/${circleId}`, params: { userId: fromUserId } } as any);
+        router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
       } else {
         router.replace("/(tabs)/circles");
       }
-    } catch (err) {
+    } catch {
       alert("Could not connect to server");
     }
+  };
+
+  const handleLockedButton = (label: string) => {
+    alert(`Join this circle to use ${label}.`);
   };
 
   const handleSettle = async (opt: any) => {
@@ -146,106 +186,129 @@ export default function CircleProfile() {
 
   if (!circle) return null;
 
-  const allActionButtons = [
-
-      { label: "Members", icon: "people", onPress: () => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}&isCreator=${circle.is_creator ? "1" : "0"}&hasCoin=${circle.coin_name ? "1" : "0"}&coinName=${encodeURIComponent(circle.coin_name ?? "")}&coinColor=${encodeURIComponent(circle.coin_color ?? "")}&coinIcon=${encodeURIComponent(circle.coin_icon ?? "")}&coinSymbol=${encodeURIComponent(circle.coin_symbol ?? "")}`), showBadge: circle.is_private && requestCount > 0, memberOnly: false, creatorOnly: false, privateOnly: false },
-        { label: "Edit",     icon: "pencil",       onPress: () => router.push(`/circle-profile/${circleId}/edit`),        showBadge: false, memberOnly: true, creatorOnly: false,  privateOnly: false },
-        { label: "Add",      icon: "person-add",   onPress: () => router.push(`/circle-profile/${circleId}/add-friend`),  showBadge: false, memberOnly: true, creatorOnly: false, privateOnly: false },
-        { label: "Leave",    icon: "exit-outline", onPress: handleLeave,                                                   showBadge: false, memberOnly: true, creatorOnly: false, privateOnly: false },
-        { label: "Coin",     icon: "cash-outline", onPress: () => router.push(`/circle-profile/${circleId}/coin`),        showBadge: false, memberOnly: true, creatorOnly: true,  privateOnly: true  },
-  ];
-
-  const actionButtons = allActionButtons.filter(b =>
-  (!b.memberOnly || isMember) &&
-  (!b.creatorOnly || circle?.is_creator) &&
-  (!b.privateOnly || circle?.is_private)
-);
-
-  const renderHistory = () => {
-    if (!history) return (
-      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 24 }}>Loading...</Text>
-    );
-    const resolvedBets = history.bets.filter((b) =>
-      ["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
-    );
-    return (
-      <View>
-        {resolvedBets.map((bet) => (
-          <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
-        ))}
-        {resolvedBets.length === 0 && (
-          <View style={{
-            borderRadius: 16, padding: 28,
-            backgroundColor: "rgba(255,255,255,0.07)",
-            borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
-            alignItems: "center",
-          }}>
-            <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>
-              No bet history yet
-            </Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
   const tabs: { key: "new" | "open" | "history"; label: string }[] = [
     { key: "new",     label: "New"     },
     { key: "open",    label: "Open"    },
     { key: "history", label: "History" },
   ];
 
+  // Bets to show — member history or public bets
+  const allBets: Bet[] = isMember ? (history?.bets ?? []) : publicBets;
+  const newBets  = allBets.filter((b) => b.my_response == null && b.status?.toUpperCase() === "PENDING");
+  const openBets = allBets.filter((b) =>
+    (b.my_response === "accepted" || b.is_creator) &&
+    !["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+  );
+  const resolvedBets = allBets.filter((b) =>
+    ["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
+  );
+
+  const renderTabContent = () => {
+    if (activeTab === "history") {
+      return (
+        <View>
+          {resolvedBets.map((bet) => (
+            <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
+          ))}
+          {resolvedBets.length === 0 && (
+            <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
+              <Ionicons name="receipt-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No bet history yet</Text>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    if (activeTab === "new") {
+      if (newBets.length === 0) return (
+        <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
+          <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+          <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No new bets right now</Text>
+        </View>
+      );
+      return (
+        <View>
+          {newBets.map((bet) => (
+            <BetCard
+              key={bet.id} item={bet} mode="feed"
+              accepting={responding} setAccepting={setResponding}
+              onRemove={(id) => setHistory((prev) => prev ? { ...prev, bets: prev.bets.filter((b) => b.id !== id) } : prev)}
+              onRefresh={fetchAll}
+            />
+          ))}
+        </View>
+      );
+    }
+
+    // open tab
+    if (openBets.length === 0) return (
+      <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
+        <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
+        <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No open bets right now</Text>
+      </View>
+    );
+    return (
+      <View>
+        {openBets.map((bet) => (
+          <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <GradientBackground>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
-          {/* ── Header row: Back + Chat + Report button ── */}
-            <View style={{
-              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-              paddingHorizontal: 16, paddingTop: 12, marginBottom: 8,
-            }}>
-              <TouchableOpacity
-                onPress={() => {
-                  if ((fromUser || fromPreview) && fromUserId) {
-                    router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
-                  } else {
-                    router.replace("/(tabs)/circles");
-                  }
-                }}
-                style={{ paddingHorizontal: 4, paddingVertical: 7 }}
-              >
-                <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
-              </TouchableOpacity>
+        {/* ── Header ── */}
+        <View style={{
+          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          paddingHorizontal: 16, paddingTop: 12, marginBottom: 8,
+        }}>
+          <TouchableOpacity
+            onPress={() => {
+              if ((fromUser || fromPreview) && fromUserId) {
+                router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+              } else {
+                router.replace("/(tabs)/circles");
+              }
+            }}
+            style={{ paddingHorizontal: 4, paddingVertical: 7 }}
+          >
+            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
 
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  {circle && !circle.is_creator && (
-                  <TouchableOpacity
-                    onPress={() => setReportVisible(true)}
-                    style={{
-                      width: 34, height: 34, borderRadius: 17,
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
-                      justifyContent: "center", alignItems: "center",
-                    }}
-                  >
-                    <Ionicons name="flag-outline" size={15} color="rgba(255,255,255,0.3)" />
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 5,
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
-                  }}
-                >
-                  <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
-                  <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>Chat</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {circle && !circle.is_creator && (
+              <TouchableOpacity
+                onPress={() => setReportVisible(true)}
+                style={{
+                  width: 34, height: 34, borderRadius: 17,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+                  justifyContent: "center", alignItems: "center",
+                }}
+              >
+                <Ionicons name="flag-outline" size={15} color="rgba(255,255,255,0.3)" />
+              </TouchableOpacity>
+            )}
+            {isMember && (
+              <TouchableOpacity
+                onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                  borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+                }}
+              >
+                <Ionicons name="chatbubbles-outline" size={15} color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.onSurface, fontSize: 13 }}>Chat</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
         {/* ── Circle hero ── */}
         <View style={{ alignItems: "center", paddingTop: 16, paddingBottom: 20, paddingHorizontal: 20 }}>
@@ -282,88 +345,138 @@ export default function CircleProfile() {
           ) : null}
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12, opacity: 0.6 }}>
-  <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
-  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-    Created {circle.created_at ? formatDate(circle.created_at) : ""}
-  </Text>
-</View>
-
-{circle.coin_name && (
-  <TouchableOpacity
-    activeOpacity={0.75}
-    onPress={() => circle.is_creator ? router.push(`/circle-profile/${circleId}/coin`) : null}
-    style={{
-      flexDirection: "row", alignItems: "center", gap: 6,
-      backgroundColor: (circle.coin_color ?? "#f0c070") + "1a",
-      borderWidth: 1, borderColor: (circle.coin_color ?? "#f0c070") + "44",
-      borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-      marginBottom: 20,
-    }}
-  >
-    <Ionicons name={(circle.coin_icon ?? "ellipse") as any} size={13} color={circle.coin_color ?? "#f0c070"} />
-    <Text style={{ color: circle.coin_color ?? "#f0c070", fontSize: 13, fontWeight: "600" }}>
-      {circle.coin_name}  •  {circle.my_coin_balance ?? 0} {circle.coin_symbol}
-    </Text>
-  </TouchableOpacity>
-)}
-
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-            {isMember === null ? null : (
-              <>
-                {actionButtons.map(({ label, icon, onPress, showBadge }) => (
-                  <TouchableOpacity
-                    key={label}
-                    onPress={onPress}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 6,
-                      backgroundColor: "rgba(255,255,255,0.08)",
-                      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-                      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-                    }}
-                  >
-                    <Ionicons name={icon as any} size={14} color={theme.colors.primary} />
-                    <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>{label}</Text>
-                    {showBadge && (
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.5)", marginLeft: 2 }} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-                {!isMember && (
-                  <TouchableOpacity
-                    onPress={async () => {
-                      try {
-                        const sessionId = await getSessionId();
-                        const res = await fetch(`${API_BASE}/circles/${circleId}/join`, {
-                          method: "POST",
-                          headers: { "x-session-id": sessionId ?? "" },
-                        });
-                        if (res.ok) {
-                          alert(`You have successfully joined ${circle.name}!`);
-                          fetchAll();
-                        } else {
-                          const data = await res.json().catch(() => ({}));
-                          alert(data.error || "Could not join circle");
-                        }
-                      } catch {
-                        alert("Could not connect to server");
-                      }
-                    }}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 6,
-                      backgroundColor: theme.colors.primary,
-                      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-                    }}
-                  >
-                    <Ionicons name="person-add" size={14} color="#fff" />
-                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Join</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+            <Ionicons name="flag-outline" size={13} color={theme.colors.onSurfaceVariant} />
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              Created {circle.created_at ? formatDate(circle.created_at) : ""}
+            </Text>
           </View>
+
+          {circle.coin_name && (
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => circle.is_creator ? router.push(`/circle-profile/${circleId}/coin`) : null}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: (circle.coin_color ?? "#f0c070") + "1a",
+                borderWidth: 1, borderColor: (circle.coin_color ?? "#f0c070") + "44",
+                borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+                marginBottom: 20,
+              }}
+            >
+              <Ionicons name={(circle.coin_icon ?? "ellipse") as any} size={13} color={circle.coin_color ?? "#f0c070"} />
+              <Text style={{ color: circle.coin_color ?? "#f0c070", fontSize: 13, fontWeight: "600" }}>
+                {circle.coin_name}  •  {circle.my_coin_balance ?? 0} {circle.coin_symbol}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* ── Action buttons ── */}
+          {isMember !== null && (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+
+              {/* Members — always visible */}
+              <TouchableOpacity
+                onPress={() => router.push(`/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}&isCreator=${circle.is_creator ? "1" : "0"}&hasCoin=${circle.coin_name ? "1" : "0"}&coinName=${encodeURIComponent(circle.coin_name ?? "")}&coinColor=${encodeURIComponent(circle.coin_color ?? "")}&coinIcon=${encodeURIComponent(circle.coin_icon ?? "")}&coinSymbol=${encodeURIComponent(circle.coin_symbol ?? "")}`)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                  borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                }}
+              >
+                <Ionicons name="people" size={14} color={theme.colors.primary} />
+                <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>Members</Text>
+                {circle.is_private && requestCount > 0 && (
+                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.5)", marginLeft: 2 }} />
+                )}
+              </TouchableOpacity>
+
+              {/* Edit — greyed out for non-members */}
+              <TouchableOpacity
+                onPress={() => isMember
+                  ? router.push(`/circle-profile/${circleId}/edit`)
+                  : handleLockedButton("Edit")
+                }
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: isMember ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+                  borderWidth: 1, borderColor: isMember ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.06)",
+                  borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  opacity: isMember ? 1 : 0.4,
+                }}
+              >
+                <Ionicons name="pencil" size={14} color={isMember ? theme.colors.primary : theme.colors.onSurfaceVariant} />
+                <Text style={{ color: isMember ? theme.colors.onSurface : theme.colors.onSurfaceVariant, fontSize: 13, fontWeight: "400" }}>Edit</Text>
+              </TouchableOpacity>
+
+              {/* Add — greyed out for non-members */}
+              <TouchableOpacity
+                onPress={() => isMember
+                  ? router.push(`/circle-profile/${circleId}/add-friend`)
+                  : handleLockedButton("Add")
+                }
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: isMember ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+                  borderWidth: 1, borderColor: isMember ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.06)",
+                  borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  opacity: isMember ? 1 : 0.4,
+                }}
+              >
+                <Ionicons name="person-add" size={14} color={isMember ? theme.colors.primary : theme.colors.onSurfaceVariant} />
+                <Text style={{ color: isMember ? theme.colors.onSurface : theme.colors.onSurfaceVariant, fontSize: 13, fontWeight: "400" }}>Add</Text>
+              </TouchableOpacity>
+
+              {/* Coin — member + creator + private only */}
+              {isMember && circle.is_creator && circle.is_private && (
+                <TouchableOpacity
+                  onPress={() => router.push(`/circle-profile/${circleId}/coin`)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  }}
+                >
+                  <Ionicons name="cash-outline" size={14} color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.onSurface, fontSize: 13, fontWeight: "400" }}>Coin</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Leave (member) or Join (non-member) */}
+              {isMember ? (
+                <TouchableOpacity
+                  onPress={handleLeave}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    backgroundColor: "rgba(232,112,96,0.1)",
+                    borderWidth: 1, borderColor: "rgba(232,112,96,0.3)",
+                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  }}
+                >
+                  <Ionicons name="exit-outline" size={14} color="#e87060" />
+                  <Text style={{ color: "#e87060", fontSize: 13, fontWeight: "400" }}>Leave</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleJoin}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+                  }}
+                >
+                  <Ionicons name="person-add" size={14} color="#fff" />
+                  <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+                    {circle.is_private ? "Request to Join" : "Join"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
-        {/* ── Tabs ── */}
+        {/* ── Tabs — always visible ── */}
         <View style={{ flexDirection: "row", marginHorizontal: 20, marginBottom: 20 }}>
           {tabs.map(({ key, label }) => {
             const active = activeTab === key;
@@ -390,51 +503,9 @@ export default function CircleProfile() {
 
         {/* ── Tab content ── */}
         <View style={{ paddingHorizontal: 20 }}>
-          {activeTab === "history" ? renderHistory() : (() => {
-            const newBets = history?.bets.filter((b) =>
-              b.my_response == null && b.status?.toUpperCase() === "PENDING"
-            ) ?? [];
-            const openBets = history?.bets.filter((b) =>
-              (b.my_response === "accepted" || b.is_creator) &&
-              !["SETTLED", "CANCELLED"].includes(b.status?.toUpperCase() ?? "")
-            ) ?? [];
-
-            if (activeTab === "new") {
-              if (newBets.length === 0) return (
-                <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
-                  <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                  <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No new bets right now</Text>
-                </View>
-              );
-              return (
-                <View>
-                  {newBets.map((bet) => (
-                    <BetCard
-                      key={bet.id} item={bet} mode="feed"
-                      accepting={responding} setAccepting={setResponding}
-                      onRemove={(id) => setHistory((prev) => prev ? { ...prev, bets: prev.bets.filter((b) => b.id !== id) } : prev)}
-                      onRefresh={fetchAll}
-                    />
-                  ))}
-                </View>
-              );
-            }
-
-            if (openBets.length === 0) return (
-              <View style={{ borderRadius: 16, padding: 28, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}>
-                <Ionicons name="flash-outline" size={36} color={theme.colors.onSurfaceVariant} style={{ marginBottom: 12 }} />
-                <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", fontSize: 14 }}>No open bets right now</Text>
-              </View>
-            );
-            return (
-              <View>
-                {openBets.map((bet) => (
-                  <BetCard key={bet.id} item={bet} mode="active" onRefresh={fetchAll} onSettle={setSettlingBet} />
-                ))}
-              </View>
-            );
-          })()}
+          {renderTabContent()}
         </View>
+
       </ScrollView>
 
       <Portal>
@@ -470,12 +541,12 @@ export default function CircleProfile() {
           </Button>
         </Modal>
       </Portal>
-        <ReportModal
-          visible={reportVisible}
-          onDismiss={() => setReportVisible(false)}
-          targetType="circle"
-          targetId={circleId}
-        />
+      <ReportModal
+        visible={reportVisible}
+        onDismiss={() => setReportVisible(false)}
+        targetType="circle"
+        targetId={circleId}
+      />
     </GradientBackground>
   );
 }

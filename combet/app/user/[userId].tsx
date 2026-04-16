@@ -44,19 +44,24 @@ function CirclePill({ circle, isMember, userId }: { circle: any; isMember: boole
 
   return (
     <TouchableOpacity
-      onPress={() => isMember
-        ? router.push({ pathname: `/circle-profile/${circle.circle_id}`, params: { from: "user", userId } } as any)
-        : router.push({ pathname: `/circle-preview/${circle.circle_id}`, params: { userId } } as any)
-      }
-      style={{ alignItems: "center", marginRight: 14, width: 68, opacity: isMember ? 1 : 0.45 }}
+      onPress={() => router.push({ pathname: `/circle-profile/${circle.circle_id}`, params: { from: "user", userId } } as any)}
+      style={{ alignItems: "center", marginRight: 14, width: 68 }}
     >
       <View style={{ width: 56, height: 56, position: "relative", overflow: "visible" }}>
+        {/* Circle avatar */}
         <View style={{
           width: 56, height: 56, borderRadius: 28,
-          backgroundColor: circle.icon_color ?? theme.colors.primary,
+          backgroundColor: isMember ? (circle.icon_color ?? theme.colors.primary) : "rgba(255,255,255,0.08)",
           alignItems: "center", justifyContent: "center",
+          borderWidth: isMember ? 0 : 1.5,
+          borderColor: "rgba(255,255,255,0.15)",
+          borderStyle: isMember ? "solid" : "dashed",
         }}>
-          <Ionicons name={(circle.icon as any) ?? "people"} size={24} color="#fff" />
+          <Ionicons
+            name={(circle.icon as any) ?? "people"}
+            size={24}
+            color={isMember ? "#fff" : "rgba(255,255,255,0.3)"}
+          />
         </View>
 
         {/* Privacy badge */}
@@ -78,14 +83,15 @@ function CirclePill({ circle, isMember, userId }: { circle: any; isMember: boole
       <Text
         numberOfLines={1}
         style={{
-          color: theme.colors.onSurface, fontSize: 11, fontWeight: "500",
+          color: isMember ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+          fontSize: 11, fontWeight: "500",
           marginTop: 6, textAlign: "center", width: 68,
         }}
       >
         {circle.name}
       </Text>
       <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 10, marginTop: 1 }}>
-        {circle.member_count} members
+        {isMember ? `${circle.member_count} members` : "Not a member"}
       </Text>
     </TouchableOpacity>
   );
