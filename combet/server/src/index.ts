@@ -12,6 +12,7 @@ import { leaderboardRouter } from "./routes/leaderboard";
 import { adminRouter } from "./routes/admin";
 import { spinRouter } from "./routes/spin";
 import { messagesRouter } from "./routes/messages";
+import path = require("node:path");
 
 
 
@@ -38,8 +39,9 @@ app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/spin", spinRouter);
 app.use("/api/messages", messagesRouter);
-
-
+app.get("/privacy", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "privacy.html"));
+});
 
 
 startCronJobs();

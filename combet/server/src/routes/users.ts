@@ -120,6 +120,38 @@ usersRouter.patch("/me", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── Delete My Account ────────────────────────────────────────────────────────
+usersRouter.delete("/me", requireAuth, async (req: AuthRequest, res) => {
+
+      console.log("DELETE /users/me hit for user:", req.userId);
+
+    const userId = req.userId;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(`DELETE FROM blocks              WHERE blocker_id = $1 OR blocked_id = $1`,   [userId]);
+    await client.query(`DELETE FROM reports             WHERE reporter_id = $1`,                      [userId]);
+    await client.query(`DELETE FROM follows             WHERE follower_id = $1 OR following_id = $1`, [userId]);
+    await client.query(`DELETE FROM follow_requests     WHERE requester_id = $1 OR requestee_id = $1`,[userId]);
+    await client.query(`DELETE FROM circle_join_requests WHERE user_id = $1`,                         [userId]);
+    await client.query(`DELETE FROM circle_members      WHERE user_id = $1`,                          [userId]);
+    await client.query(`DELETE FROM bet_responses       WHERE user_id = $1`,                          [userId]);
+    await client.query(`DELETE FROM coin_transactions   WHERE user_id = $1`,                          [userId]);
+    await client.query(`DELETE FROM sessions            WHERE user_id = $1`,                          [userId]);
+    await client.query(`DELETE FROM users               WHERE id = $1`,                               [userId]);
+
+    await client.query("COMMIT");
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("DELETE /users/me error:", err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
+  }
+});
+
 // ─── Search Users & Circles ───────────────────────────────────────────────────
 usersRouter.get("/search", requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -666,3 +698,4 @@ usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+

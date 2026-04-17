@@ -128,6 +128,38 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const doDeleteAccount = async () => {
+  try {
+    const sessionId = await getSessionId();
+    const res = await fetch(`${API_BASE}/users/me`, {
+      method: "DELETE",
+      headers: { "x-session-id": sessionId ?? "" },
+    });
+    if (!res.ok) throw new Error();
+    await deleteSessionId();
+    router.replace("/login");
+  } catch {
+    Alert.alert("Error", "Could not delete account. Please try again.");
+  }
+};
+
+const onDeleteAccount = () => {
+  if (Platform.OS === "web") {
+    if (window.confirm("This will permanently delete your account and all your data. This cannot be undone.")) {
+      void doDeleteAccount();
+    }
+    return;
+  }
+  Alert.alert(
+    "Delete Account",
+    "This will permanently delete your account and all your data. This cannot be undone.",
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => void doDeleteAccount() },
+    ]
+  );
+};
+
   const s = styles(theme);
 
   return (
@@ -173,8 +205,7 @@ export default function SettingsScreen() {
             titleStyle={{ color: theme.colors.onSurface }}
             left={(props) => <List.Icon {...props} icon="shield-account" color={theme.colors.primary} />}
             right={(props) => <List.Icon {...props} icon="chevron-right" color={theme.colors.onSurfaceVariant} />}
-            onPress={() => Alert.alert("Coming Soon", "Privacy settings coming soon.")}
-          />
+            onPress={() => router.push("/privacy-security")}          />
         </View>
 
         <Divider style={s.divider} />
@@ -182,14 +213,21 @@ export default function SettingsScreen() {
         <Text style={[s.sectionLabel, { fontSize: 13, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" }]}>
           Account
         </Text>
-        <View style={s.card}>
+          <View style={s.card}>
           <List.Item
             title="Logout"
             titleStyle={{ color: theme.colors.error }}
             left={(props) => <List.Icon {...props} icon="logout" color={theme.colors.error} />}
             onPress={onLogout}
           />
-        </View>
+          <Divider style={{ backgroundColor: theme.colors.outline }} />
+          <List.Item
+              title="Delete Account"
+              titleStyle={{ color: theme.colors.error }}
+              left={(props) => <List.Icon {...props} icon="delete-forever" color={theme.colors.error} />}
+              onPress={onDeleteAccount}
+            />
+              </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>

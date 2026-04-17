@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy & Security — Combet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:        #4dd9c0;
+      --on-surface:     #e8f0f5;
+      --on-surface-var: #7a9bb0;
+      --card-bg:        rgba(255,255,255,0.07);
+      --card-border:    rgba(255,255,255,0.10);
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, #0d1f2d 0%, #0b1a26 40%, #091520 100%);
+      color: var(--on-surface);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 20% 0%,  rgba(77,217,192,.09) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 80% 100%, rgba(77,180,220,.07) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    .page-header {
+      padding: 56px 0 28px;
+    }
+
+    .page-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--on-surface);
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .body {
+      font-size: 14px;
+      color: var(--on-surface);
+      line-height: 22px;
+    }
+
+    .bullet {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .dot {
+      color: var(--primary);
+      font-size: 14px;
+      line-height: 22px;
+      flex-shrink: 0;
+    }
+
+    .bullet-text {
+      font-size: 14px;
+      color: var(--on-surface);
+      line-height: 22px;
+      flex: 1;
+    }
+
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-header">
+    <h1>Privacy &amp; Security</h1>
+  </div>
+
+  <div class="section-label">Privacy Policy</div>
+  <div class="card">
+    <p class="body">Last updated: April 2026</p>
+    <p class="body">This Privacy Policy describes how Combet collects, uses, and protects information when you use the Combet mobile application.</p>
+  </div>
+
+  <div class="section-label">Information We Collect</div>
+  <div class="card">
+    <p class="body">When you use Combet, we collect:</p>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Account information: username, email address, and password (stored encrypted)</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Profile information: display name, bio, and avatar preferences</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">App activity: bets created, bet results, circle membership, and coin transactions</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Device information: device type and operating system, for app functionality</span></div>
+  </div>
+
+  <div class="section-label">How We Use Your Information</div>
+  <div class="card">
+    <p class="body">We use the information we collect to:</p>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Operate and maintain the Combet app</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Display leaderboards, bet history, and circle activity</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Send notifications about your bets and circles (if enabled)</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Improve the app and fix issues</span></div>
+  </div>
+
+  <div class="section-label">Virtual Currency</div>
+  <div class="card">
+    <p class="body">Combet uses a virtual coin system for social betting between friends. Coins have no real-world monetary value, cannot be exchanged for cash or real goods, and do not represent any financial instrument. Combet does not process any real money or payment information.</p>
+  </div>
+
+  <div class="section-label">Information Sharing</div>
+  <div class="card">
+    <p class="body">We do not sell your personal information to third parties. We do not share your data with advertisers. Your bet activity and profile are visible to other users within your circles based on your account privacy settings.</p>
+  </div>
+
+  <div class="section-label">Data Retention</div>
+  <div class="card">
+    <p class="body">We retain your data for as long as your account is active. If you request account deletion, your personal data will be removed within 30 days. Anonymized statistical data may be retained longer.</p>
+  </div>
+
+  <div class="section-label">Security</div>
+  <div class="card">
+    <p class="body">We take reasonable measures to protect your information:</p>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Passwords are stored using industry-standard hashing</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">All data is transmitted over encrypted HTTPS connections</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Session-based authentication protects your account access</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">No payment or financial data is stored on our servers</span></div>
+    <p class="body">No method of transmission or storage is 100% secure. We encourage you to use a strong, unique password for your account.</p>
+  </div>
+
+  <div class="section-label">Your Rights</div>
+  <div class="card">
+    <p class="body">You have the right to:</p>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Access the personal data we hold about you</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Request correction of inaccurate data</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Request deletion of your account and associated data</span></div>
+    <div class="bullet"><span class="dot">•</span><span class="bullet-text">Opt out of non-essential communications</span></div>
+    <p class="body">To exercise any of these rights, contact us at <a href="mailto:combet.privacy@gmail.com">combet.privacy@gmail.com</a>.</p>
+  </div>
+
+  <div class="section-label">Changes to This Policy</div>
+  <div class="card">
+    <p class="body">We may update this Privacy Policy from time to time. We will notify you of significant changes through the app. Continued use of Combet after changes constitutes acceptance of the updated policy.</p>
+  </div>
+
+  <div class="section-label">Contact</div>
+  <div class="card">
+    <p class="body">If you have any questions about this Privacy Policy or our data practices, contact us at <a href="mailto:combet.privacy@gmail.com">combet.privacy@gmail.com</a>.</p>
+  </div>
+
+  <div style="height:40px"></div>
+</div>
+</body>
+</html>
