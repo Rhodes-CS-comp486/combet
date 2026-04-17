@@ -271,7 +271,7 @@ export default function CoinScreen() {
           }}>
             <Ionicons name="checkmark-circle" size={16} color="#3A86FF" style={{ marginTop: 1 }} />
             <Text style={{ flex: 1, fontSize: 12, color: "rgba(55,134,255,0.7)", lineHeight: 18 }}>
-              Coins are managed by you. Combet tracks balances only — real-world value is between you and your circle.
+              Coins are managed by you and hold no real-world value. Combet tracks balances only.
             </Text>
           </View>
         )}
@@ -325,7 +325,7 @@ export default function CoinScreen() {
               underlineColor="transparent"
               activeUnderlineColor={theme.colors.primary}
               theme={{ colors: { onSurfaceVariant: theme.colors.onSurfaceVariant, primary: theme.colors.primary } }}
-              placeholder="e.g. 1 chip = $1. Venmo @you to buy in."
+
             />
           </View>
           <Text style={{ fontSize: 11, color: theme.colors.onSurfaceVariant, marginTop: 6 }}>
