@@ -518,9 +518,13 @@ export default function HomeScreen() {
       mode="feed"
       accepting={accepting}
       setAccepting={setAccepting}
-      onRemove={(id) => setFeed((prev) => prev.filter((b) => b.id !== id))}
-    />
-  );
+      onRemove={(id) => {
+          setFeed((prev) => prev.filter((b) => b.id !== id));
+          void fetchActiveBets();
+          void fetchCoins();
+        }}
+            />
+          );
 
   const renderActiveBetItem = ({ item }: { item: any }) => (
     <BetCard
