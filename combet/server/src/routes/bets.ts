@@ -190,7 +190,8 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
     await client.query("BEGIN");
 
 
-    const betResult = await client.query(`SELECT stake_amount, status FROM bets WHERE id = $1`, [betId]);
+    const betResult = await client.query(`SELECT stake_amount, status, use_circle_coin FROM bets WHERE id = $1`, [betId]);
+
     if (!betResult.rows[0]) {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Bet not found" });
@@ -200,6 +201,7 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
       return res.status(400).json({ error: "Bet is no longer open" });
     }
     const stake = betResult.rows[0].stake_amount;
+    const useCircleCoin = betResult.rows[0].use_circle_coin;
     const userResult = await client.query(`SELECT coins FROM users WHERE id = $1`, [req.userId]);
     const coins = userResult.rows[0]?.coins ?? 0;
 
@@ -211,23 +213,44 @@ betsRouter.post("/:betId/accept", requireAuth, async (req: AuthRequest, res) => 
     const circleId    = targetResult.rows[0]?.target_id;
 
     if (stake > 0) {
-      if (coins < stake) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Not enough coins", coins });
-      }
-      if (isCircleBet) {
-        const balanceResult = await client.query(
-          `SELECT coin_balance FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
-          [circleId, req.userId]
-        );
-        const coinBalance = balanceResult.rows[0]?.coin_balance ?? 0;
-        if (coinBalance < stake) {
-          await client.query("ROLLBACK");
-          return res.status(400).json({ error: "Not enough circle coins", coins: coinBalance });
-        }
-      }
-
+  if (!useCircleCoin && coins < stake) {
+    await client.query("ROLLBACK");
+    return res.status(400).json({ error: "Not enough coins", coins });
+  }
+  if (isCircleBet && useCircleCoin) {
+    const balanceResult = await client.query(
+      `SELECT coin_balance FROM circle_members WHERE circle_id = $1 AND user_id = $2`,
+      [circleId, req.userId]
+    );
+    const coinBalance = balanceResult.rows[0]?.coin_balance ?? 0;
+    if (coinBalance < stake) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Not enough circle coins", coins: coinBalance });
     }
+  }
+}
+
+    if (stake > 0) {
+  // deduct global coins
+  if (!useCircleCoin) { // or however you're determining coin type
+    await client.query(
+      `UPDATE users SET coins = coins - $1 WHERE id = $2`,
+      [stake, req.userId]
+    );
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, bet_id, amount, type) VALUES ($1, $2, $3, 'stake')`,
+      [req.userId, betId, -stake]
+    );
+  }
+  // deduct circle coins
+  if (isCircleBet && useCircleCoin) {
+    await client.query(
+      `UPDATE circle_members SET coin_balance = coin_balance - $1 WHERE circle_id = $2 AND user_id = $3`,
+      [stake, circleId, req.userId]
+    );
+  }
+}
+
 
     await client.query(
       `INSERT INTO bet_responses (bet_id, user_id, status, selected_option_id)

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TouchableOpacity, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { View, TouchableOpacity, DeviceEventEmitter, ActivityIndicator, Pressable } from "react-native";
 import { Text, Button, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -329,11 +329,12 @@ export default function BetCard({
               </View>
 
               {mode === "feed" && (
-                <TouchableOpacity
+                  <Pressable
                   disabled={accepting !== null}
-                  onPress={async () => {
-                    setAccepting?.(`${item.id}-${opt.id}`);
-                    try {
+                  onPress={async (e: any) => {
+                      e?.preventDefault?.();
+                      console.log("opt:", opt);
+                      setAccepting?.(`${item.id}-${opt.id}`);try {
                       const sessionId = await getSessionId();
                       const res = await fetch(`${API_BASE}/bets/${item.id}/accept`, {
                         method: "POST",
@@ -341,6 +342,8 @@ export default function BetCard({
                         body: JSON.stringify({ selectedOptionId: opt.id }),
                       });
                       const data = await res.json();
+                      console.log("accept response:", res.status, data);
+
                       if (!res.ok) {
                         if (res.status === 400 && data.error === "Not enough coins") {
                           alert(`Not enough coins! You have ${data.coins} but this bet costs ${stake}.`);
@@ -366,7 +369,7 @@ export default function BetCard({
                     ? <ActivityIndicator size="small" color={colors.btnText} />
                     : <Ionicons name="add" size={20} color={colors.btnText} />
                   }
-                </TouchableOpacity>
+                  </Pressable>
               )}
 
               {mode === "active" && (
