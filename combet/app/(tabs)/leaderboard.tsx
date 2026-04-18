@@ -4,6 +4,7 @@ import { Text } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
+import { router } from "expo-router";
 import GradientBackground from "@/components/GradientBackground";
 import UserAvatar from "@/components/UserAvatar";
 import { getSessionId } from "@/components/sessionStore";
@@ -68,7 +69,7 @@ function Card({ children, style, accent }: { children: React.ReactNode; style?: 
 
 
 function SpotlightCard({
-  accent, label, avatarNode, name, sub, badgeStat, badgeSub, children, style,
+  accent, label, avatarNode, name, sub, badgeStat, badgeSub, children, style, onPress,
 }: {
   accent: string;
   label: string;
@@ -79,9 +80,10 @@ function SpotlightCard({
   badgeSub?: string;
   children?: React.ReactNode;
   style?: any;
+  onPress?: () => void;
 }) {
-  return (
-    <Card style={[{ flex: 1 }, style]} accent={accent}>
+  const inner = (
+    <>
       <Text style={{ fontSize: 15, fontWeight: "800", letterSpacing: 1, color: accent, marginBottom: 14 }}>
         {label}
       </Text>
@@ -106,7 +108,14 @@ function SpotlightCard({
         </View>
       </View>
       {children}
-    </Card>
+    </>
+  );
+  return onPress ? (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={{ flex: 1 }}>
+      <Card style={style} accent={accent}>{inner}</Card>
+    </TouchableOpacity>
+  ) : (
+    <Card style={[{ flex: 1 }, style]} accent={accent}>{inner}</Card>
   );
 }
 
@@ -212,7 +221,7 @@ export default function LeaderboardScreen() {
                 <Text style={{ fontSize: 15, fontWeight: "800", color: GOLD, marginBottom: 14 }}>TOP 3</Text>
                 <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
 
-                  <View style={{ flex: 1, alignItems: "center", gap: 5 }}>
+                  <TouchableOpacity style={{ flex: 1, alignItems: "center", gap: 5 }} onPress={() => router.push(`/user/${top3[1].id}`)}>
                     <View style={{ height: 28 }} />
                     <UserAvatar user={top3[1]} size={avPodium2} />
                     <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.85)" }} numberOfLines={1}>
@@ -230,9 +239,9 @@ export default function LeaderboardScreen() {
                     }}>
                       <Text style={{ fontSize: 16, fontWeight: "900", color: "rgba(255,255,255,0.5)" }}>2</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
-                  <View style={{ flex: 1, alignItems: "center", gap: 5 }}>
+                  <TouchableOpacity style={{ flex: 1, alignItems: "center", gap: 5 }} onPress={() => router.push(`/user/${top3[0].id}`)}>
                     <Svg width={28} height={20} viewBox="0 0 28 20">
                       <Path d="M2 16 L4 6 L9 11 L14 2 L19 11 L24 6 L26 16 Z" fill={GOLD} stroke={GOLD} strokeWidth={0.5} strokeLinejoin="round" />
                       <Rect x={2} y={16} width={24} height={3} rx={1.5} fill={GOLD} />
@@ -253,9 +262,9 @@ export default function LeaderboardScreen() {
                     }}>
                       <Text style={{ fontSize: 20, fontWeight: "900", color: "rgba(255,255,255,0.5)" }}>1</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
-                  <View style={{ flex: 1, alignItems: "center", gap: 5 }}>
+                  <TouchableOpacity style={{ flex: 1, alignItems: "center", gap: 5 }} onPress={() => router.push(`/user/${top3[2].id}`)}>
                     <View style={{ height: 28 }} />
                     <UserAvatar user={top3[2]} size={avPodium3} />
                     <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.85)" }} numberOfLines={1}>
@@ -273,7 +282,7 @@ export default function LeaderboardScreen() {
                     }}>
                       <Text style={{ fontSize: 13, fontWeight: "900", color: "rgba(255,255,255,0.5)" }}>3</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                 </View>
               </Card>
@@ -288,6 +297,7 @@ export default function LeaderboardScreen() {
                   name={onFire.display_name.split(" ")[0]}
                   sub="win streak"
                   badgeStat={`${onFire.win_streak}W`}
+                  onPress={() => router.push(`/user/${onFire.id}`)}
                 >
                 </SpotlightCard>
               )}
@@ -307,6 +317,7 @@ export default function LeaderboardScreen() {
                   sub=""
                   badgeStat={`${hotCircle.bet_count}`}
                   badgeSub="bets"
+                  onPress={() => router.push({ pathname: `/circle-profile/${hotCircle.circle_id}`, params: { from: 'leaderboard' } } as any)}
                 />
               )}
             </View>
@@ -320,6 +331,7 @@ export default function LeaderboardScreen() {
                   name={losingBad.display_name.split(" ")[0]}
                   sub="in a row"
                   badgeStat={`${losingBad.loss_streak}L`}
+                  onPress={() => router.push(`/user/${losingBad.id}`)}
                 >
                 </SpotlightCard>
               )}
@@ -330,6 +342,7 @@ export default function LeaderboardScreen() {
                   name={mostBetsUser.display_name.split(" ")[0]}
                   sub="bets"
                   badgeStat={`${mostBetsUser.wins + mostBetsUser.losses}`}
+                  onPress={() => router.push(`/user/${mostBetsUser.id}`)}
                 />
               )}
             </View>
@@ -345,7 +358,7 @@ export default function LeaderboardScreen() {
                   const maxCoins = users[0]?.coins_won ?? 1;
                   const barWidth = maxCoins > 0 ? Math.max((u.coins_won / maxCoins) * 100, 4) : 4;
                   return (
-                    <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <TouchableOpacity key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => router.push(`/user/${u.id}` as any)}>
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.25)", width: 16 }}>{u.rank}</Text>
                       <UserAvatar user={u} size={avList} />
                       <View style={{ flex: 1 }}>
@@ -368,7 +381,7 @@ export default function LeaderboardScreen() {
                           <View style={{ height: "100%", borderRadius: 4, backgroundColor: accent, width: `${barWidth}%`, opacity: 0.8 }} />
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
@@ -383,12 +396,12 @@ export default function LeaderboardScreen() {
                 </View>
                 <View style={{ gap: 0 }}>
                   {circles.map((c, i) => (
-                    <View key={c.circle_id} style={{
+                    <TouchableOpacity key={c.circle_id} style={{
                       flexDirection: "row", alignItems: "center", gap: 10,
                       paddingVertical: 12,
                       borderBottomWidth: i < circles.length - 1 ? 1 : 0,
                       borderBottomColor: "rgba(255,255,255,0.07)",
-                    }}>
+                    }} onPress={() => router.push({ pathname: `/circle-profile/${c.circle_id}`, params: { from: 'leaderboard' } } as any)}>
                       <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.25)", width: 16 }}>{i + 1}</Text>
                       <View style={{
                         width: avList, height: avList, borderRadius: avList / 2,
@@ -406,7 +419,7 @@ export default function LeaderboardScreen() {
                       <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.7)" }}>
                           {c.coins_wagered.toLocaleString()}
                         </Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
               </Card>
