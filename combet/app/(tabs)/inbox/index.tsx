@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, FlatList, TouchableOpacity, Animated, PanResponder } from "react-native";
+import { View, FlatList, TouchableOpacity, Animated, PanResponder, Modal, ScrollView } from "react-native";
 import { Text, Button, ActivityIndicator } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -9,6 +9,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
+import BetCard from "@/components/BetCard";
 
 type Notification = {
   notification_id: string;
@@ -34,6 +35,7 @@ type Notification = {
   request_id: string | null;
   join_request_status: string | null;
   join_request_circle_name: string | null;
+  join_request_circle_id: string | null;
   invite_status: string | null;
 
   // Bet deadline
@@ -41,6 +43,8 @@ type Notification = {
   bet_title: string | null;
   bet_closes_at: string | null;
 };
+
+type BetDetail = any;
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -59,6 +63,9 @@ export default function InboxScreen() {
   const [requestCount, setRequestCount]   = useState(0);
   const [conversations, setConversations] = useState<any[]>([]);
   const [convoLoading, setConvoLoading]   = useState(false);
+  const [betModal, setBetModal]           = useState<{ visible: boolean; bet: BetDetail | null; loading: boolean }>({
+    visible: false, bet: null, loading: false,
+  });
 
   useFocusEffect(useCallback(() => {
     void fetchInbox();
@@ -125,6 +132,29 @@ export default function InboxScreen() {
       setLoading(false);
     }
   };
+
+  const openBetModal = async (betId: string, fallbackTitle?: string | null) => {
+    setBetModal({ visible: true, bet: null, loading: true });
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      const res = await fetch(`${API_BASE}/inbox/bet/${betId}`, {
+        headers: { "x-session-id": sessionId },
+      });
+      if (!res.ok) {
+        console.error("Fetch bet failed:", res.status);
+        setBetModal({ visible: true, bet: { id: betId, title: fallbackTitle ?? "Bet", options: [], status: "OPEN" }, loading: false });
+        return;
+      }
+      const data = await res.json();
+      setBetModal({ visible: true, bet: data, loading: false });
+    } catch (err) {
+      console.error("Fetch bet error:", err);
+      setBetModal({ visible: true, bet: { id: betId, title: fallbackTitle ?? "Bet", options: [], status: "OPEN" }, loading: false });
+    }
+  };
+
+  const closeBetModal = () => setBetModal({ visible: false, bet: null, loading: false });
 
   const handleAccept = async (inviteId: string) => {
     try {
@@ -585,7 +615,11 @@ export default function InboxScreen() {
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
                   <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
                   {" wants to join "}
-                  <Text style={{ fontWeight: "700", color: theme.colors.primary }}>
+                  <Text
+                    onPress={() => item.join_request_circle_id && router.push(`/circle-profile/${item.join_request_circle_id}`)}
+                    style={{ fontWeight: "700", color: theme.colors.primary }}
+                    suppressHighlighting
+                  >
                     "{item.join_request_circle_name}"
                   </Text>
                 </Text>
@@ -643,7 +677,11 @@ export default function InboxScreen() {
         : null;
       return (
         <View style={{ position: "relative", marginBottom: 12 }}>
-        <View style={cardStyle}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={cardStyle}
+          onPress={() => item.bet_id && openBetModal(item.bet_id, item.bet_title)}
+        >
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{
@@ -674,7 +712,7 @@ export default function InboxScreen() {
 
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
         <XButton />
         </View>
       );
@@ -705,8 +743,110 @@ export default function InboxScreen() {
     );
   };
 
+  // ── Bet detail modal ──────────────────────────────────────────────────────
+  const BetDetailModal = () => {
+    const { bet, loading: betLoading } = betModal;
+
+    const hoursLeft = bet?.closes_at
+      ? Math.max(0, Math.round((new Date(bet.closes_at).getTime() - Date.now()) / 3600000))
+      : null;
+
+    return (
+      <Modal
+        visible={betModal.visible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeBetModal}
+      >
+        {/* Backdrop */}
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)" }}
+          activeOpacity={1}
+          onPress={closeBetModal}
+        />
+
+        {/* Sheet */}
+        <View style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          backgroundColor: isDark ? "#1a1f2e" : "#f0f0f5",
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          paddingBottom: 40,
+          shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.3, shadowRadius: 12, elevation: 20,
+        }}>
+          {/* Handle */}
+          <View style={{ alignItems: "center", paddingTop: 12, paddingBottom: 4 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" }} />
+          </View>
+
+          {/* Header row */}
+          <View style={{
+            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14,
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{
+                width: 30, height: 30, borderRadius: 15,
+                backgroundColor: "rgba(252,211,77,0.12)",
+                borderWidth: 1, borderColor: "rgba(252,211,77,0.3)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="time-outline" size={15} color="#fcd34d" />
+              </View>
+              <Text style={{ color: theme.colors.onSurface, fontSize: 15, fontWeight: "600" }}>
+                Deadline Approaching
+              </Text>
+              {hoursLeft !== null && (
+                <View style={{
+                  backgroundColor: "rgba(252,211,77,0.12)", borderRadius: 20,
+                  paddingHorizontal: 8, paddingVertical: 3,
+                  borderWidth: 1, borderColor: "rgba(252,211,77,0.25)",
+                }}>
+                  <Text style={{ color: "#fcd34d", fontSize: 11, fontWeight: "700" }}>
+                    {hoursLeft > 0 ? `${hoursLeft}h left` : "Closing soon"}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity onPress={closeBetModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={22} color={theme.colors.onSurfaceVariant} />
+            </TouchableOpacity>
+          </View>
+
+          {betLoading ? (
+            <View style={{ paddingVertical: 48, alignItems: "center" }}>
+              <ActivityIndicator animating color={theme.colors.primary} />
+            </View>
+          ) : bet ? (
+            <ScrollView
+              style={{ paddingHorizontal: 16 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+            >
+              <BetCard item={bet} mode="preview" />
+              <TouchableOpacity
+                onPress={() => { closeBetModal(); router.push("/(tabs)/profile"); }}
+                style={{
+                  marginTop: 8, borderRadius: 12, padding: 14,
+                  backgroundColor: theme.colors.primary,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>View on Profile</Text>
+              </TouchableOpacity>
+              <View style={{ height: 8 }} />
+            </ScrollView>
+          ) : null}
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <GradientBackground>
+      <BetDetailModal />
       {/* ── Header ── */}
       <View style={{
         paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,

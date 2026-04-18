@@ -15,7 +15,7 @@ function fmtDate(dateStr: string) {
 
 type BetCardProps = {
   item: any;
-  mode: "feed" | "active" | "profile";
+  mode: "feed" | "active" | "profile" | "preview";
   accepting?: string | null;
   setAccepting?: (val: string | null) => void;
   onRemove?: (id: string) => void;
