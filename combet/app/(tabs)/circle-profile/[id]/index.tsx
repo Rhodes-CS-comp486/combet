@@ -256,6 +256,8 @@ export default function CircleProfile() {
             onPress={() => {
               if ((fromUser || fromPreview) && fromUserId) {
                 router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+              } else if (from === "leaderboard") {
+                router.replace("/(tabs)/leaderboard");
               } else {
                 router.replace("/(tabs)/circles");
               }

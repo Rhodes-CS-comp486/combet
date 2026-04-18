@@ -37,6 +37,7 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         cjr_circle.name         AS join_request_circle_name,
         cjr_circle.icon         AS join_request_circle_icon,
         cjr_circle.icon_color   AS join_request_circle_icon_color,
+        cjr_circle.circle_id    AS join_request_circle_id,
 
         -- Follow request fields
         fr.request_id           AS follow_request_id,
@@ -332,6 +333,80 @@ inboxRouter.delete("/:notificationId", requireAuth, async (req: AuthRequest, res
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE notification error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+// ─── Get Single Bet (for inbox deadline modal) ────────────────────────────────
+inboxRouter.get("/bet/:betId", requireAuth, async (req: AuthRequest, res) => {
+  const { betId } = req.params;
+  const userId    = req.userId;
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        b.id,
+        b.title,
+        b.description,
+        b.stake_amount,
+        b.custom_stake,
+        b.winning_option_id,
+        b.status,
+        b.created_at,
+        b.closes_at,
+        b.creator_user_id,
+        b.target_id,
+        CASE WHEN b.creator_user_id = $2 THEN true ELSE false END AS is_creator,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS creator_name,
+        u.username     AS creator_username,
+        u.avatar_color AS creator_avatar_color,
+        u.avatar_icon  AS creator_avatar_icon,
+        (SELECT COUNT(*) FROM bet_responses WHERE bet_id = b.id AND status = 'accepted') AS total_joined,
+        br.selected_option_id AS my_option_id,
+        c.name         AS circle_name,
+        c.icon         AS icon,
+        c.icon_color   AS circle_icon_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_name   END AS circle_coin_name,
+        CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
+        CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
+        CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
+        CASE WHEN b.post_to = 'circle' THEN 'circle' ELSE 'user' END AS target_type,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', tu.first_name, tu.last_name)), ''), tu.username) AS target_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id',          bo.id,
+              'label',       bo.label,
+              'text',        bo.option_text,
+              'option_text', bo.option_text,
+              'count', (
+                SELECT COUNT(*) FROM bet_responses
+                WHERE bet_id = b.id AND selected_option_id = bo.id AND status = 'accepted'
+              )
+            )
+          ) FILTER (WHERE bo.id IS NOT NULL),
+          '[]'
+        ) AS options
+      FROM bets b
+      LEFT JOIN bet_options bo ON bo.bet_id = b.id
+      LEFT JOIN bet_responses br ON br.bet_id = b.id AND br.user_id = $2
+      LEFT JOIN users u ON u.id = b.creator_user_id
+      LEFT JOIN circles c ON c.circle_id = b.target_id::uuid AND b.post_to = 'circle'
+      LEFT JOIN users tu ON tu.id = b.target_id::uuid AND b.post_to = 'user'
+      WHERE b.id = $1
+      GROUP BY b.id, b.creator_user_id, b.target_id, br.selected_option_id, u.first_name, u.last_name, u.username,
+               u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color,
+               c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon,
+               tu.first_name, tu.last_name, tu.username
+      `,
+      [betId, userId]
+    );
+
+    if (!result.rows.length)
+      return res.status(404).json({ error: "Bet not found" });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET /inbox/bet/:betId error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
