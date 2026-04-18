@@ -22,6 +22,8 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
         br.selected_option_id AS my_option_id,
         b.created_at,
         b.closes_at,
+        b.creator_user_id,
+        b.target_id,
         CASE WHEN b.creator_user_id = $1 THEN true ELSE false END AS is_creator,
         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS creator_name,
         u.username     AS creator_username,
@@ -67,7 +69,7 @@ betsRouter.get("/my-bets", requireAuth, async (req: AuthRequest, res) => {
            SELECT 1 FROM bet_responses
            WHERE bet_id = b.id AND user_id = $1
          )
-      GROUP BY b.id, br.status, br.selected_option_id, u.first_name, u.last_name, u.username, u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, b.post_to, tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
+      GROUP BY b.id, b.creator_user_id, b.target_id, br.status, br.selected_option_id, u.first_name, u.last_name, u.username, u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, b.post_to, tu.first_name, tu.last_name, tu.username, tu.avatar_color, tu.avatar_icon
       ORDER BY b.created_at DESC
       `,
       [req.userId]

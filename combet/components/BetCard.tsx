@@ -3,6 +3,7 @@ import { View, TouchableOpacity, DeviceEventEmitter, ActivityIndicator, Pressabl
 import { Text, Button, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
+import { router } from "expo-router";
 import { useAppTheme, DesignTokens } from "@/context/ThemeContext";
 import UserAvatar from "@/components/UserAvatar";
 
@@ -15,7 +16,7 @@ function fmtDate(dateStr: string) {
 
 type BetCardProps = {
   item: any;
-  mode: "feed" | "active" | "profile" | "preview";
+  mode: "feed" | "active" | "profile";
   accepting?: string | null;
   setAccepting?: (val: string | null) => void;
   onRemove?: (id: string) => void;
@@ -188,24 +189,34 @@ export default function BetCard({
         <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 5, marginTop: 5 }}>
 
           {item.target_type === "circle" ? (
-            <View style={{
-              width: 60, height: 60, borderRadius: 30,
-              backgroundColor: circleIconColor,
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name={circleIconName as any} size={26} color="#fff" />
-            </View>
+            <TouchableOpacity
+              onPress={() => { const cid = item.target_id ?? item.circle_id; if (cid) router.push(`/circle-profile/${cid}` as any); }}
+              activeOpacity={0.75}
+            >
+              <View style={{
+                width: 60, height: 60, borderRadius: 30,
+                backgroundColor: circleIconColor,
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name={circleIconName as any} size={26} color="#fff" />
+              </View>
+            </TouchableOpacity>
           ) : (
-            <UserAvatar
-              user={{
-                display_name: item.creator_name || item.creator_username,
-                username:     item.creator_username,
-                avatar_color: item.creator_avatar_color,
-                avatar_icon:  item.creator_avatar_icon,
-              }}
-              size={60}
-            />
+            <TouchableOpacity
+              onPress={() => { const uid = item.creator_user_id ?? item.creator_id; if (uid) router.push(`/user/${uid}` as any); }}
+              activeOpacity={0.75}
+            >
+              <UserAvatar
+                user={{
+                  display_name: item.creator_name || item.creator_username,
+                  username:     item.creator_username,
+                  avatar_color: item.creator_avatar_color,
+                  avatar_icon:  item.creator_avatar_icon,
+                }}
+                size={60}
+              />
+            </TouchableOpacity>
           )}
 
           <View style={{ flex: 1, marginTop: 6 }}>

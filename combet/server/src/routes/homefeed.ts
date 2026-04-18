@@ -28,6 +28,8 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         CASE WHEN b.use_circle_coin THEN c.coin_symbol END AS circle_coin_symbol,
         CASE WHEN b.use_circle_coin THEN c.coin_color  END AS circle_coin_color,
         CASE WHEN b.use_circle_coin THEN c.coin_icon   END AS circle_coin_icon,
+        b.creator_user_id,
+        bt.target_id,
         creator.username          AS creator_username,
         creator.avatar_color      AS creator_avatar_color,
         creator.avatar_icon       AS creator_avatar_icon,
@@ -95,7 +97,9 @@ homefeedRouter.get("/home", requireAuth, async (req: AuthRequest, res) => {
         c.coin_symbol,
         c.coin_color,
         c.coin_icon,
-        target_user.username
+        target_user.username,
+        b.creator_user_id,
+        bt.target_id
       ORDER BY b.created_at DESC
       `,
       [req.userId]
@@ -131,6 +135,8 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
           ELSE 'ellipse-outline'
         END AS icon,
         c.icon_color,
+        b.creator_user_id,
+        bt.target_id,
         creator.username AS creator_username,
         creator.avatar_color AS creator_avatar_color,
         creator.avatar_icon AS creator_avatar_icon,
@@ -205,7 +211,9 @@ homefeedRouter.get("/active", requireAuth, async (req: AuthRequest, res) => {
         target_user.avatar_color,
         target_user.avatar_icon,
         target_user.username,
-        my_response.selected_option_id
+        my_response.selected_option_id,
+        b.creator_user_id,
+        bt.target_id
       ORDER BY b.created_at DESC
       `,
       [req.userId]
@@ -233,10 +241,12 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
         my_response.selected_option_id AS my_option_id,
         (SELECT option_text FROM bet_options WHERE id = b.winning_option_id) AS winning_option_text,
         COUNT(DISTINCT br_all.user_id) AS total_joined,
-        (SELECT COUNT(*) FROM bet_responses 
+        (SELECT COUNT(*) FROM bet_responses
          WHERE bet_id = b.id AND selected_option_id = b.winning_option_id AND status = 'accepted') AS winner_count,
         b.creator_user_id = $1 AS is_creator,
         bt.target_type,
+        b.creator_user_id,
+        bt.target_id,
         creator.username AS creator_username,
         creator.avatar_color AS creator_avatar_color,
         creator.avatar_icon AS creator_avatar_icon,
@@ -257,7 +267,7 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
       LEFT JOIN users creator ON creator.id = b.creator_user_id
       LEFT JOIN users target_user ON bt.target_type = 'user' AND target_user.id = bt.target_id
       LEFT JOIN circles c ON bt.target_type = 'circle' AND c.circle_id = bt.target_id
-      
+
       LEFT JOIN bet_responses my_response
         ON my_response.bet_id = b.id
         AND my_response.user_id = $1
@@ -268,7 +278,7 @@ homefeedRouter.get("/recent-results", requireAuth, async (req: AuthRequest, res)
       WHERE
         (b.creator_user_id = $1 OR my_response.user_id = $1)
         AND b.status = 'SETTLED'
-      GROUP BY b.id, b.creator_user_id, my_response.selected_option_id, creator.username, creator.avatar_color, creator.avatar_icon, bt.target_type, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, target_user.username, target_user.avatar_color, target_user.avatar_icon
+      GROUP BY b.id, b.creator_user_id, bt.target_id, my_response.selected_option_id, creator.username, creator.avatar_color, creator.avatar_icon, bt.target_type, c.name, c.icon, c.icon_color, c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon, target_user.username, target_user.avatar_color, target_user.avatar_icon
       ORDER BY b.updated_at DESC
       LIMIT 5
       `,

@@ -353,6 +353,8 @@ inboxRouter.get("/bet/:betId", requireAuth, async (req: AuthRequest, res) => {
         b.status,
         b.created_at,
         b.closes_at,
+        b.creator_user_id,
+        b.target_id,
         CASE WHEN b.creator_user_id = $2 THEN true ELSE false END AS is_creator,
         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS creator_name,
         u.username     AS creator_username,
@@ -391,7 +393,7 @@ inboxRouter.get("/bet/:betId", requireAuth, async (req: AuthRequest, res) => {
       LEFT JOIN circles c ON c.circle_id = b.target_id::uuid AND b.post_to = 'circle'
       LEFT JOIN users tu ON tu.id = b.target_id::uuid AND b.post_to = 'user'
       WHERE b.id = $1
-      GROUP BY b.id, br.selected_option_id, u.first_name, u.last_name, u.username,
+      GROUP BY b.id, b.creator_user_id, b.target_id, br.selected_option_id, u.first_name, u.last_name, u.username,
                u.avatar_color, u.avatar_icon, c.name, c.icon, c.icon_color,
                c.coin_name, c.coin_symbol, c.coin_color, c.coin_icon,
                tu.first_name, tu.last_name, tu.username
