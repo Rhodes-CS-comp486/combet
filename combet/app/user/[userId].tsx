@@ -226,6 +226,7 @@ export default function UserProfileScreen() {
         });
         setIsBlocked(false);
         setShowBlockedScreen(false);
+        void fetchProfile();
       } catch (err) {
         console.error("Unblock error:", err);
       }
