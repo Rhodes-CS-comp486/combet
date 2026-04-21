@@ -11,6 +11,8 @@ import { API_BASE } from "@/constants/api";
 import { AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import { Filter } from "bad-words";
+import ConfirmModal from "@/components/Confirmmodal";
+
 const filter = new Filter();
 
 
@@ -28,6 +30,7 @@ export default function CreateCircle() {
   const [checkingName, setCheckingName] = useState(false);
   const [descError, setDescError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState("#9dd4be");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleCreate = async () => {
     setNameError(null);
@@ -219,7 +222,7 @@ export default function CreateCircle() {
 
         <Button
           mode="contained"
-          onPress={handleCreate}
+          onPress={() => setShowConfirmModal(true)}
           loading={loading}
           disabled={loading || name.length < 5}
           contentStyle={{ paddingVertical: 10 }}
@@ -239,6 +242,15 @@ export default function CreateCircle() {
         </Button>
 
       </ScrollView>
+      <ConfirmModal
+          visible={showConfirmModal}
+          icon="add-circle-outline"
+          title="Create this circle?"
+          message={`"${name}" will be ${isPrivate ? "private — members must request to join" : "public — anyone can join"}.`}
+          confirmLabel="Create Circle"
+          onConfirm={() => { setShowConfirmModal(false); handleCreate(); }}
+          onCancel={() => setShowConfirmModal(false)}
+        />
   </GradientBackground>
   );
 }

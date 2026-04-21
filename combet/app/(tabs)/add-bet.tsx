@@ -18,6 +18,9 @@ import UserAvatar from "@/components/UserAvatar";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { Filter } from "bad-words";
+import ConfirmModal from "@/components/Confirmmodal";
+
+
 const filter = new Filter();
 
 export default function AddBet() {
@@ -52,6 +55,7 @@ export default function AddBet() {
     const [selectedTargetIcon, setSelectedTargetIcon] = useState<string | null>(null);
 const [circleCoin, setCircleCoin] = useState<{ name: string; symbol: string; color: string; icon: string } | null>(null);
 const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
+const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     useEffect(() => {
       if (!circleCoin && stakeType === "circle_coin") {
@@ -777,7 +781,7 @@ const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
                 style={{ flex: 1, alignSelf: "center" ,borderRadius: 14 }} labelStyle={{ fontWeight: "400" }}>
                 ← Back
               </Button>
-              <Button mode="contained" onPress={handleCreateBet} loading={loading}
+                <Button mode="contained" onPress={() => setShowConfirmModal(true)} loading={loading}
                 disabled={!canSubmit || loading} style={{ flex: 2, borderRadius: 14 }}
                 contentStyle={{ paddingVertical: 6 }} labelStyle={{ fontWeight: "400", fontSize: 15 }}>
                  Place Bet
@@ -791,6 +795,21 @@ const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
           </View>
         )}
       </ScrollView>
+          <ConfirmModal
+          visible={showConfirmModal}
+          icon="receipt-outline"
+          title="Post this bet?"
+          message={
+            stakeType === "custom"
+              ? `Stake: ${customStake}`
+              : stakeType === "circle_coin" && circleCoin
+              ? `This will deduct ${stake} ${circleCoin.symbol.toUpperCase()} from your balance.`
+              : `This will deduct ${stake} coins from your balance.`
+          }
+          confirmLabel="Post Bet"
+          onConfirm={() => { setShowConfirmModal(false); handleCreateBet(); }}
+          onCancel={() => setShowConfirmModal(false)}
+        />
       </GradientBackground>
   );
 }

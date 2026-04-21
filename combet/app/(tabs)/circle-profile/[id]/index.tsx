@@ -14,6 +14,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import ReportModal from "@/components/ReportModal";
+import ConfirmModal from "@/components/Confirmmodal";
 
 const DRAWER_WIDTH = 260;
 
@@ -67,6 +68,8 @@ export default function CircleProfile() {
   const drawerAnim  = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const openDrawer = () => {
     setDrawerOpen(true);
@@ -141,42 +144,19 @@ export default function CircleProfile() {
   };
 
   const handleLeave = async () => {
-    const leaveNow = async () => {
-      try {
-        const sessionId = await getSessionId();
-        if (!sessionId) { alert("Not authenticated"); return; }
-        const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
-          method: "DELETE",
-          headers: { "x-session-id": sessionId },
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error || "Could not leave circle");
-          return;
-        }
-        if (fromUserId) {
-          router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
-        } else {
-          router.replace("/(tabs)/circles");
-        }
-      } catch {
-        alert("Could not connect to server");
-      }
-    };
-
-    if (typeof window !== "undefined" && typeof window.confirm === "function") {
-      if (window.confirm("Are you sure you want to leave this circle?")) leaveNow();
-    } else {
-      Alert.alert(
-        "Leave Circle",
-        "Are you sure you want to leave this circle?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Leave",  style: "destructive", onPress: leaveNow },
-        ]
-      );
-    }
-  };
+  try {
+    const sessionId = await getSessionId();
+    const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
+      method: "POST",
+      headers: { "x-session-id": sessionId ?? "" },
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Could not leave circle"); return; }
+    router.replace("/(tabs)/circles");
+  } catch {
+    alert("Network error");
+  }
+};
 
   const handleSettle = async (opt: any) => {
     if (!settlingBet) return;
@@ -342,7 +322,7 @@ export default function CircleProfile() {
             </TouchableOpacity>
 
             {isMember ? (
-              <TouchableOpacity style={styles.btnLeave} onPress={handleLeave}>
+                <TouchableOpacity style={styles.btnLeave} onPress={() => setShowLeaveModal(true)}>
                 <Ionicons name="exit-outline" size={15} color="#e87070" />
                 <Text style={styles.btnLeaveText}>  Leave</Text>
               </TouchableOpacity>
@@ -467,6 +447,16 @@ export default function CircleProfile() {
         targetType="circle"
         targetId={circleId}
       />
+        <ConfirmModal
+          visible={showLeaveModal}
+          icon="exit-outline"
+          title="Leave circle?"
+          message="You'll need to request to join again if it's private."
+          confirmLabel="Leave"
+          destructive
+          onConfirm={() => { setShowLeaveModal(false); handleLeave(); }}
+          onCancel={() => setShowLeaveModal(false)}
+        />
     </GradientBackground>
   );
 }
