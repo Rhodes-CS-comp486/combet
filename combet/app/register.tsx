@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import React, {useCallback, useEffect, useState} from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from "react-native";
 import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
@@ -8,6 +8,10 @@ import { View } from "react-native";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import { Filter } from "bad-words";
+import {Ionicons} from "@expo/vector-icons";
+import {useFocusEffect} from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const filter = new Filter();
 
 
@@ -23,6 +27,13 @@ export default function Register() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [errorMsg, setErrorMsg]           = useState<string | null>(null);
   const [loading, setLoading]             = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+      AsyncStorage.getItem("combet_eula_accepted").then((val) => {
+        setAgreedToTerms(val === "true");
+      });
+    }, []));
 
   const onRegister = async () => {
     setErrorMsg(null);
@@ -163,12 +174,38 @@ export default function Register() {
           {errorMsg}
         </HelperText>
 
+          <TouchableOpacity
+              onPress={() => {
+                  if (!agreedToTerms) router.push("/eula" as any);
+                  else setAgreedToTerms(false);
+                }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}
+            >
+              <View style={{
+                width: 20, height: 20, borderRadius: 5,
+                borderWidth: 1.5,
+                borderColor: agreedToTerms ? "#9dd4be" : "rgba(255,255,255,0.3)",
+                backgroundColor: agreedToTerms ? "rgba(157,212,190,0.15)" : "transparent",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {agreedToTerms && <Ionicons name="checkmark" size={13} color="#9dd4be" />}
+              </View>
+              <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 13, flex: 1 }}>
+                I agree to the{" "}
+                <Text
+                  onPress={() => router.push("/eula" as any)}
+                  style={{ color: "#9dd4be", textDecorationLine: "underline" }}
+                >
+                  Terms of Use
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
         <Button
           mode="contained"
           onPress={onRegister}
           loading={loading}
-          disabled={loading}
-          contentStyle={{ paddingVertical: 6 }}
+          disabled={loading || !agreedToTerms}          contentStyle={{ paddingVertical: 6 }}
           labelStyle={{ fontWeight: "400", fontSize: 16 }}
           style={{ borderRadius: 12, marginTop: 4 }}
         >
