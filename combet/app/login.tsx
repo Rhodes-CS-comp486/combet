@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import React, {useEffect, useState} from "react";
+import {KeyboardAvoidingView, Platform, TouchableOpacity, View} from "react-native";
 import { Text, TextInput, Button, Surface, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import { setSessionId } from "@/components/sessionStore";
@@ -7,7 +7,6 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
-
 
 export default function Login() {
   const { theme } = useAppTheme();
@@ -130,7 +129,7 @@ export default function Login() {
 
         <Button
           mode="text"
-          onPress={() => router.push("/register")}
+          onPress={() => router.push("/register" as any)}
           style={{ marginTop: 8 }}
           labelStyle={{ color: theme.colors.onSurfaceVariant }}
         >
