@@ -145,9 +145,10 @@ export default function CircleProfile() {
 
   const handleLeave = async () => {
   try {
+      console.log("leaving circle:", circleId);
     const sessionId = await getSessionId();
     const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
-      method: "POST",
+      method: "DELETE",
       headers: { "x-session-id": sessionId ?? "" },
     });
     const data = await res.json();
