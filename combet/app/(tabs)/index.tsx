@@ -606,7 +606,7 @@ export default function HomeScreen() {
           style={{ backgroundColor: "transparent" }}
           ListEmptyComponent={
             <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
-              No bets yet — create one or join a circle!
+              Nothing here yet — create a call or join a circle!
             </Text>
           }
         />

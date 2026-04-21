@@ -227,7 +227,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
           color: theme.colors.onSurface, fontWeight: "300",
           textAlign: "center", marginBottom: 6, letterSpacing: 1,
         }}>
-          Create a Bet
+          Make a Call
         </Text>
         <Text variant="bodyMedium" style={{
           color: theme.colors.onSurfaceVariant, textAlign: "center", marginBottom: 24,
@@ -249,7 +249,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
           color: theme.colors.onSurfaceVariant, fontWeight: "400",
           letterSpacing: 0.5, marginBottom: 16, fontSize: 16, textTransform: "uppercase"
         }}>
-          What's the bet?
+          What's the Call?
         </Text>
 
         <View style={{
@@ -257,7 +257,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
           borderRadius: 12, marginBottom: 8,
           borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
         }}>
-          <TextInput label="Bet title" value={title} onChangeText={setTitle}
+          <TextInput label="Title" value={title} onChangeText={setTitle}
             maxLength={80} mode="flat"
             style={{ backgroundColor: "transparent" }}
             underlineColor="transparent"
@@ -784,7 +784,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
                 <Button mode="contained" onPress={() => setShowConfirmModal(true)} loading={loading}
                 disabled={!canSubmit || loading} style={{ flex: 2, borderRadius: 14 }}
                 contentStyle={{ paddingVertical: 6 }} labelStyle={{ fontWeight: "400", fontSize: 15 }}>
-                 Place Bet
+                 Place
               </Button>
             </View>
 
