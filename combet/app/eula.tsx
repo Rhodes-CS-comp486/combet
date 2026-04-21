@@ -64,10 +64,10 @@ export default function EulaScreen() {
   };
 
   const handleAccept = async () => {
-    setAccepting(true);
-    await acceptEula();
-    router.replace("/register");
-  };
+      setAccepting(true);
+      await acceptEula();
+      router.back();
+    };
 
   return (
     <GradientBackground style={{ paddingHorizontal: 24 }}>
