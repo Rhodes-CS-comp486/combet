@@ -9,6 +9,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
 import PageHeader from "@/components/PageHeader";
+import ConfirmModal from "@/components/Confirmmodal";
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme, theme } = useAppTheme();
@@ -22,6 +23,9 @@ export default function SettingsScreen() {
 
   const [isPrivate, setIsPrivate]         = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const fetchPrivacy = async () => {
@@ -117,16 +121,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const onLogout = () => {
-    if (Platform.OS === "web") {
-      if (window.confirm("Are you sure you want to logout?")) void doLogout();
-      return;
-    }
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: () => void doLogout() },
-    ]);
-  };
+  const onLogout = () => setShowLogoutModal(true);
 
   const doDeleteAccount = async () => {
   try {
@@ -143,22 +138,7 @@ export default function SettingsScreen() {
   }
 };
 
-const onDeleteAccount = () => {
-  if (Platform.OS === "web") {
-    if (window.confirm("This will permanently delete your account and all your data. This cannot be undone.")) {
-      void doDeleteAccount();
-    }
-    return;
-  }
-  Alert.alert(
-    "Delete Account",
-    "This will permanently delete your account and all your data. This cannot be undone.",
-    [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => void doDeleteAccount() },
-    ]
-  );
-};
+const onDeleteAccount = () => setShowDeleteModal(true);
 
   const s = styles(theme);
 
@@ -276,6 +256,26 @@ const onDeleteAccount = () => {
           </View>
         </Modal>
       </Portal>
+        <ConfirmModal
+          visible={showDeleteModal}
+          icon="trash-outline"
+          title="Delete account?"
+          message="This will permanently delete your account and all your data. This cannot be undone."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => { setShowDeleteModal(false); void doDeleteAccount(); }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+        <ConfirmModal
+          visible={showLogoutModal}
+          icon="exit-outline"
+          title="Log out?"
+          message="You'll need to log back in to access your account."
+          confirmLabel="Logout"
+          destructive
+          onConfirm={() => { setShowLogoutModal(false); void doLogout(); }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
     </GradientBackground>
   );
 }

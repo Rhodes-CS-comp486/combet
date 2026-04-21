@@ -11,6 +11,7 @@ import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import { Filter } from "bad-words";
 const filter = new Filter();
+import ConfirmModal from "@/components/Confirmmodal";
 
 const COIN_COLORS = [
   "#FF0A54", "#FF4D6D", "#FF006E", "#FB5607", "#FFD60A",
@@ -49,6 +50,8 @@ export default function CoinScreen() {
   const [icon,        setIcon]        = useState(COIN_ICONS[0]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useFocusEffect(useCallback(() => {
     void loadCoin();
@@ -125,52 +128,23 @@ export default function CoinScreen() {
   };
 
   const handleDelete = async () => {
-      const confirmed =
-        typeof window !== "undefined"
-          ? window.confirm("This will remove the coin from your circle. Member balances will be lost. Are you sure?")
-          : await new Promise<boolean>((resolve) =>
-              Alert.alert(
-                "Delete Coin",
-                "This will remove the coin from your circle. Member balances will be lost. Are you sure?",
-                [
-                  { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-                  { text: "Delete", style: "destructive", onPress: () => resolve(true) },
-                ]
-              )
-            );
-
-      if (!confirmed) return;
-
       try {
+        setSaving(true);
         const sessionId = await getSessionId();
-        const res = await fetch(`${API_BASE}/circles/${circleId}/coin`, {
+        const deleteRes = await fetch(`${API_BASE}/circles/${circleId}/coin`, {
           method: "DELETE",
           headers: { "x-session-id": sessionId ?? "" },
         });
-        const deleteData = await res.json().catch(() => ({}));
-        console.log("COIN DELETE RESPONSE:", res.status, deleteData);
-        if (res.ok) {
-          setCoin(null);
-          setName(""); setSymbol(""); setDescription("");
-          setColor(COIN_COLORS[4]); setIcon(COIN_ICONS[0]);
-          setAcknowledged(false);
-          router.back();
-        } else {
-          Alert.alert("Error", deleteData.error || "Could not delete coin");
-        }
+        const deleteData = await deleteRes.json();
+        if (!deleteRes.ok) { Alert.alert("Error", deleteData.error || "Could not delete coin"); return; }
+        router.back();
       } catch {
         Alert.alert("Network Error", "Could not connect to server");
+      } finally {
+        setSaving(false);
       }
     };
 
-  if (loading) {
-    return (
-      <GradientBackground style={{ paddingHorizontal: 20 }}>
-        <PageHeader title="Circle Coin" />
-        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
-      </GradientBackground>
-    );
-  }
 
   const coinBg     = color + "1a";
   const coinBorder = color + "44";
@@ -409,7 +383,7 @@ export default function CoinScreen() {
         {/* ── ACTIONS ── */}
         <Button
           mode="contained"
-          onPress={handleSave}
+          onPress={coin ? handleSave : () => setShowCreateModal(true)}
           loading={saving}
           disabled={!canSave || saving}
           style={{ borderRadius: 14, marginBottom: 10 }}
@@ -422,7 +396,7 @@ export default function CoinScreen() {
         {coin && (
           <Button
             mode="outlined"
-            onPress={handleDelete}
+            onPress={() => setShowDeleteModal(true)}
             style={{ borderRadius: 14, borderColor: "rgba(232,112,96,0.4)" }}
             labelStyle={{ color: "#e87060", fontWeight: "400" }}
           >
@@ -431,6 +405,25 @@ export default function CoinScreen() {
         )}
 
       </ScrollView>
+        <ConfirmModal
+          visible={showDeleteModal}
+          icon="trash-outline"
+          title="Delete coin?"
+          message="This will remove the coin and all balances from this circle. This cannot be undone."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => { setShowDeleteModal(false); handleDelete(); }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+        <ConfirmModal
+          visible={showCreateModal}
+          icon="add-circle-outline"
+          title="Create this coin?"
+          message={`"${name}" (${symbol.toUpperCase()}) will be added to this circle.`}
+          confirmLabel="Create Coin"
+          onConfirm={() => { setShowCreateModal(false); handleSave(); }}
+          onCancel={() => setShowCreateModal(false)}
+        />
     </GradientBackground>
   );
 }
