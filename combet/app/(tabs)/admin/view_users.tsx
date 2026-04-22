@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { View, FlatList, Switch, TouchableOpacity, Modal, Pressable } from "react-native";
-import { Text, ActivityIndicator } from "react-native-paper";
+import { Text, ActivityIndicator, TextInput } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { getSessionId } from "@/components/sessionStore";
@@ -32,6 +32,11 @@ export default function AdminUsersScreen() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Coin editing state
+  const [editingCoinUserId, setEditingCoinUserId] = useState<string | null>(null);
+  const [editingCoinValue,  setEditingCoinValue]  = useState("");
+  const [savingCoin,        setSavingCoin]        = useState(false);
 
   useFocusEffect(useCallback(() => {
     void loadUsers();
@@ -70,6 +75,28 @@ export default function AdminUsersScreen() {
     }
   };
 
+  const saveCoins = async (userId: string) => {
+    const newCoins = parseInt(editingCoinValue);
+    if (isNaN(newCoins) || newCoins < 0) return;
+    setSavingCoin(true);
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/coins`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId || "" },
+        body: JSON.stringify({ coins: newCoins }),
+      });
+      if (res.ok) {
+        setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, coins: newCoins } : u));
+        setEditingCoinUserId(null);
+      }
+    } catch (err) {
+      console.error("Save coins error:", err);
+    } finally {
+      setSavingCoin(false);
+    }
+  };
+
   const deleteUser = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -90,63 +117,114 @@ export default function AdminUsersScreen() {
     }
   };
 
-  const renderUser = ({ item }: { item: AdminUser }) => (
-    <View style={{
-      flexDirection: "row", alignItems: "center",
-      backgroundColor: "rgba(255,255,255,0.09)",
-      borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
-      borderRadius: 14, padding: 14, marginBottom: 10, gap: 12,
-    }}>
-      <UserAvatar
-        user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }}
-        size={44}
-      />
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 15 }}>{item.username}</Text>
-          {item.is_admin && (
-            <View style={{
-              backgroundColor: "rgba(157,212,190,0.18)", borderRadius: 6,
-              paddingHorizontal: 7, paddingVertical: 2,
-              borderWidth: 1, borderColor: "rgba(157,212,190,0.35)",
-            }}>
-              <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Admin</Text>
+  const renderUser = ({ item }: { item: AdminUser }) => {
+    const isEditingCoins = editingCoinUserId === item.id;
+
+    return (
+      <View style={{
+        backgroundColor: "rgba(255,255,255,0.09)",
+        borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+        borderRadius: 14, padding: 14, marginBottom: 10, gap: 10,
+      }}>
+        {/* Top row: avatar + info + admin toggle + delete */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <UserAvatar
+            user={{ username: item.username, avatar_color: item.avatar_color, avatar_icon: item.avatar_icon }}
+            size={44}
+          />
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ color: theme.colors.onSurface, fontWeight: "700", fontSize: 15 }}>{item.username}</Text>
+              {item.is_admin && (
+                <View style={{
+                  backgroundColor: "rgba(157,212,190,0.18)", borderRadius: 6,
+                  paddingHorizontal: 7, paddingVertical: 2,
+                  borderWidth: 1, borderColor: "rgba(157,212,190,0.35)",
+                }}>
+                  <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Admin</Text>
+                </View>
+              )}
+            </View>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>{item.email}</Text>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11, marginTop: 2 }}>
+              Joined {new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </Text>
+          </View>
+          {toggling === item.id ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : (
+            <View style={{ alignItems: "center", gap: 3 }}>
+              <Text style={{ fontSize: 9, fontWeight: "700", letterSpacing: 0.5, color: item.is_admin ? "#9dd4be" : "rgba(255,255,255,0.35)" }}>
+                {item.is_admin ? "ADMIN" : "USER"}
+              </Text>
+              <Switch
+                value={item.is_admin}
+                onValueChange={() => toggleAdmin(item.id, item.is_admin)}
+                trackColor={{ false: "rgba(255,255,255,0.15)", true: "rgba(157,212,190,0.5)" }}
+                thumbColor={item.is_admin ? "#9dd4be" : "#fff"}
+              />
             </View>
           )}
+          {/* Coin pill */}
+          {isEditingCoins ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{
+                backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 8,
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                width: 64, height: 32, justifyContent: "center",
+              }}>
+                <TextInput
+                  value={editingCoinValue}
+                  onChangeText={setEditingCoinValue}
+                  keyboardType="numeric"
+                  mode="flat"
+                  style={{ backgroundColor: "transparent", height: 32, fontSize: 13, textAlign: "center" }}
+                  underlineColor="transparent"
+                  activeUnderlineColor="#D4AF37"
+                  textColor={theme.colors.onSurface}
+                  theme={{ colors: { primary: "#D4AF37" } }}
+                  autoFocus
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => saveCoins(item.id)}
+                disabled={savingCoin}
+                style={{ backgroundColor: "rgba(212,175,55,0.15)", borderWidth: 1, borderColor: "rgba(212,175,55,0.4)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                {savingCoin ? <ActivityIndicator size={12} color="#D4AF37" /> : <Text style={{ color: "#D4AF37", fontSize: 12, fontWeight: "600" }}>Save</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingCoinUserId(null)}>
+                <Ionicons name="close-circle-outline" size={18} color={theme.colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => { setEditingCoinUserId(item.id); setEditingCoinValue(String(item.coins ?? 0)); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(212,175,55,0.1)", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: "rgba(212,175,55,0.25)" }}
+            >
+              <Ionicons name="ellipse" size={10} color="#D4AF37" />
+              <Text style={{ color: "#D4AF37", fontSize: 13, fontWeight: "700" }}>{item.coins ?? 0}</Text>
+              <Ionicons name="pencil" size={10} color="rgba(212,175,55,0.6)" />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={() => setDeleteTarget(item)}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              backgroundColor: "rgba(232,112,96,0.12)",
+              borderWidth: 1, borderColor: "rgba(232,112,96,0.3)",
+              justifyContent: "center", alignItems: "center",
+            }}
+          >
+            <Ionicons name="trash-outline" size={16} color="#e87060" />
+          </TouchableOpacity>
         </View>
-        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>{item.email}</Text>
-        <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11, marginTop: 2 }}>
-          Joined {new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-        </Text>
+
+
       </View>
-      {toggling === item.id ? (
-        <ActivityIndicator size="small" color={theme.colors.primary} />
-      ) : (
-        <View style={{ alignItems: "center", gap: 3 }}>
-          <Text style={{ fontSize: 9, fontWeight: "700", letterSpacing: 0.5, color: item.is_admin ? "#9dd4be" : "rgba(255,255,255,0.35)" }}>
-            {item.is_admin ? "ADMIN" : "USER"}
-          </Text>
-          <Switch
-            value={item.is_admin}
-            onValueChange={() => toggleAdmin(item.id, item.is_admin)}
-            trackColor={{ false: "rgba(255,255,255,0.15)", true: "rgba(157,212,190,0.5)" }}
-            thumbColor={item.is_admin ? "#9dd4be" : "#fff"}
-          />
-        </View>
-      )}
-      <TouchableOpacity
-        onPress={() => setDeleteTarget(item)}
-        style={{
-          width: 32, height: 32, borderRadius: 8,
-          backgroundColor: "rgba(232,112,96,0.12)",
-          borderWidth: 1, borderColor: "rgba(232,112,96,0.3)",
-          justifyContent: "center", alignItems: "center",
-        }}
-      >
-        <Ionicons name="trash-outline" size={16} color="#e87060" />
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <GradientBackground style={{ paddingHorizontal: 20 }}>
