@@ -1,5 +1,7 @@
 import cron from "node-cron";
 import { pool } from "./db";
+import { userWantsNotification } from "./routes/notificationPrefs";
+import { userWantsNotification } from "./routes/notificationPrefs";
 
 export function startCronJobs() {
 
@@ -96,13 +98,15 @@ export function startCronJobs() {
         );
 
         for (const p of participants.rows) {
-          await pool.query(
-            `INSERT INTO notifications
-               (recipient_id, actor_id, type, entity_type, entity_id)
-             VALUES ($1, NULL, 'bet_deadline', 'bet', $2)
-             ON CONFLICT DO NOTHING`,
-            [p.user_id, betId]
-          );
+          if (await userWantsNotification(p.user_id, "notify_bet_deadline")) {
+            await pool.query(
+              `INSERT INTO notifications
+                 (recipient_id, actor_id, type, entity_type, entity_id)
+               VALUES ($1, NULL, 'bet_deadline', 'bet', $2)
+               ON CONFLICT DO NOTHING`,
+              [p.user_id, betId]
+            );
+          }
         }
 
         await pool.query(

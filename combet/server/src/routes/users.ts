@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { userWantsNotification } from "./notificationPrefs";
 
 export const usersRouter = Router();
 
@@ -280,21 +281,33 @@ usersRouter.post("/follows", requireAuth, async (req: AuthRequest, res) => {
       );
       const requestId = request.rows[0].request_id;
 
-      await pool.query(
-        `INSERT INTO notifications
-           (recipient_id, actor_id, type, entity_type, entity_id)
-         VALUES ($1, $2, 'follow_request', 'follow_request', $3)`,
-        [followingId, currentUserId, requestId]
-      );
+      if (await userWantsNotification(followingId, "notify_follow_request")) {
+        await pool.query(
+          `INSERT INTO notifications
+             (recipient_id, actor_id, type, entity_type, entity_id)
+           VALUES ($1, $2, 'follow_request', 'follow_request', $3)`,
+          [followingId, currentUserId, requestId]
+        );
+      }
 
       return res.json({ ok: true, status: "requested" });
     } else {
       // ── Public profile: follow directly ──
-      await pool.query(
+      const followResult = await pool.query(
         `INSERT INTO follows (follower_id, following_id)
-         VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+         VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING follower_id`,
         [currentUserId, followingId]
       );
+      // Only notify if this was a new follow (not a duplicate)
+      if (followResult.rows.length) {
+        if (await userWantsNotification(followingId, "notify_new_follower")) {
+          await pool.query(
+            `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+             VALUES ($1, $2, 'new_follower', 'user', $2, false, NOW())`,
+            [followingId, currentUserId]
+          );
+        }
+      }
       return res.json({ ok: true, status: "following" });
     }
   } catch (err) {
@@ -698,4 +711,3 @@ usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
