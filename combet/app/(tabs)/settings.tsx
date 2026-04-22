@@ -164,7 +164,7 @@ const onDeleteAccount = () => setShowDeleteModal(true);
             titleStyle={{ color: theme.colors.onSurface }}
             left={(props) => <List.Icon {...props} icon="bell-outline" color={theme.colors.primary} />}
             right={(props) => <List.Icon {...props} icon="chevron-right" color={theme.colors.onSurfaceVariant} />}
-            onPress={() => Alert.alert("Coming Soon", "Notification settings coming soon.")}
+            onPress={() => router.push("/user/notification-preferences")}
           />
           <Divider style={{ backgroundColor: theme.colors.outline }} />
           <List.Item

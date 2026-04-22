@@ -60,6 +60,7 @@ export default function InboxScreen() {
   const [loading, setLoading]             = useState(true);
   const [activeTab, setActiveTab]         = useState<TabKey>("notifications");
   const [actioning, setActioning]         = useState<string | null>(null);
+  const [followBackStatus, setFollowBackStatus] = useState<Record<string, "followed" | "requested">>({});
   const [requestCount, setRequestCount]   = useState(0);
   const [conversations, setConversations] = useState<any[]>([]);
   const [convoLoading, setConvoLoading]   = useState(false);
@@ -214,6 +215,23 @@ export default function InboxScreen() {
       setNotifications((prev) => prev.filter((n) => n.follow_request_id !== requestId));
     } catch (err) {
       console.error("Decline follow error:", err);
+    }
+  };
+
+  const handleFollowBack = async (actorId: string) => {
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      const res = await fetch(`${API_BASE}/inbox/follow-back/${actorId}`, {
+        method: "POST",
+        headers: { "x-session-id": sessionId },
+      });
+      const data = await res.json();
+      if (data.status === "followed" || data.status === "requested") {
+        setFollowBackStatus((prev) => ({ ...prev, [actorId]: data.status }));
+      }
+    } catch (err) {
+      console.error("Follow back error:", err);
     }
   };
 
@@ -568,6 +586,61 @@ export default function InboxScreen() {
       );
     }
 
+    // ── New follower (public account) ─────────────────────────────────────
+    if (item.type === "new_follower") {
+      const fbStatus = item.actor_id ? followBackStatus[item.actor_id] : undefined;
+      const isFollowed   = fbStatus === "followed";
+      const isRequested  = fbStatus === "requested";
+      return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
+          <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
+            <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
+              {avatarEl}
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
+                  <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
+                  {" started following you"}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  {timeAgo(item.created_at)}
+                </Text>
+              </View>
+              {isFollowed ? (
+                <View style={{
+                  backgroundColor: "rgba(157,212,190,0.12)",
+                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                  borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                }}>
+                  <Ionicons name="checkmark" size={11} color="#9dd4be" />
+                  <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
+                </View>
+              ) : isRequested ? (
+                <View style={{
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                }}>
+                  <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11, fontWeight: "600" }}>Requested</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); item.actor_id && handleFollowBack(item.actor_id); }}
+                  style={{
+                    backgroundColor: theme.colors.primary,
+                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Follow</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </TouchableOpacity>
+          <XButton />
+        </View>
+      );
+    }
+
     // ── Follow accepted ───────────────────────────────────────────────────
     if (item.type === "follow_accepted") {
       return (
@@ -597,6 +670,69 @@ export default function InboxScreen() {
           </View>
         </TouchableOpacity>
         <XButton />
+        </View>
+      );
+    }
+
+    // ── New follower (public account) ─────────────────────────────────────
+    if (item.type === "new_follower") {
+      const alreadyFollowing = item.viewer_follows_actor;
+      const requested        = item.viewer_requested_actor;
+
+      const followLabel = alreadyFollowing ? "Following" : requested ? "Requested" : "Follow";
+      const followColor = alreadyFollowing
+        ? "rgba(157,212,190,0.12)"
+        : requested
+        ? "rgba(255,255,255,0.08)"
+        : theme.colors.primary;
+      const followTextColor = alreadyFollowing
+        ? "#9dd4be"
+        : requested
+        ? theme.colors.onSurfaceVariant
+        : "#fff";
+      const followBorderColor = alreadyFollowing
+        ? "rgba(157,212,190,0.3)"
+        : requested
+        ? "rgba(255,255,255,0.15)"
+        : "transparent";
+
+      return (
+        <View style={{ position: "relative", marginBottom: 12 }}>
+          <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
+            <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
+              {avatarEl}
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
+                  <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
+                  {" started following you"}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                  {timeAgo(item.created_at)}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (!alreadyFollowing && !requested && item.actor_id) {
+                    handleFollowBack(item.actor_id, item.notification_id);
+                  }
+                }}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 6,
+                  borderRadius: 20, borderWidth: 1,
+                  borderColor: followBorderColor,
+                  backgroundColor: followColor,
+                  flexDirection: "row", alignItems: "center", gap: 4,
+                }}
+              >
+                {alreadyFollowing && <Ionicons name="checkmark" size={11} color="#9dd4be" />}
+                <Text style={{ fontSize: 12, fontWeight: "700", color: followTextColor }}>
+                  {followLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+          <XButton />
         </View>
       );
     }

@@ -12,6 +12,7 @@ import { leaderboardRouter } from "./routes/leaderboard";
 import { adminRouter } from "./routes/admin";
 import { spinRouter } from "./routes/spin";
 import { messagesRouter } from "./routes/messages";
+import { notificationPrefsRouter } from "./routes/notificationPrefs";
 import path = require("node:path");
 
 
@@ -32,6 +33,7 @@ app.use(express.json());
 app.use("/api/auth",     authRouter);
 app.use("/api/circles",  circlesRouter);
 app.use("/api/bets",     betsRouter);
+app.use("/api/users/me/notification-preferences", notificationPrefsRouter);
 app.use("/api/users",    usersRouter);
 app.use("/api/inbox",    inboxRouter);
 app.use("/api/homefeed", homefeedRouter);

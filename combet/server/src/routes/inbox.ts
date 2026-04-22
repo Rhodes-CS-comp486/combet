@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { userWantsNotification } from "./notificationPrefs";
+import { userWantsNotification } from "./notificationPrefs";
 
 export const inboxRouter = Router();
 
@@ -176,11 +178,15 @@ inboxRouter.post("/follow-requests/:requestId/accept", requireAuth, async (req: 
       `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [requesterId, userId]
     );
-    await client.query(
-      `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
-       VALUES ($1, $2, 'follow_accepted', 'follow_request', $3, false, NOW())`,
-      [requesterId, userId, requestId]
-    );
+    if (await userWantsNotification(requesterId, "notify_follow_accepted")) {
+      if (await userWantsNotification(requesterId, "notify_follow_accepted")) {
+        await client.query(
+          `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+           VALUES ($1, $2, 'follow_accepted', 'follow_request', $3, false, NOW())`,
+          [requesterId, userId, requestId]
+        );
+      }
+    }
     await client.query(
       `UPDATE notifications SET is_read = true
        WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'follow_request'`,
@@ -215,6 +221,87 @@ inboxRouter.post("/follow-requests/:requestId/decline", requireAuth, async (req:
   } catch (err) {
     console.error("DECLINE FOLLOW REQUEST ERROR:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Follow Back (from new_follower notification) ────────────────────────────
+inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, res) => {
+  const { actorId } = req.params;
+  const userId      = req.userId!;
+  const client      = await pool.connect();
+  try {
+    // Check if target is private
+    const target = await client.query(
+      `SELECT is_private FROM users WHERE id = $1`,
+      [actorId]
+    );
+    if (!target.rows.length)
+      return res.status(404).json({ error: "User not found" });
+
+    const isPrivate = target.rows[0].is_private;
+
+    // Check for existing follow or pending request
+    const alreadyFollowing = await client.query(
+      `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
+      [userId, actorId]
+    );
+    if (alreadyFollowing.rows.length)
+      return res.json({ status: "followed" });
+
+    const existingRequest = await client.query(
+      `SELECT request_id FROM follow_requests
+       WHERE requester_id = $1 AND requestee_id = $2 AND status = 'pending'`,
+      [userId, actorId]
+    );
+    if (existingRequest.rows.length)
+      return res.json({ status: "requested" });
+
+    await client.query("BEGIN");
+
+    if (isPrivate) {
+      // Send a follow request
+      await client.query(
+        `INSERT INTO follow_requests (requester_id, requestee_id, status, created_at)
+         VALUES ($1, $2, 'pending', NOW())`,
+        [userId, actorId]
+      );
+      const reqRow = await client.query(
+        `SELECT request_id FROM follow_requests
+         WHERE requester_id = $1 AND requestee_id = $2 AND status = 'pending'`,
+        [userId, actorId]
+      );
+      const newRequestId = reqRow.rows[0].request_id;
+      if (await userWantsNotification(actorId, "notify_follow_request")) {
+        await client.query(
+          `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+           VALUES ($1, $2, 'follow_request', 'follow_request', $3, false, NOW())`,
+          [actorId, userId, newRequestId]
+        );
+      }
+      await client.query("COMMIT");
+      return res.json({ status: "requested" });
+    } else {
+      // Public — follow directly
+      await client.query(
+        `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [userId, actorId]
+      );
+      if (await userWantsNotification(actorId, "notify_new_follower")) {
+        await client.query(
+          `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+           VALUES ($1, $2, 'new_follower', 'user', $2, false, NOW())`,
+          [actorId, userId]
+        );
+      }
+      await client.query("COMMIT");
+      return res.json({ status: "followed" });
+    }
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("FOLLOW BACK ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    client.release();
   }
 });
 
