@@ -85,8 +85,9 @@ export default function CombetHeader() {
           color: "#FFFFFF",
           fontWeight: "300",
           letterSpacing: 3.2,
-            textAlign: "center",
+          textAlign: "center",
         }}
+        onPress={() => router.replace("/(tabs)")}
       />
 
       {/* Right */}

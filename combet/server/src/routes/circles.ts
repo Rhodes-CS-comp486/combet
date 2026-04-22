@@ -38,6 +38,33 @@ circlesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+
+// ─── Get Public Circles (Discover) ───────────────────────────────────────────
+circlesRouter.get("/discover", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         c.circle_id, c.name, c.description, c.icon, c.icon_color, c.is_private,
+         COUNT(DISTINCT cm.user_id) AS member_count
+       FROM circles c
+       LEFT JOIN circle_members cm ON cm.circle_id = c.circle_id AND cm.status = 'accepted'
+       WHERE c.is_private = false
+         AND c.circle_id NOT IN (
+           SELECT circle_id FROM circle_members
+           WHERE user_id = $1 AND status = 'accepted'
+         )
+       GROUP BY c.circle_id
+       ORDER BY member_count DESC
+       LIMIT 10`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /circles/discover error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get My Circles ───────────────────────────────────────────────────────────
 circlesRouter.get("/my", requireAuth, async (req: AuthRequest, res) => {
   try {

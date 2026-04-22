@@ -14,7 +14,6 @@ import { useAppTheme } from "@/context/ThemeContext";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import ReportModal from "@/components/ReportModal";
-import ConfirmModal from "@/components/Confirmmodal";
 
 const DRAWER_WIDTH = 260;
 
@@ -49,9 +48,11 @@ export default function CircleProfile() {
   const { theme } = useAppTheme();
   const { id, from, userId } = useLocalSearchParams();
   const circleId   = Array.isArray(id)     ? id[0]     : id;
-  const fromUserId = Array.isArray(userId) ? userId[0] : userId;
-  const fromUser   = from === "user";
-  const fromPreview = from === "preview";
+  const fromUserId = Array.isArray(userId) ? userId[0] : userId as string | undefined;
+  const fromCircles     = from === "circles";
+  const fromUser        = from === "user";
+  const fromLeaderboard = from === "leaderboard";
+  const fromHome        = from === "home";
 
   const [reportVisible,  setReportVisible]  = useState(false);
   const [circle,         setCircle]         = useState<Circle | null>(null);
@@ -63,13 +64,12 @@ export default function CircleProfile() {
   const [requestCount,   setRequestCount]   = useState(0);
   const [settlingBet,    setSettlingBet]    = useState<any>(null);
   const [isMember,       setIsMember]       = useState<boolean | null>(null);
+  const [requested,      setRequested]      = useState(false);
 
   // Drawer animation
   const drawerAnim  = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const openDrawer = () => {
     setDrawerOpen(true);
@@ -93,7 +93,11 @@ export default function CircleProfile() {
     try {
       const sessionId = await getSessionId();
       const circleRes = await fetch(`${API_BASE}/circles/${circleId}`);
-      if (circleRes.ok) setCircle(await circleRes.json());
+      if (circleRes.ok) {
+        const circleData = await circleRes.json();
+        setCircle(circleData);
+        if (circleData.join_status === "pending") setRequested(true);
+      }
 
       const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
         headers: { "x-session-id": sessionId ?? "" },
@@ -135,7 +139,11 @@ export default function CircleProfile() {
         headers: { "x-session-id": sessionId ?? "" },
       });
       if (res.ok) {
-        circle?.is_private ? alert("Join request sent!") : (alert(`You have successfully joined ${circle?.name}!`), fetchAll());
+        if (circle?.is_private) {
+          setRequested(true);
+        } else {
+          await fetchAll();
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         alert(data.error || "Could not join circle");
@@ -144,20 +152,42 @@ export default function CircleProfile() {
   };
 
   const handleLeave = async () => {
-  try {
-      console.log("leaving circle:", circleId);
-    const sessionId = await getSessionId();
-    const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
-      method: "DELETE",
-      headers: { "x-session-id": sessionId ?? "" },
-    });
-    const data = await res.json();
-    if (!res.ok) { alert(data.error || "Could not leave circle"); return; }
-    router.replace("/(tabs)/circles");
-  } catch {
-    alert("Network error");
-  }
-};
+    const leaveNow = async () => {
+      try {
+        const sessionId = await getSessionId();
+        if (!sessionId) { alert("Not authenticated"); return; }
+        const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
+          method: "DELETE",
+          headers: { "x-session-id": sessionId },
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Could not leave circle");
+          return;
+        }
+        if (fromCircles) router.replace("/(tabs)/circles");
+      else if (fromLeaderboard) router.replace("/(tabs)/leaderboard");
+      else if (fromHome) router.replace("/(tabs)");
+      else if (fromUser && fromUserId) router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+      else router.back();
+      } catch {
+        alert("Could not connect to server");
+      }
+    };
+
+    if (typeof window !== "undefined" && typeof window.confirm === "function") {
+      if (window.confirm("Are you sure you want to leave this circle?")) leaveNow();
+    } else {
+      Alert.alert(
+        "Leave Circle",
+        "Are you sure you want to leave this circle?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Leave",  style: "destructive", onPress: leaveNow },
+        ]
+      );
+    }
+  };
 
   const handleSettle = async (opt: any) => {
     if (!settlingBet) return;
@@ -235,13 +265,11 @@ export default function CircleProfile() {
         <View style={styles.topbar}>
           <TouchableOpacity
             onPress={() => {
-              if ((fromUser || fromPreview) && fromUserId) {
-                router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
-              } else if (from === "leaderboard") {
-                router.replace("/(tabs)/leaderboard");
-              } else {
-                router.replace("/(tabs)/circles");
-              }
+              if (fromCircles) router.replace("/(tabs)/circles");
+              else if (fromLeaderboard) router.replace("/(tabs)/leaderboard");
+              else if (fromHome) router.replace("/(tabs)");
+              else if (fromUser && fromUserId) router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+              else router.back();
             }}
             hitSlop={8}
           >
@@ -255,14 +283,17 @@ export default function CircleProfile() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.dotsBtn} onPress={openDrawer}>
-            <Text style={styles.dotsText}>···</Text>
-          </TouchableOpacity>
+          {isMember && (
+            <TouchableOpacity style={styles.dotsBtn} onPress={openDrawer}>
+              <Text style={styles.dotsText}>···</Text>
+            </TouchableOpacity>
+          )}
+          {!isMember && <View style={{ width: 34 }} />}
         </View>
         {/* ── Profile Card ── */}
         <View style={styles.card}>
 
-          {/* Avatar + Stats */}
+          {/* Avatar + Stats — always visible for members, limited for non-members of private */}
           <View style={styles.topRow}>
             <View style={[styles.avatar, { backgroundColor: circle.icon_color ?? "#2c4a5e" }]}>
               <Ionicons name={(circle.icon as any) ?? "people"} size={32} color="#fff" />
@@ -274,15 +305,16 @@ export default function CircleProfile() {
               </View>
               <TouchableOpacity
                 style={styles.stat}
+                disabled={!!circle.is_private && !isMember}
                 onPress={() => router.push(`/(tabs)/circle-profile/${circleId}/members?isPrivate=${circle.is_private ? "1" : "0"}&isCreator=${circle.is_creator ? "1" : "0"}&hasCoin=${circle.coin_name ? "1" : "0"}&coinName=${encodeURIComponent(circle.coin_name ?? "")}&coinColor=${encodeURIComponent(circle.coin_color ?? "")}&coinIcon=${encodeURIComponent(circle.coin_icon ?? "")}&coinSymbol=${encodeURIComponent(circle.coin_symbol ?? "")}`)}>
                 <Text style={styles.statNum}>{members.length}</Text>
-                <Text style={styles.statLbl}>Members</Text>
+                <Text style={[styles.statLbl, { color: circle.is_private && !isMember ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.6)" }]}>Members</Text>
               </TouchableOpacity>
               <View style={styles.stat}>
                 <Text style={styles.statNum}>{openBets.length}</Text>
                 <Text style={styles.statLbl}>Open</Text>
               </View>
-              {circle.coin_name && (
+              {circle.coin_name && isMember && (
                 <View style={styles.stat}>
                   <View style={[styles.coinCircle, {
                     backgroundColor: (circle.coin_color ?? "#f0c070") + "22",
@@ -311,52 +343,119 @@ export default function CircleProfile() {
 
           {/* Buttons */}
           <View style={styles.btnRow}>
-            <TouchableOpacity
-              style={styles.btnMsg}
-              onPress={() => isMember
-                ? router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)
-                : alert("Join this circle to use Message.")
-              }
-            >
-              <Ionicons name="chatbubble-outline" size={15} color="#fff" />
-              <Text style={styles.btnMsgText}>  Message</Text>
-            </TouchableOpacity>
-
             {isMember ? (
-                <TouchableOpacity style={styles.btnLeave} onPress={() => setShowLeaveModal(true)}>
-                <Ionicons name="exit-outline" size={15} color="#e87070" />
-                <Text style={styles.btnLeaveText}>  Leave</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.btnMsg}
+                  onPress={() => router.push(`/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`)}
+                >
+                  <Ionicons name="chatbubble-outline" size={15} color="#fff" />
+                  <Text style={styles.btnMsgText}>  Message</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnLeave} onPress={handleLeave}>
+                  <Ionicons name="exit-outline" size={15} color="#e87070" />
+                  <Text style={styles.btnLeaveText}>  Leave</Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <TouchableOpacity style={styles.btnJoin} onPress={handleJoin}>
-                <Ionicons name="person-add" size={15} color="#fff" />
-                <Text style={styles.btnJoinText}>  {circle.is_private ? "Request" : "Join"}</Text>
+              <TouchableOpacity
+                style={[styles.btnJoin, { flex: 1 }, requested && styles.btnRequested]}
+                onPress={requested ? undefined : handleJoin}
+                activeOpacity={requested ? 1 : 0.7}
+              >
+                <Ionicons name={requested ? "time-outline" : "person-add"} size={15} color={requested ? "rgba(255,255,255,0.4)" : "#fff"} />
+                <Text style={[styles.btnJoinText, requested && styles.btnRequestedText]}>
+                  {requested ? "  Requested" : circle.is_private ? "  Request to Join" : "  Join"}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
 
-
         </View>
 
-        {/* ── Tabs ── */}
-        <View style={styles.tabBar}>
-          {(["new", "open", "history"] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* ── Tabs + Content ── */}
+        {(isMember || !circle.is_private) ? (
+          <>
+            <View style={styles.tabBar}>
+              {(["new", "open", "history"] as const).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={{ paddingTop: 8 }}>
+              {renderTabContent()}
+            </View>
+          </>
+        ) : (
+          /* Private + not a member: locked teaser */
+          <View style={{ marginTop: 12, borderRadius: 18, overflow: "hidden" }}>
+            {/* Tab bar — greyed out */}
+            <View style={[styles.tabBar, { opacity: 0.35 }]}>
+              {["New", "Open", "History"].map((tab) => (
+                <View key={tab} style={styles.tab}>
+                  <Text style={styles.tabText}>{tab}</Text>
+                </View>
+              ))}
+            </View>
 
-        {/* ── Tab Content ── */}
-        <View style={{ paddingTop: 8 }}>
-          {renderTabContent()}
-        </View>
+            {/* Blurred fake content */}
+            <View style={{
+              borderRadius: 14, overflow: "hidden",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+              marginTop: 8, padding: 20,
+            }}>
+              {/* Fake bet rows */}
+              {[1, 2].map((i) => (
+                <View key={i} style={{
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  borderRadius: 12, padding: 14, marginBottom: 10,
+                  opacity: i === 1 ? 0.5 : 0.25,
+                }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.1)" }} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <View style={{ height: 10, width: "70%", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 6 }} />
+                      <View style={{ height: 8, width: "40%", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 6 }} />
+                    </View>
+                  </View>
+                  <View style={{ height: 8, width: "90%", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 6, marginBottom: 6 }} />
+                  <View style={{ height: 8, width: "60%", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 6 }} />
+                </View>
+              ))}
+
+              {/* Lock overlay */}
+              <View style={{
+                position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                alignItems: "center", justifyContent: "center",
+                backgroundColor: "rgba(10,20,30,0.55)",
+                borderRadius: 14, gap: 10,
+              }}>
+                <View style={{
+                  width: 52, height: 52, borderRadius: 26,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.13)",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Ionicons name="lock-closed" size={22} color="rgba(255,255,255,0.5)" />
+                </View>
+                <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: "600" }}>
+                  Members only
+                </Text>
+                <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center", paddingHorizontal: 24 }}>
+                  Join this circle to see bets and activity
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
       </ScrollView>
 
@@ -448,16 +547,6 @@ export default function CircleProfile() {
         targetType="circle"
         targetId={circleId}
       />
-        <ConfirmModal
-          visible={showLeaveModal}
-          icon="exit-outline"
-          title="Leave circle?"
-          message="You'll need to request to join again if it's private."
-          confirmLabel="Leave"
-          destructive
-          onConfirm={() => { setShowLeaveModal(false); handleLeave(); }}
-          onCancel={() => setShowLeaveModal(false)}
-        />
     </GradientBackground>
   );
 }
@@ -518,6 +607,12 @@ const styles = StyleSheet.create({
     padding: 12, backgroundColor: "#3aaa6e", borderRadius: 12,
   },
   btnJoinText: { color: "#fff", fontSize: 14, fontWeight: "500" },
+  btnRequested: {
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  btnRequestedText: { color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: "500" },
 
 
   tabBar: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" },

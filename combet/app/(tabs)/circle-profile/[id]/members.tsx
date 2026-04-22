@@ -45,6 +45,11 @@ export default function MembersScreen() {
       if (histRes.ok) {
         const data = await histRes.json();
         setMembers(data.members ?? []);
+      } else if (!isPrivate) {
+        // Not a member but circle is public — show public members
+        const pubRes = await fetch(`${API_BASE}/circles/${circleId}/members`);
+        if (pubRes.ok) setMembers(await pubRes.json());
+        // If private and not a member — show nothing
       }
       if (isPrivate) {
         const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {

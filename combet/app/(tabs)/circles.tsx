@@ -64,7 +64,7 @@ export default function CirclesScreen() {
   const renderItem = ({ item }: { item: Circle }) => (
     <TouchableOpacity
       style={{ width: "33.33%", alignItems: "center", marginBottom: 28 }}
-      onPress={() => router.push(`/circle-profile/${item.circle_id}`)}
+      onPress={() => router.push(`/circle-profile/${item.circle_id}?from=circles`)}
     >
       <Surface
         elevation={2}
@@ -115,7 +115,7 @@ export default function CirclesScreen() {
       {/* ── Search Bar ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <Searchbar
-          placeholder="Search circles..."
+          placeholder="Search your circles..."
           value={q}
           onChangeText={setQ}
           style={{

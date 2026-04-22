@@ -23,6 +23,186 @@ function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// ── Discover / Empty State ────────────────────────────────────────────────────
+function DiscoverCircles() {
+  const { theme } = useAppTheme();
+  const [circles, setCircles]       = React.useState<any[]>([]);
+  const [joining, setJoining]       = React.useState<string | null>(null);
+  const [joined,  setJoined]        = React.useState<Set<string>>(new Set());
+  const [dismissed, setDismissed]   = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const sessionId = await getSessionId();
+
+        // Use dedicated discover endpoint
+        const res = await fetch(`${API_BASE}/circles/discover`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const suggestions = data.slice(0, 3);
+          setCircles(suggestions.map((c: any) => ({
+            ...c,
+            id: c.circle_id,
+            label: c.name,
+          })));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const handleJoin = async (circle: any) => {
+    setJoining(circle.id);
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/circles/${circle.id}/join`, {
+        method: "POST", headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (res.ok) {
+        setJoined((prev) => new Set([...prev, circle.id]));
+        // Remove after a short delay and replace with next suggestion
+        setTimeout(() => {
+          setCircles((prev) => prev.filter((c) => c.id !== circle.id));
+        }, 1200);
+      }
+    } catch {}
+    finally { setJoining(null); }
+  };
+
+  const handleDismiss = (circleId: string) => {
+    setDismissed((prev) => new Set([...prev, circleId]));
+    setCircles((prev) => prev.filter((c) => c.id !== circleId));
+  };
+
+  const visible = circles.filter((c) => !dismissed.has(c.id));
+
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+
+      {/* Hero */}
+      <View style={{ alignItems: "center", marginBottom: 24 }}>
+        <View style={{
+          width: 64, height: 64, borderRadius: 32,
+          backgroundColor: "rgba(157,212,190,0.1)",
+          borderWidth: 1.5, borderColor: "rgba(157,212,190,0.2)",
+          alignItems: "center", justifyContent: "center", marginBottom: 14,
+        }}>
+          <Ionicons name="compass-outline" size={30} color="#9dd4be" />
+        </View>
+        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700", marginBottom: 6 }}>
+          Discover Circles
+        </Text>
+        <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", lineHeight: 19 }}>
+          Join a circle to start making bets with your crew
+        </Text>
+      </View>
+
+      {/* Suggestions */}
+      {visible.length > 0 && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{
+            color: "rgba(255,255,255,0.3)", fontSize: 10,
+            letterSpacing: 1.5, fontWeight: "600", marginBottom: 10,
+          }}>
+            SUGGESTED FOR YOU
+          </Text>
+          {visible.map((c) => {
+            const isJoined  = joined.has(c.id);
+            const isLoading = joining === c.id;
+            return (
+              <View
+                key={c.id}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 12,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 14, padding: 12, marginBottom: 8,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: `/(tabs)/circle-profile/${c.id}`, params: { from: "home" } } as any)}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}
+                >
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: c.icon_color ?? "#2c5364",
+                    alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <Ionicons name={(c.icon as any) ?? "people"} size={22} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>{c.label}</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 1 }}>
+                      {c.member_count ? `${c.member_count} members` : "Public circle"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleJoin(c)}
+                  disabled={isJoined || isLoading}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                    backgroundColor: isJoined ? "rgba(157,212,190,0.12)" : "#9dd4be",
+                    borderWidth: 1,
+                    borderColor: isJoined ? "rgba(157,212,190,0.3)" : "#9dd4be",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: isJoined ? "#9dd4be" : "#0d2416" }}>
+                    {isLoading ? "..." : isJoined ? "✓" : "Join"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleDismiss(c.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="close" size={16} color="rgba(255,255,255,0.25)" />
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Divider */}
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 16 }} />
+
+      {/* Create CTA */}
+      <TouchableOpacity
+        onPress={() => router.push("/create-circle")}
+        style={{
+          flexDirection: "row", alignItems: "center", gap: 14,
+          backgroundColor: "rgba(255,255,255,0.05)",
+          borderWidth: 1, borderColor: "rgba(255,255,255,0.09)",
+          borderRadius: 16, padding: 16,
+        }}
+      >
+        <View style={{
+          width: 44, height: 44, borderRadius: 22,
+          backgroundColor: "rgba(157,212,190,0.1)",
+          borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Ionicons name="add" size={22} color="#9dd4be" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>Create your own circle</Text>
+          <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 2 }}>
+            Invite friends and start betting
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+      </TouchableOpacity>
+
+    </View>
+  );
+}
+
+
 export default function HomeScreen() {
   const { theme, isDark } = useAppTheme();
 
@@ -405,12 +585,15 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
               renderItem={({ item }) => (
-                <View style={{
-                  flexDirection: "row", alignItems: "center",
-                  paddingVertical: 12, gap: 12,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: theme.colors.outline,
-                }}>
+                <TouchableOpacity
+                  onPress={() => router.push(`/circle-profile/${item.id}`)}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: "row", alignItems: "center",
+                    paddingVertical: 12, gap: 12,
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: theme.colors.outline,
+                  }}>
                   <View style={{
                   width:           42,
                   height:          42,
@@ -503,7 +686,7 @@ export default function HomeScreen() {
                        item.is_private               ? "Request" : "Join"}
                     </Text>
                   </Pressable>
-                </View>
+                </TouchableOpacity>
               )}
             />
           )
@@ -540,7 +723,7 @@ export default function HomeScreen() {
 
       <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
       <Searchbar
-        placeholder="Search users, circles..."
+        placeholder="Search all users, circles..."
         value={q}
         onChangeText={setQ}
         style={{
@@ -604,11 +787,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
           style={{ backgroundColor: "transparent" }}
-          ListEmptyComponent={
-            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginTop: 40, fontSize: 14 }}>
-              Nothing here yet — create a call or join a circle!
-            </Text>
-          }
+          ListEmptyComponent={<DiscoverCircles />}
         />
       ) : (
         <FlatList
