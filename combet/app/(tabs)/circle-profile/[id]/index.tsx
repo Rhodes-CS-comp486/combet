@@ -363,7 +363,7 @@ export default function CircleProfile() {
                 onPress={requested ? undefined : handleJoin}
                 activeOpacity={requested ? 1 : 0.7}
               >
-                <Ionicons name={requested ? "time-outline" : "person-add"} size={15} color={requested ? "rgba(255,255,255,0.4)" : "#fff"} />
+                <Ionicons name={requested ? "time-outline" : "person-add"} size={15} color={requested ? "rgba(255,255,255,0.4)" : "#0d2416"} />
                 <Text style={[styles.btnJoinText, requested && styles.btnRequestedText]}>
                   {requested ? "  Requested" : circle.is_private ? "  Request to Join" : "  Join"}
                 </Text>
@@ -604,9 +604,9 @@ const styles = StyleSheet.create({
   btnLeaveText: { color: "#e87070", fontSize: 14, fontWeight: "500" },
   btnJoin: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    padding: 12, backgroundColor: "#3aaa6e", borderRadius: 12,
+    padding: 12, backgroundColor: "#9dd4be", borderRadius: 12,
   },
-  btnJoinText: { color: "#fff", fontSize: 14, fontWeight: "500" },
+  btnJoinText: { color: "#0d2416", fontSize: 14, fontWeight: "600" },
   btnRequested: {
     backgroundColor: "rgba(255,255,255,0.07)",
     borderWidth: 1,
