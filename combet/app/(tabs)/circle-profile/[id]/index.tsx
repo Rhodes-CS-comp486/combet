@@ -314,32 +314,17 @@ export default function CircleProfile() {
                 <Text style={styles.statNum}>{openBets.length}</Text>
                 <Text style={styles.statLbl}>Open</Text>
               </View>
-              {circle.coin_name && isMember && (
-                <View style={styles.stat}>
-                  <View style={[styles.coinCircle, {
-                    backgroundColor: (circle.coin_color ?? "#f0c070") + "22",
-                    borderColor: (circle.coin_color ?? "#f0c070") + "66",
-                  }]}>
-                    <Ionicons name={(circle.coin_icon ?? "star") as any} size={14} color={circle.coin_color ?? "#f0c070"} />
-                    <Text style={[styles.coinCircleNum, { color: circle.coin_color ?? "#f0c070" }]}>
-                      {circle.my_coin_balance ?? 0}
-                    </Text>
-                  </View>
-                  <Text style={styles.statLbl}> </Text>
-                </View>
-              )}
             </View>
           </View>
 
+            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginBottom: 14 }} />
+
           {/* Info */}
-          <Text style={styles.circleName}>{circle.name}</Text>
-          {circle.description ? (
-            <Text style={styles.circleDesc}>{circle.description}</Text>
-          ) : null}
-          <View style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.circleDate}>  Created {formatDate(circle.created_at)}</Text>
-          </View>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            </View>
+            {circle.description ? (
+              <Text style={styles.circleDesc}>{circle.description}</Text>
+            ) : null}
 
           {/* Buttons */}
           <View style={styles.btnRow}>
@@ -372,6 +357,22 @@ export default function CircleProfile() {
           </View>
 
         </View>
+
+          {circle.coin_name && isMember && (
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 8,
+            alignSelf: "center",
+            backgroundColor: (circle.coin_color ?? "#f0c070") + "18",
+            borderWidth: 1, borderColor: (circle.coin_color ?? "#f0c070") + "40",
+            borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
+            marginBottom: 12,
+          }}>
+            <Ionicons name={(circle.coin_icon ?? "star") as any} size={13} color={circle.coin_color ?? "#f0c070"} />
+            <Text style={{ color: circle.coin_color ?? "#f0c070", fontSize: 13, fontWeight: "600" }}>
+              {circle.my_coin_balance ?? 0} {circle.coin_symbol ?? circle.coin_name}
+            </Text>
+          </View>
+        )}
 
         {/* ── Tabs + Content ── */}
         {(isMember || !circle.is_private) ? (
@@ -472,10 +473,15 @@ export default function CircleProfile() {
         pointerEvents={drawerOpen ? "auto" : "none"}
       >
         <View style={styles.drawerHeader}>
+          <Text style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+            Created {formatDate(circle.created_at)}
+          </Text>
           <TouchableOpacity style={styles.drawerClose} onPress={closeDrawer}>
             <Ionicons name="close" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
+
+
 
         {menuItems.map((item) => {
           if (item.label === "Report" && circle.is_creator) return null;
@@ -567,7 +573,14 @@ const styles = StyleSheet.create({
   },
   dotsText: { color: "#fff", fontSize: 16, letterSpacing: 1, lineHeight: 18 },
 
-  card: { backgroundColor: "#1e2f3c", borderRadius: 18, padding: 16, marginBottom: 12 },
+    card: {
+  backgroundColor: "rgba(255,255,255,0.07)",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.1)",
+  borderRadius: 18,
+  padding: 16,
+  marginBottom: 12,
+},
   topRow: { flexDirection: "row", alignItems: "center", gap: 18, marginBottom: 16 },
   avatar: { width: 70, height: 70, borderRadius: 35, alignItems: "center", justifyContent: "center" },
   statsRow: { flex: 1, flexDirection: "row", justifyContent: "space-around" },
@@ -590,7 +603,7 @@ const styles = StyleSheet.create({
     fontSize: 11, fontWeight: "700", lineHeight: 13,
   },
 
-  btnRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  btnRow: { flexDirection: "row", gap: 10, marginTop: 2},
   btnMsg: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     padding: 12, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12,
@@ -634,7 +647,12 @@ const styles = StyleSheet.create({
     width: DRAWER_WIDTH, backgroundColor: "#1e2f3c",
     borderTopLeftRadius: 18, borderBottomLeftRadius: 18, zIndex: 11,
   },
-  drawerHeader: { alignItems: "flex-end", paddingTop: 14, paddingRight: 14, paddingBottom: 6 },
+    drawerHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: 14, paddingHorizontal: 14, paddingBottom: 6,
+    },
   drawerClose: {
     width: 30, height: 30, borderRadius: 15,
     borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
