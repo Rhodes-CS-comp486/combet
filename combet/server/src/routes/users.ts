@@ -467,6 +467,27 @@ usersRouter.get("/:userId/following", requireAuth, async (req: AuthRequest, res)
   }
 });
 
+
+// ─── Get My Block List ────────────────────────────────────────────────────────
+usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
+         u.avatar_color, u.avatar_icon
+       FROM blocks b
+       JOIN users u ON u.id = b.blocked_id
+       WHERE b.blocker_id = $1
+       ORDER BY b.created_at DESC`,
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /users/blocked error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Another User's Profile ───────────────────────────────────────────────
 usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;
@@ -688,26 +709,6 @@ usersRouter.delete("/:userId/block", requireAuth, async (req: AuthRequest, res) 
     res.json({ ok: true });
   } catch (err) {
     console.error("DELETE /users/:userId/block error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ─── Get My Block List ────────────────────────────────────────────────────────
-usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT u.id, u.username,
-         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.username) AS display_name,
-         u.avatar_color, u.avatar_icon
-       FROM blocks b
-       JOIN users u ON u.id = b.blocked_id
-       WHERE b.blocker_id = $1
-       ORDER BY b.created_at DESC`,
-      [req.userId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("GET /users/blocked error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
