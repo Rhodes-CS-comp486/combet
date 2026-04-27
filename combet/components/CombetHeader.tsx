@@ -4,11 +4,13 @@ import {AppState, DeviceEventEmitter, View} from "react-native";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getSessionId } from "@/components/sessionStore";
+import { useUser } from "@/context/UserContext";
 
 import { API_BASE } from "@/constants/api";
 
 export default function CombetHeader() {
   const [coinBalance, setCoinBalance] = useState<number>(120);
+  const { unreadCount, setUnreadCount } = useUser();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const prevPathname = useRef<string>(pathname);
@@ -32,6 +34,22 @@ export default function CombetHeader() {
     }
   };
 
+  const fetchUnread = useCallback(async () => {
+    if (isOnInbox) return; // don't overwrite 0 while user is reading inbox
+    try {
+      const sessionId = await getSessionId();
+      const res = await fetch(`${API_BASE}/inbox`, {
+        headers: { "x-session-id": sessionId ?? "" },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const count = Array.isArray(data) ? data.filter((n: any) => !n.is_read).length : 0;
+      setUnreadCount(count);
+    } catch (err) {
+      console.error("Header unread error:", err);
+    }
+  }, [isOnInbox]);
+
   const fetchCoins = useCallback(async () => {
     try {
       const sessionId = await getSessionId();
@@ -48,9 +66,13 @@ export default function CombetHeader() {
 
   useEffect(() => {
   fetchCoins();
-  const interval = setInterval(fetchCoins, 10000); // refresh every 10s
+  fetchUnread();
+  const interval = setInterval(() => {
+    fetchCoins();
+    fetchUnread();
+  }, 10000); // refresh every 10s
   const appStateSub = AppState.addEventListener("change", (state) => {
-    if (state === "active") fetchCoins();
+    if (state === "active") { fetchCoins(); fetchUnread(); }
   });
   const eventSub = DeviceEventEmitter.addListener("coinsUpdated", fetchCoins);
   return () => {
@@ -58,7 +80,7 @@ export default function CombetHeader() {
     appStateSub.remove();
     eventSub.remove();
   };
-}, [fetchCoins]);
+}, [fetchCoins, fetchUnread, isOnInbox]);
 
   return (
     <Appbar.Header
@@ -72,11 +94,21 @@ export default function CombetHeader() {
       statusBarHeight={insets.top}
     >
       {/* Left */}
-      <Appbar.Action
-        icon={isOnInbox ? "arrow-left" : "bell-outline"}
-        color="#FFFFFF"
-        onPress={handleInboxPress}
-      />
+      <View style={{ position: "relative", marginLeft: 4 }}>
+        <Appbar.Action
+          icon={isOnInbox ? "arrow-left" : "email-outline"}
+          color="#FFFFFF"
+          onPress={handleInboxPress}
+        />
+        {!isOnInbox && unreadCount > 0 && (
+          <View style={{
+            position: "absolute", top: 8, right: 6,
+            width: 9, height: 9, borderRadius: 4.5,
+            backgroundColor: "#e87060",
+            borderWidth: 1.5, borderColor: "#1a3040",
+          }} />
+        )}
+      </View>
 
       {/* Center */}
       <Appbar.Content

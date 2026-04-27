@@ -18,6 +18,8 @@ type UserContextType = {
   setUser: (user: User | null) => void;
   adminMode: boolean;
   toggleAdminMode: () => void;
+  unreadCount: number;
+  setUnreadCount: (n: number | ((prev: number) => number)) => void;
 };
 
 const UserContext = createContext<UserContextType>({
@@ -25,6 +27,8 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
   adminMode: false,
   toggleAdminMode: () => {},
+  unreadCount: 0,
+  setUnreadCount: () => {},
 });
 
 async function getPersistedAdminMode(): Promise<boolean> {
@@ -52,6 +56,7 @@ async function persistAdminMode(value: boolean): Promise<void> {
 export function UserContextProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]           = useState<User | null>(null);
   const [adminMode, setAdminMode] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Load persisted admin mode on startup
   useEffect(() => {
@@ -66,7 +71,7 @@ export function UserContextProvider({ children }: { children: React.ReactNode })
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, adminMode, toggleAdminMode }}>
+    <UserContext.Provider value={{ user, setUser, adminMode, toggleAdminMode, unreadCount, setUnreadCount }}>
       {children}
     </UserContext.Provider>
   );

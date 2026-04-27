@@ -117,6 +117,40 @@ messagesRouter.get("/requests", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+
+// ─── Get Total Unread DM Count ────────────────────────────────────────────────
+// GET /messages/unread-count
+messagesRouter.get("/unread-count", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*) AS count
+       FROM direct_messages
+       WHERE recipient_id = $1 AND is_read = false AND is_request = false`,
+      [req.userId]
+    );
+    res.json({ count: Number(result.rows[0].count) });
+  } catch (err) {
+    console.error("GET /messages/unread-count error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Mark All DMs as Read ─────────────────────────────────────────────────────
+// PATCH /messages/read-all
+messagesRouter.patch("/read-all", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    await pool.query(
+      `UPDATE direct_messages SET is_read = true
+       WHERE recipient_id = $1 AND is_read = false AND is_request = false`,
+      [req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PATCH /messages/read-all error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Thread with a Specific User ─────────────────────────────────────────
 // GET /messages/:userId
 messagesRouter.get("/:otherUserId", requireAuth, async (req: AuthRequest, res) => {
