@@ -878,25 +878,7 @@ export default function HomeScreen() {
                           ) : (
                             <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 12 }}>—</Text>
                           )}
-                          {!iWon && !item.is_creator && (
-                            <TouchableOpacity
-                              onPress={async () => {
-                                const sessionId = await getSessionId();
-                                const res = await fetch(`${API_BASE}/bets/${item.id}/dispute`, {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json", "x-session-id": sessionId ?? "" },
-                                });
-                                if (res.ok) fetchRecentResults();
-                              }}
-                              style={{
-                                backgroundColor: "rgba(232,112,96,0.1)",
-                                borderWidth: 1, borderColor: "rgba(232,112,96,0.25)",
-                                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                              }}
-                            >
-                              <Text style={{ fontSize: 11, color: "#e87060", fontWeight: "500" }}>Dispute</Text>
-                            </TouchableOpacity>
-                          )}
+
                         </View>
                       </View>
                     );

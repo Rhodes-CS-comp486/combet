@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
 
-  card:     { backgroundColor: "#1e2f3c", borderRadius: 18, padding: 16, marginBottom: 12 },
+    card: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 18, padding: 16, marginBottom: 12 },
   topRow:   { flexDirection: "row", alignItems: "center", gap: 18, marginBottom: 16 },
   statsRow: { flex: 1, flexDirection: "row", justifyContent: "space-around" },
   stat:     { alignItems: "center" },
