@@ -10,6 +10,7 @@ import PageHeader from "@/components/PageHeader";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
+import CoinEditModal from "@/components/CoinEditModal";
 
 type Member  = { id: string; username: string; joined_at: string; avatar_color?: string; avatar_icon?: string; is_creator?: boolean; coin_balance?: number };
 type Request = { request_id: string; user_id: string; username: string; created_at: string; avatar_color?: string; avatar_icon?: string };
@@ -36,6 +37,8 @@ export default function MembersScreen() {
   const [requests,  setRequests]  = useState<Request[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
   const [loading,   setLoading]   = useState(true);
+
+  const [coinEditTarget, setCoinEditTarget] = useState<Member | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -183,71 +186,24 @@ export default function MembersScreen() {
         </View>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>@{item.username}</Text>
       </View>
+        {hasCoin && (
+          <TouchableOpacity
+            onPress={() => isCreator && setCoinEditTarget(item)}
+            activeOpacity={isCreator ? 0.7 : 1}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 5,
+              backgroundColor: coinBg, borderWidth: 1, borderColor: coinBorder,
+              borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+            }}
+          >
+            <Ionicons name={coinIcon as any} size={12} color={coinColor} />
+            <Text style={{ color: coinColor, fontSize: 12, fontWeight: "600" }}>
+              {item.coin_balance ?? 0}
+            </Text>
+            {isCreator && <Ionicons name="pencil" size={10} color={coinColor} style={{ opacity: 0.6 }} />}
+          </TouchableOpacity>
+        )}
 
-      {hasCoin && (
-        <View style={{ alignItems: "flex-end", gap: 6 }}>
-          {isEditing ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={{
-                backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 8,
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                width: 70, height: 36, justifyContent: "center",
-              }}>
-                <TextInput
-                  value={editingBalance}
-                  onChangeText={setEditingBalance}
-                  keyboardType="numeric"
-                  mode="flat"
-                  style={{ backgroundColor: "transparent", height: 36, fontSize: 13, textAlign: "center" }}
-                  underlineColor="transparent"
-                  activeUnderlineColor={coinColor}
-                  textColor={theme.colors.onSurface}
-                  theme={{ colors: { primary: coinColor } }}
-                  autoFocus
-                />
-              </View>
-              <TouchableOpacity
-                onPress={() => handleBalanceSave(item.id)}
-                disabled={savingBalance}
-                style={{
-                  backgroundColor: coinBg, borderWidth: 1, borderColor: coinBorder,
-                  borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
-                }}
-              >
-                {savingBalance
-                  ? <ActivityIndicator size={12} color={coinColor} />
-                  : <Text style={{ color: coinColor, fontSize: 12, fontWeight: "600" }}>Save</Text>
-                }
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditingMemberId(null)}>
-                <Ionicons name="close-circle-outline" size={20} color={theme.colors.onSurfaceVariant} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={(e) => {
-                if (isCreator) {
-                  e.stopPropagation?.();
-                  setEditingMemberId(item.id);
-                  setEditingBalance(String(item.coin_balance ?? 0));
-                }
-              }}
-              activeOpacity={isCreator ? 0.7 : 1}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 5,
-                backgroundColor: coinBg, borderWidth: 1, borderColor: coinBorder,
-                borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
-              }}
-            >
-              <Ionicons name={coinIcon as any} size={12} color={coinColor} />
-              <Text style={{ color: coinColor, fontSize: 12, fontWeight: "600" }}>
-                {item.coin_balance ?? 0}
-              </Text>
-              {isCreator && <Ionicons name="pencil" size={10} color={coinColor} style={{ opacity: 0.6 }} />}
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
     </TouchableOpacity>
   );
 };
@@ -366,6 +322,29 @@ export default function MembersScreen() {
           }
         />
       )}
+        <CoinEditModal
+              visible={!!coinEditTarget}
+              onDismiss={() => setCoinEditTarget(null)}
+              member={coinEditTarget}
+              coinName={coinName}
+              coinColor={coinColor}
+              coinIcon={coinIcon}
+              coinSymbol={coinSymbol}
+              onSave={async (newBalance) => {
+                if (!coinEditTarget) return;
+                const sessionId = await getSessionId();
+                const res = await fetch(`${API_BASE}/circles/${circleId}/members/${coinEditTarget.id}/balance`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json", "x-session-id": sessionId || "" },
+                  body: JSON.stringify({ balance: newBalance }),
+                });
+                if (!res.ok) throw new Error();
+                setMembers((prev) => prev.map((m) =>
+                  m.id === coinEditTarget.id ? { ...m, coin_balance: newBalance } : m
+                ));
+                setCoinEditTarget(null);
+              }}
+            />
     </GradientBackground>
   );
 }

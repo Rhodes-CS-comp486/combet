@@ -14,8 +14,16 @@ const filter = new Filter();
 import ConfirmModal from "@/components/Confirmmodal";
 
 const COIN_COLORS = [
-  "#FF0A54", "#FF4D6D", "#FF006E", "#FB5607", "#FFD60A",
-  "#2DC653", "#06D6A0", "#00B4D8", "#3A86FF", "#7B2FBE", "#8338EC",
+  "#c47a85", // dusty rose
+  "#c4876a", // muted coral
+  "#c4a96a", // muted amber
+  "#a8b86a", // muted olive
+  "#7ab87a", // muted sage
+  "#6ab8a0", // muted teal
+  "#6aaec4", // muted sky
+  "#7a8ec4", // muted slate blue
+  "#9a7ac4", // muted lavender
+  "#c47ab0", // muted mauve
 ];
 
 const COIN_ICONS = [

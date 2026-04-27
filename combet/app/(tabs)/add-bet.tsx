@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import DateTimePickerModal from "react-native-ui-datepicker";
 import dayjs from "dayjs";
 import { View, ScrollView, Alert, Pressable, DeviceEventEmitter } from "react-native";
@@ -19,6 +19,7 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { Filter } from "bad-words";
 import ConfirmModal from "@/components/Confirmmodal";
+import {useFocusEffect} from "@react-navigation/native";
 
 
 const filter = new Filter();
@@ -57,6 +58,26 @@ const [circleCoin, setCircleCoin] = useState<{ name: string; symbol: string; col
 const [circleCoinBalance, setCircleCoinBalance] = useState<number | null>(null);
 const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+    const resetForm = () => {
+      setStep(1);
+      setTitle("");
+      setDescription("")
+      setOptions(["", ""]);
+      setStake("");
+      setStakeType("coins");
+      setCustomStake("");
+      setCloseAt(null);
+      setPostTo("circles");
+      setSelectedTargetId(null);
+      setSelectedTargetName(null);
+      setSelectedTargetColor(null);
+      setSelectedTargetIcon(null);
+      setCircleCoin(null);
+      setCircleCoinBalance(null);
+      setCreatorOptionIndex(null);
+      setSearchQuery("");
+    };
+
     useEffect(() => {
       if (!circleCoin && stakeType === "circle_coin") {
         setStakeType("coins");
@@ -74,27 +95,29 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
       fetchBalance();
     }, []);
 
-  useEffect(() => {
-    const fetchTargets = async () => {
-      try {
-        const sessionId = await getSessionId();
-        if (!sessionId) return;
-        const endpoint = postTo === "circles"
-          ? `${API_BASE}/circles/my`
+  useFocusEffect(useCallback(() => {
+      const fetchTargets = async () => {
+        try {
+          const sessionId = await getSessionId();
+          if (!sessionId) return;
+          const endpoint = postTo === "circles"
+            ? `${API_BASE}/circles/my`
             : `${API_BASE}/users/friends`;
-        const res  = await fetch(endpoint, { headers: { "x-session-id": sessionId } });
-        const data = await res.json();
-
-        console.log("targets fetched for", postTo, data);
-
-
-        if (res.ok) { setTargets(data); setSelectedTargetId(null); setSelectedTargetName(null); }
-      } catch (err) {
-        console.error("Fetch targets error:", err);
-      }
-    };
-    fetchTargets();
-  }, [postTo]);
+          const res  = await fetch(endpoint, { headers: { "x-session-id": sessionId } });
+          const data = await res.json();
+          if (res.ok) {
+              setTargets(data);
+              if (selectedTargetId) {
+                const updated = data.find((c: any) => c.circle_id === selectedTargetId);
+                if (updated) setCircleCoinBalance(updated.coin_name ? (updated.my_coin_balance ?? 0) : null);
+              }
+            }
+        } catch (err) {
+          console.error("Fetch targets error:", err);
+        }
+      };
+      void fetchTargets();
+    }, [postTo]));
 
   const filteredTargets = targets.filter((item) => {
     const name = item.username ?? item.name;
@@ -288,7 +311,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
                Add Picks →
             </Button>
 
-            <Button mode="text" onPress={() => router.back()}
+            <Button mode="text" onPress={() => { resetForm(); router.back(); }}
               style={{ marginTop: 4 }}
               labelStyle={{ color: theme.colors.onSurfaceVariant }}>
               Cancel
@@ -373,7 +396,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
                 </Button>
             </View>
 
-            <Button mode="text" onPress={() => router.back()}
+            <Button mode="text" onPress={() => { resetForm(); router.back(); }}
               style={{ marginTop: 4 }}
               labelStyle={{ color: theme.colors.onSurfaceVariant }}>
               Cancel
@@ -788,7 +811,7 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
               </Button>
             </View>
 
-            <Button mode="text" onPress={() => router.back()}
+            <Button mode="text" onPress={() => { resetForm(); router.back(); }}
               labelStyle={{ color: theme.colors.onSurfaceVariant }}>
               Cancel
             </Button>
