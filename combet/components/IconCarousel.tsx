@@ -3,16 +3,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/context/ThemeContext";
 import { View, TouchableOpacity, useWindowDimensions } from "react-native";
 
-export const ICONS: (keyof typeof Ionicons.glyphMap)[] = [
-  "people",
-  "flame",
-  "football",
-  "book",
-  "fitness",
-  "trophy",
-  "cash",
-  "game-controller",
-];
+import { AVATAR_ICONS } from "@/components/UserAvatar";
+
+export const ICONS = AVATAR_ICONS.map((i) => i.icon) as (keyof typeof Ionicons.glyphMap)[];
 
 interface Props {
   selectedIndex: number;
@@ -20,7 +13,7 @@ interface Props {
   selectedColor?: string;
 }
 
-export default function IconCarousel({ selectedIndex, onIndexChange , selectedColor}: Props) {
+export default function IconCarousel({ selectedIndex, onIndexChange, selectedColor }: Props) {
   const { theme, isDark } = useAppTheme();
 
   const canGoLeft  = selectedIndex > 0;

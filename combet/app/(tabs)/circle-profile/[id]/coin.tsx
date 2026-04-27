@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { View, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
@@ -53,12 +53,29 @@ export default function CoinScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const loadedCircleIdRef = useRef<string | null>(null);
+
+  // Full reset only when circleId actually changes
+  useEffect(() => {
+    if (loadedCircleIdRef.current === circleId) return;
+    loadedCircleIdRef.current = circleId;
+    setCoin(null);
+    setName("");
+    setSymbol("");
+    setDescription("");
+    setColor(COIN_COLORS[4]);
+    setIcon(COIN_ICONS[0]);
+    setAcknowledged(false);
+    void loadCoin();
+  }, [circleId]);
+
+  // Silent refresh when returning to screen
   useFocusEffect(useCallback(() => {
+    if (loadedCircleIdRef.current !== circleId) return;
     void loadCoin();
   }, [circleId]));
 
   const loadCoin = async () => {
-    setLoading(true);
     try {
       const sessionId = await getSessionId();
       const res = await fetch(`${API_BASE}/circles/${circleId}/coin`, {
@@ -149,6 +166,12 @@ export default function CoinScreen() {
   const coinBg     = color + "1a";
   const coinBorder = color + "44";
   const canSave    = name.trim().length > 0 && symbol.trim().length > 0 && acknowledged;
+
+  if (loadedCircleIdRef.current !== circleId) return (
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="Circle Coin" />
+    </GradientBackground>
+  );
 
   return (
     <GradientBackground style={{ paddingHorizontal: 20 }}>

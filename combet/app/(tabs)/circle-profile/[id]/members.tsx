@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { View, FlatList, TouchableOpacity, Alert} from "react-native";
 import { Text, ActivityIndicator, TextInput } from "react-native-paper";
@@ -35,8 +35,10 @@ export default function MembersScreen() {
   const [members,   setMembers]   = useState<Member[]>([]);
   const [requests,  setRequests]  = useState<Request[]>([]);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [loading,   setLoading]   = useState(true);
 
   const loadAll = async () => {
+    setLoading(true);
     try {
       const sessionId = await getSessionId();
       const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
@@ -59,12 +61,25 @@ export default function MembersScreen() {
       }
     } catch (err) {
       console.error("Error loading members:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useFocusEffect(useCallback(() => {
+  const loadedCircleIdRef = useRef<string | null>(null);
+
+  // Full reset only when circleId actually changes
+  useEffect(() => {
+    if (loadedCircleIdRef.current === circleId) return;
+    loadedCircleIdRef.current = circleId;
     setMembers([]);
     setRequests([]);
+    void loadAll();
+  }, [circleId]);
+
+  // Silent refresh when returning to screen
+  useFocusEffect(useCallback(() => {
+    if (loadedCircleIdRef.current !== circleId) return;
     void loadAll();
   }, [circleId]));
 
@@ -274,6 +289,15 @@ export default function MembersScreen() {
         </View>
       )}
     </View>
+  );
+
+  if (loading) return (
+    <GradientBackground style={{ paddingHorizontal: 20 }}>
+      <PageHeader title="Members" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 14 }}>Loading…</Text>
+      </View>
+    </GradientBackground>
   );
 
   return (
