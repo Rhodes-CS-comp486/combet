@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
+import { useUser } from "@/context/UserContext";
 import GradientBackground from "@/components/GradientBackground";
 import { API_BASE } from "@/constants/api";
 import UserAvatar from "@/components/UserAvatar";
@@ -56,6 +57,7 @@ type TabKey = typeof TABS[number]["key"];
 
 export default function InboxScreen() {
   const { theme, isDark } = useAppTheme();
+  const { setUnreadCount } = useUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading]             = useState(true);
   const [activeTab, setActiveTab]         = useState<TabKey>("notifications");
@@ -69,6 +71,8 @@ export default function InboxScreen() {
   });
 
   useFocusEffect(useCallback(() => {
+    setUnreadCount(0);
+    void markAllRead();
     void fetchInbox();
     void fetchRequestCount();
     void fetchConversations();
@@ -118,6 +122,20 @@ export default function InboxScreen() {
     }
   };
 
+  const markAllRead = async () => {
+    try {
+      const sessionId = await getSessionId();
+      if (!sessionId) return;
+      // Only mark notifications read — DMs are marked read when you open the chat
+      await fetch(`${API_BASE}/inbox/read-all`, {
+        method: "PATCH",
+        headers: { "x-session-id": sessionId },
+      });
+    } catch (err) {
+      console.error("markAllRead error:", err);
+    }
+  };
+
   const fetchInbox = async () => {
     try {
       const sessionId = await getSessionId();
@@ -126,7 +144,9 @@ export default function InboxScreen() {
         headers: { "x-session-id": sessionId },
       });
       const data = await res.json();
-      setNotifications(Array.isArray(data) ? data : []);
+      const notifs = Array.isArray(data) ? data : [];
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
     } catch (err) {
       console.error("Inbox error:", err);
     } finally {
@@ -181,7 +201,9 @@ export default function InboxScreen() {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });
-      setNotifications((prev) => prev.filter((n) => n.invite_id !== inviteId));
+      setNotifications((prev) =>
+        prev.map((n) => n.invite_id === inviteId ? { ...n, invite_status: "accepted" } : n)
+      );
     } catch (err) {
       console.error("Decline error:", err);
     }
@@ -212,7 +234,10 @@ export default function InboxScreen() {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });
-      setNotifications((prev) => prev.filter((n) => n.follow_request_id !== requestId));
+      setNotifications((prev) =>
+        prev.map((n) => n.follow_request_id === requestId
+          ? { ...n, follow_request_status: "accepted" } : n)
+      );
     } catch (err) {
       console.error("Decline follow error:", err);
     }
@@ -265,7 +290,10 @@ export default function InboxScreen() {
         method: "POST",
         headers: { "x-session-id": sessionId },
       });
-      setNotifications((prev) => prev.filter((n) => n.request_id !== requestId));
+      setNotifications((prev) =>
+        prev.map((n) => n.request_id === requestId
+          ? { ...n, join_request_status: "accepted" } : n)
+      );
     } catch (err) {
       console.error("Decline join request error:", err);
     }
@@ -586,61 +614,6 @@ export default function InboxScreen() {
       );
     }
 
-    // ── New follower (public account) ─────────────────────────────────────
-    if (item.type === "new_follower") {
-      const fbStatus = item.actor_id ? followBackStatus[item.actor_id] : undefined;
-      const isFollowed   = fbStatus === "followed";
-      const isRequested  = fbStatus === "requested";
-      return (
-        <View style={{ position: "relative", marginBottom: 12 }}>
-          <TouchableOpacity onPress={goToProfile} activeOpacity={0.8} style={cardStyle}>
-            <View style={{ padding: 16, flexDirection: "row", alignItems: "center" }}>
-              {avatarEl}
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, lineHeight: 20 }}>
-                  <Text style={{ fontWeight: "700" }}>@{item.actor_username}</Text>
-                  {" started following you"}
-                </Text>
-                <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
-                  {timeAgo(item.created_at)}
-                </Text>
-              </View>
-              {isFollowed ? (
-                <View style={{
-                  backgroundColor: "rgba(157,212,190,0.12)",
-                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                  borderWidth: 1, borderColor: "rgba(157,212,190,0.2)",
-                  flexDirection: "row", alignItems: "center", gap: 5,
-                }}>
-                  <Ionicons name="checkmark" size={11} color="#9dd4be" />
-                  <Text style={{ color: "#9dd4be", fontSize: 11, fontWeight: "600" }}>Following</Text>
-                </View>
-              ) : isRequested ? (
-                <View style={{
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                  borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                }}>
-                  <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 11, fontWeight: "600" }}>Requested</Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); item.actor_id && handleFollowBack(item.actor_id); }}
-                  style={{
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>Follow</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </TouchableOpacity>
-          <XButton />
-        </View>
-      );
-    }
-
     // ── Follow accepted ───────────────────────────────────────────────────
     if (item.type === "follow_accepted") {
       return (
@@ -674,10 +647,12 @@ export default function InboxScreen() {
       );
     }
 
-    // ── New follower (public account) ─────────────────────────────────────
+    // ── New follower ──────────────────────────────────────────────────────
     if (item.type === "new_follower") {
-      const alreadyFollowing = item.viewer_follows_actor;
-      const requested        = item.viewer_requested_actor;
+      const fbStatus = item.actor_id ? followBackStatus[item.actor_id] : undefined;
+      // Prefer live state from followBackStatus, fall back to value from API
+      const alreadyFollowing = fbStatus === "followed"  || (!fbStatus && item.viewer_follows_actor);
+      const requested        = fbStatus === "requested" || (!fbStatus && item.viewer_requested_actor);
 
       const followLabel = alreadyFollowing ? "Following" : requested ? "Requested" : "Follow";
       const followColor = alreadyFollowing
@@ -999,6 +974,18 @@ export default function InboxScreen() {
         <View style={{ flexDirection: "row" }}>
           {TABS.map(({ key, label }) => {
             const active = activeTab === key;
+            const unreadDMs = conversations.reduce((sum, c) => sum + Number(c.unread_count ?? 0), 0);
+            const pendingNotifs = notifications.filter((n) => {
+              if (n.type === "circle_invite")      return n.invite_status === "pending";
+              if (n.type === "follow_request")     return n.follow_request_status === "pending";
+              if (n.type === "circle_join_request") return n.join_request_status === "pending";
+              return false;
+            }).length;
+            const badge = key === "messages"
+              ? (unreadDMs + requestCount)
+              : key === "notifications"
+              ? pendingNotifs
+              : 0;
             return (
               <TouchableOpacity
                 key={key}
@@ -1009,12 +996,26 @@ export default function InboxScreen() {
                   borderBottomColor: active ? theme.colors.primary : "rgba(255,255,255,0.08)",
                 }}
               >
-                <Text style={{
-                  fontSize: 13, fontWeight: active ? "600" : "400",
-                  color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
-                }}>
-                  {label}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{
+                    fontSize: 13, fontWeight: active ? "600" : "400",
+                    color: active ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
+                  }}>
+                    {label}
+                  </Text>
+                  {badge > 0 && (
+                    <View style={{
+                      backgroundColor: "#e87060",
+                      borderRadius: 10, minWidth: 18, height: 18,
+                      alignItems: "center", justifyContent: "center",
+                      paddingHorizontal: 4,
+                    }}>
+                      <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+                        {badge > 99 ? "99+" : badge}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}

@@ -48,7 +48,17 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
         -- Bet deadline fields
         b.id                    AS bet_id,
         b.title                 AS bet_title,
-        b.closes_at             AS bet_closes_at
+        b.closes_at             AS bet_closes_at,
+
+        -- For new_follower: does the recipient already follow the actor back?
+        EXISTS (
+          SELECT 1 FROM follows
+          WHERE follower_id = $1 AND following_id = n.actor_id
+        ) AS viewer_follows_actor,
+        EXISTS (
+          SELECT 1 FROM follow_requests
+          WHERE requester_id = $1 AND requestee_id = n.actor_id AND status = 'pending'
+        ) AS viewer_requested_actor
 
       FROM notifications n
       LEFT JOIN users actor ON actor.id = n.actor_id

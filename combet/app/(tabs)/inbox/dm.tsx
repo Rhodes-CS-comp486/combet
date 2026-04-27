@@ -7,6 +7,7 @@ import { Text } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { getSessionId } from "@/components/sessionStore";
+import { useUser } from "@/context/UserContext";
 import { useAppTheme } from "@/context/ThemeContext";
 import GradientBackground from "@/components/GradientBackground";
 import UserAvatar from "@/components/UserAvatar";
@@ -28,6 +29,7 @@ export default function DMScreen() {
     userId: string; username: string; avatarColor?: string; avatarIcon?: string;
   }>();
   const { theme, isDark } = useAppTheme();
+  const { setUnreadCount } = useUser();
 
   const [messages, setMessages]     = useState<Message[]>([]);
   const [myId, setMyId]             = useState<string | null>(null);
@@ -59,6 +61,25 @@ export default function DMScreen() {
       if (res.ok) {
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
+        // Backend marks this thread's messages as read on fetch —
+        // re-fetch the true unread count so the dot updates correctly
+        const sid = await getSessionId();
+        if (sid) {
+          const countRes = await fetch(`${API_BASE}/messages/unread-count`, {
+            headers: { "x-session-id": sid },
+          });
+          if (countRes.ok) {
+            const { count } = await countRes.json();
+            // Also fetch unread notifications to keep total accurate
+            const notifRes = await fetch(`${API_BASE}/inbox`, {
+              headers: { "x-session-id": sid },
+            });
+            const notifCount = notifRes.ok
+              ? (await notifRes.json() as any[]).filter((n: any) => !n.is_read).length
+              : 0;
+            setUnreadCount(notifCount + count);
+          }
+        }
       }
     } catch (err) {
       console.error("Fetch DM error:", err);
