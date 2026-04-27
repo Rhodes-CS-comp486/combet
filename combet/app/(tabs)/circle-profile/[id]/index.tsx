@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View, ScrollView, Alert, TouchableOpacity,
   DeviceEventEmitter, Animated, Pressable, StyleSheet,
@@ -55,6 +55,7 @@ export default function CircleProfile() {
   const fromHome        = from === "home";
 
   const [reportVisible,  setReportVisible]  = useState(false);
+  const reportOpenRef = useRef(false); // track modal open state without triggering re-renders
   const [circle,         setCircle]         = useState<Circle | null>(null);
   const [history,        setHistory]        = useState<HistoryData | null>(null);
   const [publicMembers,  setPublicMembers]  = useState<Member[]>([]);
@@ -69,10 +70,12 @@ export default function CircleProfile() {
   // Drawer animation
   const drawerAnim  = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen,        setDrawerOpen]        = useState(false);
+  const [drawerTouchable,   setDrawerTouchable]   = useState(false); // separate from open so we can kill touches instantly
 
   const openDrawer = () => {
     setDrawerOpen(true);
+    setDrawerTouchable(true);
     Animated.parallel([
       Animated.timing(drawerAnim,  { toValue: 0, duration: 280, useNativeDriver: true }),
       Animated.timing(overlayAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
@@ -80,49 +83,103 @@ export default function CircleProfile() {
   };
 
   const closeDrawer = () => {
+    setDrawerTouchable(false); // kill touches immediately — don't wait for animation
     Animated.parallel([
       Animated.timing(drawerAnim,  { toValue: DRAWER_WIDTH, duration: 260, useNativeDriver: true }),
       Animated.timing(overlayAnim, { toValue: 0,            duration: 260, useNativeDriver: true }),
-    ]).start(() => setDrawerOpen(false));
+    ]).start(() => setDrawerOpen(false)); // unmount after animation finishes
   };
 
-  // ── All original data fetching logic unchanged ──────────────────────────────
-  useFocusEffect(useCallback(() => { fetchAll(); }, [circleId]));
+  // ── Track the last circleId we fully loaded ──────────────────────────────────
+  const loadedCircleIdRef = useRef<string | null>(null);
+
+  // ── Full reset+fetch only when circleId changes ───────────────────────────
+  useEffect(() => {
+    if (loadedCircleIdRef.current === circleId) return; // same circle, skip
+    loadedCircleIdRef.current = circleId;
+    setCircle(null);
+    setHistory(null);
+    setPublicMembers([]);
+    setPublicBets([]);
+    setIsMember(null);
+    setRequested(false);
+    setRequestCount(0);
+    setActiveTab("new");
+    void fetchAll();
+  }, [circleId]);
+
+  // ── Track if we need a hard reload (e.g. after edit) ────────────────────
+  const needsHardReloadRef = useRef(false);
+
+  // ── Listen for edit saves ─────────────────────────────────────────────────
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("circleUpdated", () => {
+      needsHardReloadRef.current = true;
+    });
+    return () => sub.remove();
+  }, []);
+
+  // ── Refresh when returning from sub-screens ───────────────────────────────
+  useFocusEffect(useCallback(() => {
+    if (loadedCircleIdRef.current !== circleId) return;
+    if (reportOpenRef.current) return; // modal is open, don't refresh
+    if (needsHardReloadRef.current) {
+      // Coming back from Edit — clear stale data so old circle never shows
+      needsHardReloadRef.current = false;
+      setCircle(null);
+    }
+    void fetchAll();
+  }, [circleId]));
 
   const fetchAll = async () => {
     try {
       const sessionId = await getSessionId();
-      const circleRes = await fetch(`${API_BASE}/circles/${circleId}`);
-      if (circleRes.ok) {
-        const circleData = await circleRes.json();
-        setCircle(circleData);
-        if (circleData.join_status === "pending") setRequested(true);
-      }
 
-      const histRes = await fetch(`${API_BASE}/circles/${circleId}/history`, {
-        headers: { "x-session-id": sessionId ?? "" },
-      });
+      // Fetch circle info and membership history in parallel
+      const [circleRes, histRes] = await Promise.all([
+        fetch(`${API_BASE}/circles/${circleId}`),
+        fetch(`${API_BASE}/circles/${circleId}/history`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        }),
+      ]);
+
+      const circleData = circleRes.ok ? await circleRes.json() : null;
+
       if (histRes.ok) {
+        // Member path: get history + request count, then set everything at once
         const histData = await histRes.json();
-        setHistory(histData);
+        const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
+          headers: { "x-session-id": sessionId ?? "" },
+        });
+        const reqCount = reqRes.ok ? (await reqRes.json()).length : 0;
+
+        // All state set together — one render, no intermediate flash
         setCircle(histData.circle);
+        setHistory(histData);
         setIsMember(true);
+        setRequested(false);
+        setRequestCount(reqCount);
       } else {
-        setIsMember(false);
+        // Non-member path: fetch public data in parallel
         const [membersRes, betsRes] = await Promise.all([
           fetch(`${API_BASE}/circles/${circleId}/members`),
           fetch(`${API_BASE}/circles/${circleId}/bets`, {
             headers: { "x-session-id": sessionId ?? "" },
           }),
         ]);
-        if (membersRes.ok) setPublicMembers(await membersRes.json());
-        if (betsRes.ok)    setPublicBets(await betsRes.json());
-      }
 
-      const reqRes = await fetch(`${API_BASE}/circles/${circleId}/requests`, {
-        headers: { "x-session-id": sessionId ?? "" },
-      });
-      if (reqRes.ok) setRequestCount((await reqRes.json()).length);
+        const members = membersRes.ok ? await membersRes.json() : [];
+        const bets    = betsRes.ok    ? await betsRes.json()    : [];
+
+        // All state set together — one render, no intermediate flash
+        if (circleData) {
+          setCircle(circleData);
+          setRequested(circleData.join_status === "pending");
+        }
+        setPublicMembers(members);
+        setPublicBets(bets);
+        setIsMember(false);
+      }
     } catch (err) {
       console.error("fetchAll error:", err);
     }
@@ -205,7 +262,13 @@ export default function CircleProfile() {
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  if (!circle) return null;
+  if (!circle) return (
+    <GradientBackground>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 14 }}>Loading…</Text>
+      </View>
+    </GradientBackground>
+  );
 
   // ── All original bet filtering logic unchanged ──────────────────────────────
   const allBets: Bet[] = isMember ? (history?.bets ?? []) : publicBets;
@@ -462,15 +525,19 @@ export default function CircleProfile() {
 
       {/* ── Drawer Overlay ── */}
       {drawerOpen && (
-        <Animated.View style={[styles.overlay, { opacity: overlayAnim }]} pointerEvents="auto">
+        <Animated.View
+          style={[styles.overlay, { opacity: overlayAnim }]}
+          pointerEvents={drawerTouchable ? "auto" : "none"}
+        >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeDrawer} />
         </Animated.View>
       )}
 
       {/* ── Slide-in Drawer ── */}
+      {drawerOpen && (
       <Animated.View
         style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}
-        pointerEvents={drawerOpen ? "auto" : "none"}
+        pointerEvents={drawerTouchable ? "auto" : "none"}
       >
         <View style={styles.drawerHeader}>
           <Text style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
@@ -497,7 +564,7 @@ export default function CircleProfile() {
                 else if (item.label === "Add Friends")  router.push(`/(tabs)/circle-profile/${circleId}/add-friend`);
                 else if (item.label === "Group Chat")   router.push(`/(tabs)/circle-profile/${circleId}/inbox?name=${encodeURIComponent(circle.name)}`);
                 else if (item.label === "Coin")         router.push(`/circle-profile/${circleId}/coin`);
-                else if (item.label === "Report")       setReportVisible(true);
+                else if (item.label === "Report")       { reportOpenRef.current = true; closeDrawer(); setTimeout(() => setReportVisible(true), 50); }
               }}
             >
               <View style={[styles.drawerIcon, item.danger && styles.drawerIconDanger]}>
@@ -511,6 +578,7 @@ export default function CircleProfile() {
           );
         })}
       </Animated.View>
+      )}
 
       {/* ── Settle Modal (unchanged) ── */}
       <Portal>
@@ -549,7 +617,7 @@ export default function CircleProfile() {
 
       <ReportModal
         visible={reportVisible}
-        onDismiss={() => setReportVisible(false)}
+        onDismiss={() => { reportOpenRef.current = false; setReportVisible(false); }}
         targetType="circle"
         targetId={circleId}
       />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, Alert, Switch, TouchableOpacity } from "react-native";
+import { View, ScrollView, Alert, Switch, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { Text, TextInput, Button, HelperText } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -16,14 +16,14 @@ export default function EditCircle() {
   const { id }            = useLocalSearchParams();
   const circleId          = Array.isArray(id) ? id[0] : id;
 
-  const [iconIndex, setIconIndex]     = useState(0);
-  const [name, setName]               = useState("");
-  const [description, setDescription] = useState("");
-  const [isPrivate, setIsPrivate]     = useState(false);
-  const [nameError, setNameError]     = useState<string | null>(null);
-  const [descError, setDescError]     = useState<string | null>(null);
-  const [loading, setLoading]         = useState(false);
-  const [ready, setReady]             = useState(false);
+  const [iconIndex,     setIconIndex]     = useState(0);
+  const [name,          setName]          = useState("");
+  const [description,   setDescription]   = useState("");
+  const [isPrivate,     setIsPrivate]     = useState(false);
+  const [nameError,     setNameError]     = useState<string | null>(null);
+  const [descError,     setDescError]     = useState<string | null>(null);
+  const [loading,       setLoading]       = useState(false);
+  const [ready,         setReady]         = useState(false);
   const [selectedColor, setSelectedColor] = useState("#9dd4be");
 
   useEffect(() => {
@@ -34,10 +34,11 @@ export default function EditCircle() {
         setName(data.name);
         setDescription(data.description || "");
         setIsPrivate(data.is_private ?? false);
+        setSelectedColor(data.icon_color ?? "#9dd4be");
+        // Find the index of the saved icon in the full ICONS list
         const idx = ICONS.indexOf(data.icon);
         setIconIndex(idx >= 0 ? idx : 0);
         setReady(true);
-        setSelectedColor(data.icon_color ?? "#9dd4be");
       })
       .catch(console.error);
   }, [circleId]);
@@ -64,11 +65,17 @@ export default function EditCircle() {
       const res = await fetch(`${API_BASE}/circles/${circleId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, icon: ICONS[iconIndex], icon_color: selectedColor, is_private: isPrivate }),
+        body: JSON.stringify({
+          name, description,
+          icon: ICONS[iconIndex],
+          icon_color: selectedColor,
+          is_private: isPrivate,
+        }),
       });
       if (res.status === 409) { const data = await res.json(); setNameError(data.error); return; }
       if (!res.ok) throw new Error("Failed to update");
-      router.replace(`/circle-profile/${circleId}`);
+      DeviceEventEmitter.emit("circleUpdated");
+      router.back();
     } catch {
       Alert.alert("Error saving changes");
     } finally {
@@ -112,12 +119,17 @@ export default function EditCircle() {
                 backgroundColor: color,
                 borderWidth: selectedColor === color ? 3 : 0,
                 borderColor: "#fff",
+                alignItems: "center", justifyContent: "center",
               }}
-            />
+            >
+              {selectedColor === color && (
+                <Ionicons name="checkmark" size={16} color="#fff" />
+              )}
+            </TouchableOpacity>
           ))}
         </View>
 
-        <View style={{ marginTop: 28 }}>
+        <View style={{ marginTop: 8 }}>
           <View style={{
             backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12,
             borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 2,
@@ -215,7 +227,7 @@ export default function EditCircle() {
 
           <Button
             mode="text"
-            onPress={() => router.replace(`/circle-profile/${circleId}`)}
+            onPress={() => router.back()}
             labelStyle={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}
           >
             Cancel
