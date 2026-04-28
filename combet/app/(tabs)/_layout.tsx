@@ -46,9 +46,9 @@ export default function TabLayout() {
             //@ts-ignore
             sceneContainerStyle: { backgroundColor: "transparent"},
           tabBarStyle: {
-            height:          70,
-            paddingBottom:   8,
-            paddingTop:      8,
+            height:          80,
+            paddingBottom:   14,
+            paddingTop:      14,
             backgroundColor: tabBarBg,
             borderTopWidth:  isDark ? 0 : 1,
             borderTopColor:  isDark ? "transparent" : "rgba(0,0,0,0.08)",
@@ -129,7 +129,7 @@ export default function TabLayout() {
          {/* ── Tab bar divider line ── */}
         <View style={{
           position: "absolute",
-          bottom: 70,
+          bottom: 80,
           left: 0,
           right: 0,
           height: 1,
@@ -141,7 +141,7 @@ export default function TabLayout() {
         onPress={() => router.push("/add-bet")}
         style={{
           position:        "absolute",
-          bottom:          35,
+          bottom:          45,
           alignSelf:       "center",
           width:           65,
           height:          65,
