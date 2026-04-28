@@ -449,7 +449,7 @@ export default function UserProfileScreen() {
             {renderFollowButton()}
             <TouchableOpacity
               style={styles.btnMsg}
-              onPress={() => router.push({ pathname: "/(tabs)/inbox/dm", params: { userId: profile.id, username: profile.username } } as any)}
+              onPress={() => router.push({ pathname: "/(tabs)/inbox/dm", params: { userId: profile.id, username: profile.username, avatarColor: profile.avatar_color, avatarIcon: profile.avatar_icon } } as any)}
             >
               <Ionicons name="chatbubble-outline" size={14} color="#fff" />
               <Text style={styles.btnMsgText}>  Message</Text>
