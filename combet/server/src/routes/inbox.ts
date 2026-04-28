@@ -2,7 +2,7 @@ import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { userWantsNotification } from "./notificationPrefs";
-import { userWantsNotification } from "./notificationPrefs";
+import { sendPushNotification } from "../utils/push";
 
 export const inboxRouter = Router();
 
@@ -96,13 +96,26 @@ inboxRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── Mark All Read ────────────────────────────────────────────────────────────
+inboxRouter.patch("/read-all", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    await pool.query(
+      `UPDATE notifications SET is_read = true WHERE recipient_id = $1`,
+      [req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("PATCH /inbox/read-all error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Accept Circle Invite ─────────────────────────────────────────────────────
 inboxRouter.post("/invites/:inviteId/accept", requireAuth, async (req: AuthRequest, res) => {
   const { inviteId } = req.params;
   const userId       = req.userId;
   const client       = await pool.connect();
   try {
-    // Don't require status = 'pending' — handle already-accepted invites gracefully
     const invite = await client.query(
       `SELECT * FROM circle_invites WHERE invite_id = $1 AND invitee_id = $2`,
       [inviteId, userId]
@@ -188,15 +201,30 @@ inboxRouter.post("/follow-requests/:requestId/accept", requireAuth, async (req: 
       `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [requesterId, userId]
     );
+
     if (await userWantsNotification(requesterId, "notify_follow_accepted")) {
-      if (await userWantsNotification(requesterId, "notify_follow_accepted")) {
-        await client.query(
-          `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
-           VALUES ($1, $2, 'follow_accepted', 'follow_request', $3, false, NOW())`,
-          [requesterId, userId, requestId]
+      await client.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id, is_read, created_at)
+         VALUES ($1, $2, 'follow_accepted', 'follow_request', $3, false, NOW())`,
+        [requesterId, userId, requestId]
+      );
+      // ── Push: tell requester their follow was accepted ──
+      const acceptorRow = await client.query(
+        `SELECT username FROM users WHERE id = $1`, [userId]
+      );
+      const tokenRow = await client.query(
+        `SELECT push_token FROM users WHERE id = $1`, [requesterId]
+      );
+      const pushToken = tokenRow.rows[0]?.push_token;
+      if (pushToken) {
+        await sendPushNotification(
+          pushToken,
+          "Follow Request Accepted",
+          `${acceptorRow.rows[0]?.username ?? "Someone"} accepted your follow request`
         );
       }
     }
+
     await client.query(
       `UPDATE notifications SET is_read = true
        WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'follow_request'`,
@@ -240,7 +268,6 @@ inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, 
   const userId      = req.userId!;
   const client      = await pool.connect();
   try {
-    // Check if target is private
     const target = await client.query(
       `SELECT is_private FROM users WHERE id = $1`,
       [actorId]
@@ -250,7 +277,6 @@ inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, 
 
     const isPrivate = target.rows[0].is_private;
 
-    // Check for existing follow or pending request
     const alreadyFollowing = await client.query(
       `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
       [userId, actorId]
@@ -269,7 +295,6 @@ inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, 
     await client.query("BEGIN");
 
     if (isPrivate) {
-      // Send a follow request
       await client.query(
         `INSERT INTO follow_requests (requester_id, requestee_id, status, created_at)
          VALUES ($1, $2, 'pending', NOW())`,
@@ -287,11 +312,21 @@ inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, 
            VALUES ($1, $2, 'follow_request', 'follow_request', $3, false, NOW())`,
           [actorId, userId, newRequestId]
         );
+        // ── Push: new follow request ──
+        const senderRow = await client.query(`SELECT username FROM users WHERE id = $1`, [userId]);
+        const tokenRow  = await client.query(`SELECT push_token FROM users WHERE id = $1`, [actorId]);
+        const pushToken = tokenRow.rows[0]?.push_token;
+        if (pushToken) {
+          await sendPushNotification(
+            pushToken,
+            "New Follow Request",
+            `${senderRow.rows[0]?.username ?? "Someone"} wants to follow you`
+          );
+        }
       }
       await client.query("COMMIT");
       return res.json({ status: "requested" });
     } else {
-      // Public — follow directly
       await client.query(
         `INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [userId, actorId]
@@ -302,6 +337,17 @@ inboxRouter.post("/follow-back/:actorId", requireAuth, async (req: AuthRequest, 
            VALUES ($1, $2, 'new_follower', 'user', $2, false, NOW())`,
           [actorId, userId]
         );
+        // ── Push: new follower ──
+        const senderRow = await client.query(`SELECT username FROM users WHERE id = $1`, [userId]);
+        const tokenRow  = await client.query(`SELECT push_token FROM users WHERE id = $1`, [actorId]);
+        const pushToken = tokenRow.rows[0]?.push_token;
+        if (pushToken) {
+          await sendPushNotification(
+            pushToken,
+            "New Follower",
+            `${senderRow.rows[0]?.username ?? "Someone"} started following you`
+          );
+        }
       }
       await client.query("COMMIT");
       return res.json({ status: "followed" });
@@ -370,6 +416,19 @@ inboxRouter.post("/join-requests/:requestId/accept", requireAuth, async (req: Au
        WHERE recipient_id = $1 AND entity_id = $2 AND entity_type = 'circle_join_request'`,
       [userId, requestId]
     );
+
+    // ── Push: tell the requester they were accepted ──
+    const circleRow = await client.query(`SELECT name FROM circles WHERE circle_id = $1`, [circle_id]);
+    const tokenRow  = await client.query(`SELECT push_token FROM users WHERE id = $1`, [requesterId]);
+    const pushToken = tokenRow.rows[0]?.push_token;
+    if (pushToken) {
+      await sendPushNotification(
+        pushToken,
+        "Circle Request Accepted",
+        `You've been accepted into ${circleRow.rows[0]?.name ?? "a circle"}`
+      );
+    }
+
     await client.query("COMMIT");
     res.json({ success: true });
   } catch (err) {
@@ -418,6 +477,7 @@ inboxRouter.post("/join-requests/:requestId/decline", requireAuth, async (req: A
     res.status(500).json({ error: "Server error" });
   }
 });
+
 // ─── Delete Notification ──────────────────────────────────────────────────────
 inboxRouter.delete("/:notificationId", requireAuth, async (req: AuthRequest, res) => {
   const { notificationId } = req.params;
@@ -433,6 +493,7 @@ inboxRouter.delete("/:notificationId", requireAuth, async (req: AuthRequest, res
     res.status(500).json({ error: "Server error" });
   }
 });
+
 // ─── Get Single Bet (for inbox deadline modal) ────────────────────────────────
 inboxRouter.get("/bet/:betId", requireAuth, async (req: AuthRequest, res) => {
   const { betId } = req.params;

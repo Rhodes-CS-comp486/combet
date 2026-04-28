@@ -127,6 +127,16 @@ authRouter.post("/logout", async (req, res) => {
   if (!sessionId) return res.status(200).json({ ok: true });
 
   try {
+    // Clear push token before deleting session
+    const sessionResult = await pool.query(
+      `SELECT user_id FROM sessions WHERE session_id = $1`,
+      [sessionId]
+    );
+    const userId = sessionResult.rows[0]?.user_id;
+    if (userId) {
+      await pool.query(`UPDATE users SET push_token = NULL WHERE id = $1`, [userId]);
+    }
+
     await pool.query("DELETE FROM sessions WHERE session_id = $1", [sessionId]);
     return res.json({ ok: true });
   } catch (e: any) {

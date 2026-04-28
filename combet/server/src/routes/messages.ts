@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { sendPushNotification } from "../utils/push";
+import { userWantsNotification } from "./notificationPrefs";
 
 export const messagesRouter = Router();
 
@@ -20,8 +22,6 @@ messagesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
 
   try {
     // is_request = true if the recipient doesn't follow the sender
-    // (i.e. sender hasn't been approved/accepted by recipient via following)
-    // Simple rule: if sender doesn't follow recipient → goes to requests
     const followCheck = await pool.query(
       `SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2`,
       [senderId, recipientId]
@@ -34,6 +34,25 @@ messagesRouter.post("/", requireAuth, async (req: AuthRequest, res) => {
        RETURNING message_id, created_at`,
       [senderId, recipientId, content.trim(), isRequest]
     );
+
+    // ── Push notification ──
+    if (await userWantsNotification(recipientId, "notify_messages")) {
+      const senderRow = await pool.query(
+        `SELECT username FROM users WHERE id = $1`, [senderId]
+      );
+      const tokenRow = await pool.query(
+        `SELECT push_token FROM users WHERE id = $1`, [recipientId]
+      );
+      const pushToken = tokenRow.rows[0]?.push_token;
+      const senderUsername = senderRow.rows[0]?.username ?? "Someone";
+      if (pushToken) {
+        await sendPushNotification(
+          pushToken,
+          isRequest ? "New Message Request" : `${senderUsername}`,
+          content.trim().slice(0, 100)
+        );
+      }
+    }
 
     res.json({ success: true, message_id: result.rows[0].message_id, is_request: isRequest });
   } catch (err) {
@@ -86,8 +105,6 @@ messagesRouter.get("/", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // ─── Get Message Requests ─────────────────────────────────────────────────────
-// GET /messages/requests
-// Returns messages where is_request = true and recipient = current user
 messagesRouter.get("/requests", requireAuth, async (req: AuthRequest, res) => {
   const userId = req.userId!;
   try {
@@ -117,9 +134,7 @@ messagesRouter.get("/requests", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-
 // ─── Get Total Unread DM Count ────────────────────────────────────────────────
-// GET /messages/unread-count
 messagesRouter.get("/unread-count", requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
@@ -136,7 +151,6 @@ messagesRouter.get("/unread-count", requireAuth, async (req: AuthRequest, res) =
 });
 
 // ─── Mark All DMs as Read ─────────────────────────────────────────────────────
-// PATCH /messages/read-all
 messagesRouter.patch("/read-all", requireAuth, async (req: AuthRequest, res) => {
   try {
     await pool.query(
@@ -152,7 +166,6 @@ messagesRouter.patch("/read-all", requireAuth, async (req: AuthRequest, res) => 
 });
 
 // ─── Get Thread with a Specific User ─────────────────────────────────────────
-// GET /messages/:userId
 messagesRouter.get("/:otherUserId", requireAuth, async (req: AuthRequest, res) => {
   const currentUserId  = req.userId!;
   const { otherUserId } = req.params;
@@ -196,8 +209,6 @@ messagesRouter.get("/:otherUserId", requireAuth, async (req: AuthRequest, res) =
 });
 
 // ─── Accept Message Request ───────────────────────────────────────────────────
-// PATCH /messages/requests/:messageId/accept
-// Moves the message from requests into the normal inbox
 messagesRouter.patch("/requests/:messageId/accept", requireAuth, async (req: AuthRequest, res) => {
   const { messageId } = req.params;
   const userId        = req.userId!;
@@ -219,7 +230,6 @@ messagesRouter.patch("/requests/:messageId/accept", requireAuth, async (req: Aut
 });
 
 // ─── Decline / Delete Message Request ────────────────────────────────────────
-// DELETE /messages/requests/:messageId
 messagesRouter.delete("/requests/:messageId", requireAuth, async (req: AuthRequest, res) => {
   const { messageId } = req.params;
   const userId        = req.userId!;
@@ -236,7 +246,6 @@ messagesRouter.delete("/requests/:messageId", requireAuth, async (req: AuthReque
 });
 
 // ─── Delete Entire Conversation ──────────────────────────────────────────────
-// DELETE /messages/conversation/:otherUserId
 messagesRouter.delete("/conversation/:otherUserId", requireAuth, async (req: AuthRequest, res) => {
   const { otherUserId } = req.params;
   const userId          = req.userId!;
@@ -255,8 +264,6 @@ messagesRouter.delete("/conversation/:otherUserId", requireAuth, async (req: Aut
 });
 
 // ─── Delete a Single DM ───────────────────────────────────────────────────────
-// DELETE /messages/:messageId
-// Only the sender can delete their own message
 messagesRouter.delete("/:messageId", requireAuth, async (req: AuthRequest, res) => {
   const { messageId } = req.params;
   const userId        = req.userId!;

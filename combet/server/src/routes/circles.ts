@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import { sendPushNotification } from "../utils/push";
+import { userWantsNotification } from "./notificationPrefs";
 
 export const circlesRouter = Router();
 
@@ -208,10 +210,31 @@ circlesRouter.post("/:circleId/invite", requireAuth, async (req: AuthRequest, re
     );
     const inviteId = invite.rows[0].invite_id;
 
-    await pool.query(
-      `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id) VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)`,
-      [inviteeId, inviterId, inviteId]
-    );
+    if (await userWantsNotification(inviteeId, "notify_circle_invite")) {
+      await pool.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id) VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)`,
+        [inviteeId, inviterId, inviteId]
+      );
+      // ── Push: notify invitee ──
+      const [circleRow, inviterRow, tokenRow] = await Promise.all([
+        pool.query(`SELECT name FROM circles WHERE circle_id = $1`, [circleId]),
+        pool.query(`SELECT username FROM users WHERE id = $1`, [inviterId]),
+        pool.query(`SELECT push_token FROM users WHERE id = $1`, [inviteeId]),
+      ]);
+      const pushToken = tokenRow.rows[0]?.push_token;
+      if (pushToken) {
+        await sendPushNotification(
+          pushToken,
+          "Circle Invite",
+          `${inviterRow.rows[0]?.username ?? "Someone"} invited you to join ${circleRow.rows[0]?.name ?? "a circle"}`
+        );
+      }
+    } else {
+      await pool.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, entity_type, entity_id) VALUES ($1, $2, 'circle_invite', 'circle_invite', $3)`,
+        [inviteeId, inviterId, inviteId]
+      );
+    }
 
     res.json({ success: true, inviteId });
   } catch (err) {
@@ -636,12 +659,35 @@ circlesRouter.post("/:circleId/request-join", requireAuth, async (req: AuthReque
       );
 
       for (const m of members.rows) {
-        await pool.query(
-          `INSERT INTO notifications
-             (recipient_id, actor_id, type, entity_type, entity_id)
-           VALUES ($1, $2, 'circle_join_request', 'circle_join_request', $3)`,
-          [m.user_id, userId, requestId]
-        );
+        if (await userWantsNotification(m.user_id, "notify_circle_join_request")) {
+          await pool.query(
+            `INSERT INTO notifications
+               (recipient_id, actor_id, type, entity_type, entity_id)
+             VALUES ($1, $2, 'circle_join_request', 'circle_join_request', $3)`,
+            [m.user_id, userId, requestId]
+          );
+          // ── Push: notify existing members of join request ──
+          const [requesterRow, circleRow, tokenRow] = await Promise.all([
+            pool.query(`SELECT username FROM users WHERE id = $1`, [userId]),
+            pool.query(`SELECT name FROM circles WHERE circle_id = $1`, [circleId]),
+            pool.query(`SELECT push_token FROM users WHERE id = $1`, [m.user_id]),
+          ]);
+          const pushToken = tokenRow.rows[0]?.push_token;
+          if (pushToken) {
+            await sendPushNotification(
+              pushToken,
+              "New Join Request",
+              `${requesterRow.rows[0]?.username ?? "Someone"} wants to join ${circleRow.rows[0]?.name ?? "your circle"}`
+            );
+          }
+        } else {
+          await pool.query(
+            `INSERT INTO notifications
+               (recipient_id, actor_id, type, entity_type, entity_id)
+             VALUES ($1, $2, 'circle_join_request', 'circle_join_request', $3)`,
+            [m.user_id, userId, requestId]
+          );
+        }
       }
     }
 
