@@ -31,6 +31,10 @@ export default function DMScreen() {
   const { theme, isDark } = useAppTheme();
   const { setUnreadCount } = useUser();
 
+  // Route params come through as the string "undefined" when not provided
+  const safeAvatarColor = avatarColor && avatarColor !== "undefined" ? avatarColor : undefined;
+  const safeAvatarIcon  = avatarIcon  && avatarIcon  !== "undefined" ? avatarIcon  : undefined;
+
   const [messages, setMessages]     = useState<Message[]>([]);
   const [myId, setMyId]             = useState<string | null>(null);
   const [loading, setLoading]       = useState(true);
@@ -255,8 +259,8 @@ export default function DMScreen() {
             <UserAvatar
               user={{
                 username:     username,
-                avatar_color: avatarColor ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_color,
-                avatar_icon:  avatarIcon  ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_icon,
+                avatar_color: safeAvatarColor ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_color,
+                avatar_icon:  safeAvatarIcon  ?? messages.find(m => m.sender_id !== myId)?.sender_avatar_icon,
               }}
               size={36}
             />
