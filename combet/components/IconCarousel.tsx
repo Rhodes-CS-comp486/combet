@@ -1,7 +1,7 @@
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "@/context/ThemeContext";
-import { View, TouchableOpacity, useWindowDimensions } from "react-native";
+import { View, TouchableOpacity, useWindowDimensions, PanResponder } from "react-native";
 
 import { AVATAR_ICONS } from "@/components/UserAvatar";
 
@@ -31,11 +31,19 @@ export default function IconCarousel({ selectedIndex, onIndexChange, selectedCol
   const { width } = useWindowDimensions();
   const centerSize = Math.min(130, width * 0.32);
   const sideSize   = Math.min(72,  width * 0.17);
-  const arrowSize  = 36;
+  const arrowSize = Math.min(36, width * 0.085);
+
+  const panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -20 && canGoRight) onIndexChange(selectedIndex + 1);
+        if (g.dx >  20 && canGoLeft)  onIndexChange(selectedIndex - 1);
+      },
+    });
 
   return (
-    <View>
-      {/* ── Three-icon row ── */}
+    <View {...panResponder.panHandlers}>
+    {/* ── Three-icon row ── */}
       <View style={{
         flexDirection:  "row",
         alignItems:     "center",

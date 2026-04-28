@@ -8,18 +8,18 @@ type Props = {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  titleStyle?: object;
 };
 
-export default function PageHeader({ title, subtitle, onBack }: Props) {
-  const { theme } = useAppTheme();
+export default function PageHeader({ title, subtitle, onBack, titleStyle }: Props) {  const { theme } = useAppTheme();
 
   return (
     <View style={{ paddingTop: 12, marginBottom: 20 }}>
       <BackButton onBack={onBack} />
       <Text style={{
-        color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
-        letterSpacing: 2, marginBottom: 4, marginTop: 16,
-      }}>
+          color: theme.colors.onSurface, fontSize: 24, fontWeight: "300",
+          letterSpacing: 2, marginBottom: 4, marginTop: 16, ...titleStyle
+        }}>
         {title}
       </Text>
       {subtitle && (

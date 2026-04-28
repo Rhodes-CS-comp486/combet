@@ -12,7 +12,7 @@ import { AVATAR_COLORS } from "@/components/UserAvatar";
 import GradientBackground from "@/components/GradientBackground";
 import { Filter } from "bad-words";
 import ConfirmModal from "@/components/Confirmmodal";
-
+import PageHeader from "@/components/PageHeader";
 const filter = new Filter();
 
 
@@ -88,25 +88,7 @@ export default function CreateCircle() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Back ── */}
-        <View>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={{ alignSelf: "flex-start", paddingHorizontal: 4, paddingVertical: 7, marginBottom: 8 }}
-          >
-            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
-          </TouchableOpacity>
-
-          <Text variant="headlineMedium" style={{
-            color:        theme.colors.onSurface,
-            fontWeight:   "900",
-            textAlign:    "center",
-            marginBottom: 32,
-          }}>
-            Create a Circle
-          </Text>
-        </View>
-
+        <PageHeader title="Create a Circle" titleStyle={{ textAlign: "center", fontWeight: "300" }} />
         {/* ── Icon carousel ── */}
         <Text variant="labelLarge" style={{
           color:         theme.colors.onSurfaceVariant,
