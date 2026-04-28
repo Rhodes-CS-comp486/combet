@@ -8,12 +8,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import GradientBackground from "@/components/GradientBackground";
-import PageHeader from "@/components/PageHeader";
 import { getSessionId } from "@/components/sessionStore";
 import { useAppTheme } from "@/context/ThemeContext";
 import BetCard from "@/components/BetCard";
 import { API_BASE } from "@/constants/api";
 import ReportModal from "@/components/ReportModal";
+import ConfirmModal from "@/components/Confirmmodal";
 
 const DRAWER_WIDTH = 260;
 
@@ -81,6 +81,8 @@ export default function CircleProfile() {
       Animated.timing(overlayAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
     ]).start();
   };
+
+  const [leaveVisible, setLeaveVisible] = useState(false);
 
   const closeDrawer = () => {
     setDrawerTouchable(false); // kill touches immediately — don't wait for animation
@@ -209,42 +211,32 @@ export default function CircleProfile() {
   };
 
   const handleLeave = async () => {
-    const leaveNow = async () => {
-      try {
-        const sessionId = await getSessionId();
-        if (!sessionId) { alert("Not authenticated"); return; }
-        const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
-          method: "DELETE",
-          headers: { "x-session-id": sessionId },
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error || "Could not leave circle");
-          return;
-        }
-        if (fromCircles) router.replace("/(tabs)/circles");
-      else if (fromLeaderboard) router.replace("/(tabs)/leaderboard");
-      else if (fromHome) router.replace("/(tabs)");
-      else if (fromUser && fromUserId) router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
-      else router.back();
-      } catch {
-        alert("Could not connect to server");
-      }
-    };
+  setLeaveVisible(true);
+};
 
-    if (typeof window !== "undefined" && typeof window.confirm === "function") {
-      if (window.confirm("Are you sure you want to leave this circle?")) leaveNow();
-    } else {
-      Alert.alert(
-        "Leave Circle",
-        "Are you sure you want to leave this circle?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Leave",  style: "destructive", onPress: leaveNow },
-        ]
-      );
+const leaveNow = async () => {
+  try {
+    const sessionId = await getSessionId();
+    if (!sessionId) { alert("Not authenticated"); return; }
+    const res = await fetch(`${API_BASE}/circles/${circleId}/leave`, {
+      method: "DELETE",
+      headers: { "x-session-id": sessionId },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Could not leave circle");
+      return;
     }
-  };
+    if (fromCircles) router.replace("/(tabs)/circles");
+    else if (fromLeaderboard) router.replace("/(tabs)/leaderboard");
+    else if (fromHome) router.replace("/(tabs)");
+    else if (fromUser && fromUserId) router.replace({ pathname: `/user/${fromUserId}`, params: {} } as any);
+    else router.back();
+  } catch {
+    alert("Could not connect to server");
+  }
+};
+
 
   const handleSettle = async (opt: any) => {
     if (!settlingBet) return;
@@ -621,6 +613,18 @@ export default function CircleProfile() {
         targetType="circle"
         targetId={circleId}
       />
+
+        <ConfirmModal
+          visible={leaveVisible}
+          icon="exit-outline"
+          title="Leave Circle"
+          message="Are you sure you want to leave this circle?"
+          confirmLabel="Leave"
+          cancelLabel="Cancel"
+          destructive
+          onCancel={() => setLeaveVisible(false)}
+          onConfirm={() => { setLeaveVisible(false); leaveNow(); }}
+        />
     </GradientBackground>
   );
 }
