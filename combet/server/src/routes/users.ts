@@ -488,6 +488,33 @@ usersRouter.get("/blocked", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// ─── Save Push Token ──────────────────────────────────────────────────────────
+usersRouter.post("/me/push-token", requireAuth, async (req: AuthRequest, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: "Token required" });
+  try {
+    await pool.query(
+      `UPDATE users SET push_token = $1 WHERE id = $2`,
+      [token, req.userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("POST /users/me/push-token error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ─── Clear Push Token (on logout) ─────────────────────────────────────────────
+usersRouter.delete("/me/push-token", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    await pool.query(`UPDATE users SET push_token = NULL WHERE id = $1`, [req.userId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DELETE /users/me/push-token error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ─── Get Another User's Profile ───────────────────────────────────────────────
 usersRouter.get("/:userId", requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;

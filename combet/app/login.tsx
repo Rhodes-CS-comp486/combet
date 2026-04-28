@@ -7,6 +7,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { useUser } from "@/context/UserContext";
 import { API_BASE } from "@/constants/api";
 import GradientBackground from "@/components/GradientBackground";
+import { registerForPushNotificationsAsync } from "@/hooks/useNotifications";
 
 export default function Login() {
   const { theme } = useAppTheme();
@@ -41,6 +42,7 @@ export default function Login() {
       await setSessionId(data.session_id);
       setUser(data.user);
       router.replace("/(tabs)");
+      await registerForPushNotificationsAsync();
     } catch {
       setErrorMsg("Unable to connect. Please try again.");
     } finally {
@@ -50,7 +52,7 @@ export default function Login() {
 
   return (
   <KeyboardAvoidingView
-    behavior={Platform.OS === "ios" ? "padding" : undefined}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
     style={{ flex: 1 }}
   >
     <GradientBackground style={{ paddingHorizontal: 24 }}>
